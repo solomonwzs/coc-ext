@@ -27,7 +27,7 @@
     "@typescript-eslint/eslint-plugin": "^4.8.2",
     "@typescript-eslint/parser": "^4.8.2",
     "coc.nvim": "^0.0.80",
-    "esbuild": "^0.8.42",
+    "esbuild": "^0.8.46",
     "eslint": "^7.14.0",
     "eslint-config-prettier": "^7.1.0",
     "eslint-plugin-prettier": "^3.1.4",
@@ -57,5 +57,8 @@
         "title": "coc-ext command title"
       }
     ]
+  },
+  "dependencies": {
+    "request-light": "^0.4.0"
   }
 }

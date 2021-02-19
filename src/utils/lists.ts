@@ -1,4 +1,11 @@
-import { BasicList, ListAction, ListContext, ListItem, Neovim, window } from 'coc.nvim';
+import {
+  BasicList,
+  ListAction,
+  ListContext,
+  ListItem,
+  Neovim,
+  window,
+} from 'coc.nvim';
 
 export default class DemoList extends BasicList {
   public readonly name = 'demo_list';

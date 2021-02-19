@@ -1,13 +1,68 @@
-import { commands, CompleteResult, ExtensionContext, listManager, sources, window, workspace } from 'coc.nvim';
-import DemoList from './lists';
+import {
+  commands,
+  // CompleteResult,
+  ExtensionContext,
+  // listManager,
+  // sources,
+  // window,
+  workspace,
+  MapMode,
+  ProviderResult,
+} from 'coc.nvim';
+// import DemoList from './utils/lists';
+import GoogleTranslator from './utils/translators/google';
+import BingTranslator from './utils/translators/bing';
+import { BaseTranslator, ITranslation } from './utils/translators/base';
+import { logger } from './utils/logger';
+import { popup, getText } from './utils/helper';
+
+function translateFn(mode: MapMode): () => ProviderResult<any> {
+  return async () => {
+    const text = await getText(mode);
+
+    let translator: BaseTranslator = new GoogleTranslator();
+    let trans: ITranslation | null = await translator.translate(
+      text,
+      'auto',
+      'zh-CN',
+    );
+    if (!trans) {
+      translator = new BingTranslator();
+      trans = await translator.translate(text, 'auto', 'zh-CN');
+    }
+
+    if (trans) {
+      await popup(`[${trans.engine}]\n\n${trans.paraphrase}`, 'ui_float');
+    } else {
+      await popup(`[Error]\n\ntranslate fail`);
+    }
+  };
+}
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext works`);
+  logger.info(`coc-ext works`);
+
+  // const { nvim } = workspace;
 
   context.subscriptions.push(
-    commands.registerCommand('ext.text', async (text: string) => {
-      window.showMessage(`coc-ext Commands works!`);
-    })
+    commands.registerCommand(
+      'ext-text',
+      async (_text: string) => {
+        // window.showMessage(`test, ${text}`);
+        // workspace.nvim.command(`echo "${text}"`);
+        popup('hello');
+      },
+      { sync: false },
+    ),
+
+    workspace.registerKeymap(['n'], 'ext-translate', translateFn('n'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-translate-v', translateFn('v'), {
+      sync: false,
+    }),
 
     // listManager.registerList(new DemoList(workspace.nvim))
 
