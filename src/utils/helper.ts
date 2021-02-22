@@ -24,7 +24,11 @@ export async function getText(mode: MapMode): Promise<string> {
   const doc = await workspace.document;
   let range: Nullable<Range> = null;
   if (mode === 'v') {
-    range = await workspace.getSelectedRange('v', doc);
+    // range = await workspace.getSelectedRange('v', doc);
+    const text: string = (
+      await workspace.nvim.call('lib#common#visual_selection', 1)
+    ).toString();
+    return text.trim();
   } else {
     const pos = await window.getCursorPosition();
     range = doc.getWordRangeAtPosition(pos);

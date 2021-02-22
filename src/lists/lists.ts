@@ -7,8 +7,8 @@ import {
   window,
 } from 'coc.nvim';
 
-export default class DemoList extends BasicList {
-  public readonly name = 'demo_list';
+export default class ExtList extends BasicList {
+  public readonly name = 'ext_list';
   public readonly description = 'CocList for coc-ext';
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];

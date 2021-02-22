@@ -5,7 +5,7 @@ async function start(watch) {
     bundle: true,
     watch,
     // minify: process.env.NODE_ENV === 'production',
-    minify: true,
+    minify: false,
     sourcemap: process.env.NODE_ENV === 'development',
     mainFields: ['module', 'main'],
     external: ['coc.nvim'],
