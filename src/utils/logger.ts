@@ -5,7 +5,7 @@ class Logger {
   private channel: OutputChannel;
 
   constructor() {
-    this.channel = window.createOutputChannel('coc-ext');
+    this.channel = window.createOutputChannel('coc-solomon-ext');
   }
 
   public dispose(): void {

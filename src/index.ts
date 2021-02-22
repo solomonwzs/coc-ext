@@ -34,9 +34,9 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  context.logger.info(`coc-ext works`);
-  logger.info(`coc-ext works`);
-  logger.debug(workspace.getConfiguration('coc-ext'));
+  context.logger.info(`coc-solomon-ext works`);
+  logger.info(`coc-solomon-ext works`);
+  logger.debug(workspace.getConfiguration('coc-solomon-ext'));
 
   // const { nvim } = workspace;
 
@@ -95,7 +95,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new CommandsList(workspace.nvim)),
 
     // sources.createSource({
-    //   name: 'coc-ext completion source', // unique id
+    //   name: 'coc-solomon-ext completion source', // unique id
     //   doComplete: async () => {
     //     const items = await getCompletionItems();
     //     return items;
@@ -117,11 +117,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
 //     items: [
 //       {
 //         word: 'TestCompletionItem 1',
-//         menu: '[coc-ext]',
+//         menu: '[coc-solomon-ext]',
 //       },
 //       {
 //         word: 'TestCompletionItem 2',
-//         menu: '[coc-ext]',
+//         menu: '[coc-solomon-ext]',
 //       },
 //     ],
 //   };

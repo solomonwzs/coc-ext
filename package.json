@@ -1,5 +1,5 @@
 {
-  "name": "coc-ext",
+  "name": "coc-solomon-ext",
   "version": "0.0.1-development",
   "description": "",
   "author": "solomon <solomon.wzs@gmail.com>",
@@ -38,14 +38,14 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "coc-ext configuration",
+      "title": "coc-solomon-ext configuration",
       "properties": {
-        "coc-ext.enabled": {
+        "coc-solomon-ext.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable coc-ext extension"
+          "description": "Enable coc-solomon-ext extension"
         },
-        "coc-ext.test": {
+        "coc-solomon-ext.test": {
           "type": "string",
           "default": "test",
           "description": "test"
@@ -54,8 +54,8 @@
     },
     "commands": [
       {
-        "command": "coc-ext.Command",
-        "title": "coc-ext command title"
+        "command": "coc-solomon-ext.Command",
+        "title": "coc-solomon-ext command title"
       }
     ]
   },

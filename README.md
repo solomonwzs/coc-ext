@@ -1,10 +1,10 @@
-# coc-ext
+# coc-solomon-ext
 
 
 
 ## Install
 
-`:CocInstall coc-ext`
+`:CocInstall coc-solomon-ext`
 
 ## Keymaps
 
