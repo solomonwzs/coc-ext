@@ -45,10 +45,15 @@
           "default": true,
           "description": "Enable coc-solomon-ext extension"
         },
-        "coc-solomon-ext.test": {
-          "type": "string",
-          "default": "test",
-          "description": "test"
+        "coc-solomon-ext.log.detail": {
+          "type": "boolean",
+          "default": false,
+          "description": "print detail log"
+        },
+        "coc-solomon-ext.log.level": {
+          "type": "number",
+          "default": 1,
+          "description": "log level"
         }
       }
     },
@@ -60,7 +65,6 @@
     ]
   },
   "dependencies": {
-    "@types/node": "^14.14.30",
-    "request-light": "^0.4.0"
+    "@types/node": "^14.14.30"
   }
 }

@@ -4,7 +4,7 @@ import {
   ExtensionContext,
   listManager,
   // sources,
-  window,
+  // window,
   workspace,
   MapMode,
   ProviderResult,
@@ -36,7 +36,7 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-solomon-ext works`);
   logger.info(`coc-solomon-ext works`);
-  logger.debug(workspace.getConfiguration('coc-solomon-ext'));
+  logger.info(workspace.getConfiguration('coc-solomon-ext'));
 
   // const { nvim } = workspace;
 

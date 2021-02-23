@@ -6,7 +6,7 @@ import {
   Neovim,
   // window,
 } from 'coc.nvim';
-// import {logger} from '../utils/logger';
+import { logger } from '../utils/logger';
 
 export default class CommandsList extends BasicList {
   public readonly name = 'cmd_list';
@@ -20,9 +20,8 @@ export default class CommandsList extends BasicList {
 
   public async loadItems(context: ListContext): Promise<ListItem[]> {
     const { nvim } = this;
-    const list = (await nvim.eval(
-      'split(execute("command"),"\n")',
-    )) as string[];
+    let list = (await nvim.eval('split(execute("command"),"\n")')) as string[];
+    list = list.slice(1);
     return [];
   }
 }

@@ -51,6 +51,7 @@ export async function google_translate(
     return null;
   }
   if (!resp.data || resp.statusCode != 200) {
+    logger.error(`status: ${resp.statusCode}`);
     return null;
   }
   const obj = JSON.parse(resp.data.toString());

@@ -4,8 +4,8 @@ export default function getcfg<T>(
   key: string,
   defaultValue?: T,
 ): T | undefined {
-  const config = workspace.getConfiguration('ext');
+  const config = workspace.getConfiguration('coc-solomon-ext');
   return defaultValue === undefined
-    ? undefined
+    ? config.get<T>(key)
     : config.get<T>(key, defaultValue);
 }
