@@ -13,8 +13,8 @@ import getcfg from './utils/config';
 let client: LanguageClient;
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  context.logger.info(`coc-erlangls works`);
-  logger.info(`coc-erlangls works`);
+  context.logger.info(`coc-ext-erlang works`);
+  logger.info(`coc-ext-erlang works`);
   logger.info(workspace.getConfiguration('coc-ext.erlang'));
 
   const server_path: string = getcfg<string>(
