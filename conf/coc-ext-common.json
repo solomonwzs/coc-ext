@@ -5,7 +5,7 @@
       "type": "object",
       "title": "coc-ext-common configuration",
       "properties": {
-        "coc-ext-common.enabled": {
+        "coc-ext.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable coc-ext extension"

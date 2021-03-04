@@ -13,10 +13,12 @@ import { Nullable } from './types';
 function defauleFloatWinConfig(): FloatWinConfig {
   return {
     autoHide: true,
-    border: getcfg('window.enableBorder') ? [1, 1, 1, 1] : [0, 0, 0, 0],
+    border: getcfg<boolean>('window.enableBorder', false)
+      ? [1, 1, 1, 1]
+      : [0, 0, 0, 0],
     close: false,
-    maxHeight: getcfg('window.maxHeight'),
-    maxWidth: getcfg('window.maxWidth'),
+    maxHeight: getcfg<any>('window.maxHeight', undefined),
+    maxWidth: getcfg<any>('window.maxWidth', undefined),
   };
 }
 

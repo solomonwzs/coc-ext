@@ -1,13 +1,15 @@
 import {
-  Neovim,
   FloatFactory,
-  workspace,
+  FloatWinConfig,
+  Neovim,
   Range,
   window,
-  FloatWinConfig,
+  workspace,
 } from 'coc.nvim';
-import { ActionMode, KeymapMode, Nullable } from './types';
+
 import getcfg from './config';
+import { ActionMode, KeymapMode, Nullable } from './types';
+
 // import { logger } from './logger';
 
 export default class Manager {
@@ -112,10 +114,12 @@ export default class Manager {
   private get floatWinConfig(): FloatWinConfig {
     return {
       autoHide: true,
-      border: getcfg('window.enableBorder') ? [1, 1, 1, 1] : [0, 0, 0, 0],
+      border: getcfg<boolean>('window.enableBorder', false)
+        ? [1, 1, 1, 1]
+        : [0, 0, 0, 0],
       close: false,
-      maxHeight: getcfg('window.maxHeight'),
-      maxWidth: getcfg('window.maxWidth'),
+      maxHeight: getcfg<any>('window.maxHeight', undefined),
+      maxWidth: getcfg<any>('window.maxWidth', undefined),
     };
   }
 }

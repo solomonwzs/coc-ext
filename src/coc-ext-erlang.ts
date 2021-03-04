@@ -1,6 +1,5 @@
 import {
   LanguageClient,
-  WorkspaceConfiguration,
   workspace,
   ExtensionContext,
   LanguageClientOptions,
@@ -9,19 +8,17 @@ import {
   window,
 } from 'coc.nvim';
 import { logger } from './utils/logger';
+import getcfg from './utils/config';
 
 let client: LanguageClient;
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-erlangls works`);
   logger.info(`coc-erlangls works`);
-  logger.info(workspace.getConfiguration('erlang_ls'));
+  logger.info(workspace.getConfiguration('coc-ext.erlang'));
 
-  const config: WorkspaceConfiguration = workspace.getConfiguration(
-    'erlang_ls',
-  );
-  const server_path: string = config.get<string>(
-    'erlang_ls_path',
+  const server_path: string = getcfg<string>(
+    'erlang.erlang_ls_path',
     '/bin/erlang_ls',
   );
 

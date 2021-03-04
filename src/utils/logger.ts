@@ -9,14 +9,8 @@ class Logger {
 
   constructor() {
     this.channel = window.createOutputChannel('coc-ext');
-    this.detail = getcfg<boolean>('log.detail') === true;
-
-    const level = getcfg<number>('log.level');
-    if (level !== undefined) {
-      this.level = level;
-    } else {
-      this.level = 1;
-    }
+    this.detail = getcfg<boolean>('log.detail', false) === true;
+    this.level = getcfg<number>('log.level', 1);
   }
 
   public dispose(): void {

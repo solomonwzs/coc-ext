@@ -36,7 +36,7 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
   logger.info(`coc-ext-common works`);
-  logger.info(workspace.getConfiguration('coc-ext-common'));
+  logger.info(workspace.getConfiguration('coc-ext.common'));
 
   // const { nvim } = workspace;
 
