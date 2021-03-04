@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 
 export default class CommandsList extends BasicList {
   public readonly name = 'cmd_list';
-  public readonly description = 'CocList for coc-solomon-ext (commands)';
+  public readonly description = 'CocList for coc-ext-common (commands)';
   public readonly defaultAction = 'execute';
   public actions: ListAction[] = [];
 

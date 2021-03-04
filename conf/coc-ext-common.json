@@ -1,0 +1,37 @@
+{
+  "activationEvents": ["*"],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "coc-ext-common configuration",
+      "properties": {
+        "coc-ext-common.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable coc-ext extension"
+        },
+        "coc-ext.log.detail": {
+          "type": "boolean",
+          "default": false,
+          "description": "print detail log"
+        },
+        "coc-ext.log.level": {
+          "type": "number",
+          "default": 1,
+          "description": "log level"
+        },
+        "coc-ext.debug": {
+          "type": "number",
+          "default": 1,
+          "description": "debug"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "coc-ext.Command",
+        "title": "coc-ext command title"
+      }
+    ]
+  }
+}

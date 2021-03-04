@@ -1,0 +1,26 @@
+{
+  "activationEvents": ["onLanguage:erlang"],
+  "contributes": {
+    "configuration": {
+      "title": "erlang_ls language server configuration",
+      "properties": {
+        "erlang_ls.erlang_ls_path": {
+          "type": "string",
+          "default": "erlang_ls",
+          "description": "path of erlang_ls"
+        },
+        "erlang_ls.port": {
+          "type": "number",
+          "default": 19527,
+          "description": "(Deprecated, as we use stdio to communicate now) Port to communicate with language server."
+        },
+        "erlang_ls.trace.server": {
+          "type": "string",
+          "default": "off",
+          "enum": ["off", "messages", "verbose"],
+          "description": "Trace level of vim language server"
+        }
+      }
+    }
+  }
+}

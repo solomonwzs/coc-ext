@@ -8,7 +8,7 @@ class Logger {
   private level: number;
 
   constructor() {
-    this.channel = window.createOutputChannel('coc-solomon-ext');
+    this.channel = window.createOutputChannel('coc-ext');
     this.detail = getcfg<boolean>('log.detail') === true;
 
     const level = getcfg<number>('log.level');

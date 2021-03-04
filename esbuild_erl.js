@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 async function start(watch) {
   await require('esbuild').build({
-    entryPoints: ['src/index.ts'],
+    entryPoints: ['src/coc-ext-erlang.ts'],
     bundle: true,
     watch,
     // minify: process.env.NODE_ENV === 'production',
@@ -11,7 +11,7 @@ async function start(watch) {
     external: ['coc.nvim'],
     platform: 'node',
     target: 'node10.12',
-    outfile: 'lib/index.js',
+    outfile: 'lib/coc-ext-erlang.js',
   });
 }
 
@@ -29,6 +29,6 @@ if (process.argv.length > 2 && process.argv[2] === '--watch') {
   };
 }
 
-start(watch).catch((e) => {
+start(watch).catch(e => {
   console.error(e);
 });

@@ -1,5 +1,5 @@
 {
-  "name": "coc-solomon-ext",
+  "name": "coc-ext",
   "version": "0.0.1-development",
   "description": "",
   "author": "solomon <solomon.wzs@gmail.com>",
@@ -12,8 +12,9 @@
   "scripts": {
     "lint": "eslint src --ext ts",
     "clean": "rimraf lib",
-    "watch": "node esbuild.js --watch",
-    "build": "node esbuild.js",
+    "watch_ext": "node esbuild_ext.js --watch",
+    "build_ext": "node esbuild_ext.js",
+    "build_erl": "node esbuild_erl.js",
     "prepare": "npm-run-all clean build"
   },
   "prettier": {
@@ -33,36 +34,6 @@
     "prettier": "^2.2.0",
     "rimraf": "^3.0.2",
     "typescript": "^4.1.2"
-  },
-  "activationEvents": ["*"],
-  "contributes": {
-    "configuration": {
-      "type": "object",
-      "title": "coc-solomon-ext configuration",
-      "properties": {
-        "coc-solomon-ext.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable coc-solomon-ext extension"
-        },
-        "coc-solomon-ext.log.detail": {
-          "type": "boolean",
-          "default": false,
-          "description": "print detail log"
-        },
-        "coc-solomon-ext.log.level": {
-          "type": "number",
-          "default": 1,
-          "description": "log level"
-        }
-      }
-    },
-    "commands": [
-      {
-        "command": "coc-solomon-ext.Command",
-        "title": "coc-solomon-ext command title"
-      }
-    ]
   },
   "dependencies": {
     "@types/node": "^14.14.30"
