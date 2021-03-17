@@ -8,6 +8,7 @@ import {
   workspace,
   MapMode,
   ProviderResult,
+  TextEdit,
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
@@ -15,7 +16,8 @@ import { google_translate } from './translators/google';
 import { bing_translate } from './translators/bing';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
-import { decode_utf8_str, decode_mime_encode_str } from './utils/decoder';
+import { decode_mime_encode_str } from './utils/decoder';
+import { call_python } from './utils/python';
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
@@ -33,10 +35,41 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
   };
 }
 
+function decodeStrFn(enc: string): () => ProviderResult<any> {
+  return async () => {
+    const text = await getText('v');
+    const res = await call_python('coder', 'decode_str', [text, enc]);
+    if (res.exitCode == 0 && res.data) {
+      popup(`[${enc.toUpperCase()} decode]\n\n${res.data.toString('utf8')}`);
+    } else {
+      logger.error(res.error?.toString('utf8'));
+    }
+  };
+}
+
+function encodeStrFn(enc: string): () => ProviderResult<any> {
+  return async () => {
+    const doc = await workspace.document;
+    const range = await workspace.getSelectedRange('v', doc);
+    if (!range) {
+      return;
+    }
+    const text = doc.textDocument.getText(range);
+    const res = await call_python('coder', 'encode_str', [text, enc]);
+    if (res.exitCode == 0 && res.data) {
+      const ed = TextEdit.replace(range, res.data.toString('utf8'));
+      await doc.applyEdits([ed]);
+    } else {
+      logger.error(res.error?.toString('utf8'));
+    }
+  };
+}
+
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
   logger.info(`coc-ext-common works`);
   logger.info(workspace.getConfiguration('coc-ext.common'));
+  logger.info(process.env.COC_VIMCONFIG);
 
   // const { nvim } = workspace;
 
@@ -44,8 +77,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     commands.registerCommand(
       'ext-debug',
       async () => {
-        const doc = await workspace.document;
-        logger.debug(doc.lineCount);
+        // const doc = await workspace.document;
+        // logger.debug(doc.lineCount);
         // logger.debug(workspace.document.lineCount);
         // window.showMessage(`test, ${text}`);
         // // workspace.nvim.command(`echo "${text}"`);
@@ -65,22 +98,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sync: false,
     }),
 
-    workspace.registerKeymap(
-      ['v'],
-      'ext-decode-utf8-v',
-      async () => {
-        const text = await getText('v');
-        const tt = decode_utf8_str(text);
-        popup(`[UTF8 decode]\n\n${tt}`);
-      },
-      {
-        sync: false,
-      },
-    ),
+    workspace.registerKeymap(['v'], 'ext-encode-utf8', encodeStrFn('utf8'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-encode-gbk', encodeStrFn('gbk'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-decode-utf8', decodeStrFn('utf8'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-decode-gbk', decodeStrFn('gbk'), {
+      sync: false,
+    }),
 
     workspace.registerKeymap(
       ['v'],
-      'ext-decode-mime-v',
+      'ext-decode-mime',
       async () => {
         const text = await getText('v');
         const tt = decode_mime_encode_str(text);

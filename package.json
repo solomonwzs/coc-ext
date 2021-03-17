@@ -15,6 +15,7 @@
     "watch_ext": "node esbuild_ext.js --watch",
     "build_ext": "node esbuild_ext.js",
     "build_erl": "node esbuild_erl.js",
+    "build_test": "node esbuild_test.js",
     "prepare": "npm-run-all clean build"
   },
   "prettier": {

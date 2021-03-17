@@ -1,7 +1,7 @@
 import { TextDecoder } from 'util';
 // import { logger } from './logger';
 
-export function decode_utf8_str(str: string): string {
+export function decode_str(str: string, enc: string): string {
   const re = /\x(..)/g;
   let expl = re.exec(str);
   const buf: number[] = [];
@@ -9,7 +9,8 @@ export function decode_utf8_str(str: string): string {
     buf.push(parseInt(expl[1], 16));
     expl = re.exec(str);
   }
-  return Buffer.from(buf).toString('utf8');
+  const decoder = new TextDecoder(enc);
+  return decoder.decode(Buffer.from(buf));
 }
 
 export function decode_mime_encode_str(str: string): string {
