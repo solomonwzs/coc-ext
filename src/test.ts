@@ -1,4 +1,19 @@
 import { spawn } from 'child_process';
+import { simple_https_request } from './utils/http';
+// import { get_call_stack } from './utils/common';
+import { RequestOptions } from 'https';
+
+async function http_test(): Promise<void> {
+  const opts: RequestOptions = {
+    hostname: 'www.google.com',
+    method: 'GET',
+    timeout: 100,
+  };
+  const resp = await simple_https_request(opts);
+  console.log(resp);
+}
+
+http_test();
 
 // const ls = spawn('ls', ['-lh']);
 

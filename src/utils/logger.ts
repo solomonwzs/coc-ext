@@ -1,8 +1,9 @@
 import { OutputChannel, window } from 'coc.nvim';
 import getcfg from './config';
+import { stringify, get_call_stack } from './common';
 import path from 'path';
 
-class Logger {
+export class Logger {
   private channel: OutputChannel;
   private detail: boolean;
   private level: number;
@@ -19,14 +20,7 @@ class Logger {
 
   private logLevel(level: string, value: any): void {
     const now = new Date();
-    let str: string;
-    if (typeof value === 'string') {
-      str = value;
-    } else if (value instanceof String) {
-      str = value.toString();
-    } else {
-      str = JSON.stringify(value, null, 2);
-    }
+    const str = stringify(value);
     if (this.detail) {
       const stack = new Error().stack?.split('\n');
       if (stack && stack.length >= 4) {
