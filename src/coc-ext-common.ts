@@ -9,6 +9,8 @@ import {
   MapMode,
   ProviderResult,
   TextEdit,
+  languages,
+  DocumentSelector,
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
@@ -18,6 +20,7 @@ import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
 import { call_python } from './utils/python';
+import { FormattingEditProvider } from './formatter/formatprovider';
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
@@ -72,6 +75,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(process.env.COC_VIMCONFIG);
 
   // const { nvim } = workspace;
+  const formatProvider = new FormattingEditProvider();
 
   context.subscriptions.push(
     commands.registerCommand(
@@ -129,6 +133,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     listManager.registerList(new ExtList(workspace.nvim)),
     listManager.registerList(new CommandsList(workspace.nvim)),
+
+    languages.registerDocumentFormatProvider(
+      [{ scheme: 'file', language: 'cpp' }],
+      formatProvider,
+      1,
+    ),
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id

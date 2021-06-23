@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
-import { simple_https_request } from './utils/http';
 // import { get_call_stack } from './utils/common';
 import { RequestOptions } from 'https';
+import { TextDecoder, TextEncoder } from 'util';
+import { simple_https_request } from './utils/http';
 
 async function http_test(): Promise<void> {
   const opts: RequestOptions = {
@@ -12,8 +13,43 @@ async function http_test(): Promise<void> {
   const resp = await simple_https_request(opts);
   console.log(resp);
 }
+// http_test();
 
-http_test();
+function fnvHash(data: string | Uint8Array, seed = 0): number {
+  const fnvPrime = BigInt(0x811c9dc5);
+  let hash = BigInt(seed);
+  const func = function (x: number) {
+    hash = BigInt.asUintN(32, hash * fnvPrime);
+    hash ^= BigInt(x);
+  };
+  if (typeof data === 'string') {
+    const enc = new TextEncoder();
+    const bytes = enc.encode(data);
+    bytes.forEach(func);
+  } else if (data instanceof String) {
+    const enc = new TextEncoder();
+    const bytes = enc.encode(data.toString());
+    bytes.forEach(func);
+  } else {
+    data.forEach(function (x: number) {
+      hash = BigInt.asUintN(32, hash * fnvPrime);
+      hash ^= BigInt(x);
+    });
+  }
+  return Number(hash);
+}
+console.log(fnvHash('👨👩👧👦'));
+console.log(fnvHash('1234'));
+console.log(fnvHash('中文'));
+
+// const enc = new TextEncoder();
+// const bytes = enc.encode('👨👩👧👦');
+// bytes.forEach(function (x: number) {
+//   console.log(x);
+// });
+// for (const i in bytes) {
+//   console.log(bytes[i]);
+// }
 
 // const ls = spawn('ls', ['-lh']);
 
@@ -46,12 +82,14 @@ http_test();
 //   console.log(`child process exited with code ${code}`);
 // });
 
-const py = spawn('python3', ['/tmp/2.py'], {
-  stdio: ['pipe', 'pipe', process.stderr],
-});
-py.stdin.write('hello');
-py.stdin.write('hello');
-py.stdin.end();
-py.stdout.on('data', data => {
-  console.log(`stdout: ${data}`);
-});
+function python_test() {
+  const py = spawn('python3', ['/tmp/2.py'], {
+    stdio: ['pipe', 'pipe', process.stderr],
+  });
+  py.stdin.write('hello');
+  py.stdin.write('hello');
+  py.stdin.end();
+  py.stdout.on('data', data => {
+    console.log(`stdout: ${data}`);
+  });
+}
