@@ -12,6 +12,7 @@ import getcfg from './config';
 import { Nullable } from './types';
 import path from 'path';
 import { TextEncoder } from 'util';
+import fs from 'fs';
 // import fs from 'fs-extra';
 // import md5 from 'md5';
 // import { logger } from './logger';
@@ -116,24 +117,18 @@ export function fnvHash(data: string | Uint8Array, seed = 0): number {
   return Number(hash);
 }
 
-// export function getTempFileWithDocumentContents(
-//   document: TextDocument,
-// ): Promise<string> {
-//   return new Promise<string>((resolve, reject) => {
-//     const fsPath = Uri.parse(document.uri).fsPath;
-//     const ext = path.extname(fsPath);
-//     // Don't create file in temp folder since external utilities
-//     // look into configuration files in the workspace and are not able
-//     // to find custom rules if file is saved in a random disk location.
-//     // This means temp file has to be created in the same folder
-//     // as the original one and then removed.
-
-//     const fileName = `${fsPath}.${md5(document.uri)}${ext}`;
-//     fs.writeFile(fileName, document.getText(), ex => {
-//       if (ex) {
-//         reject(new Error(`Failed to create a temporary file, ${ex.message}`));
-//       }
-//       resolve(fileName);
-//     });
-//   });
-// }
+export function getTempFileWithDocumentContents(
+  document: TextDocument,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const fsPath = Uri.parse(document.uri).fsPath;
+    const ext = path.extname(fsPath);
+    const fileName = `${fsPath}.${fnvHash(document.uri)}${ext}`;
+    fs.writeFile(fileName, document.getText(), ex => {
+      if (ex) {
+        reject(new Error(`Failed to create a temporary file, ${ex.message}`));
+      }
+      resolve(fileName);
+    });
+  });
+}

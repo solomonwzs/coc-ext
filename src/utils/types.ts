@@ -9,3 +9,11 @@ export interface ExecutionInfo {
   moduleName?: string;
   args: string[];
 }
+
+export interface FormatterSetting {
+  lang: string;
+  provider: string;
+  exec?: string;
+  args?: string[];
+  clangFormStyle?: Record<string, string>;
+}

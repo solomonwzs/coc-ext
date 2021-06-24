@@ -7,15 +7,28 @@ import {
   Range,
   TextEdit,
   ProviderResult,
+  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
+// import getcfg from '../utils/config';
+import { FormatterSetting } from '../utils/types';
+import {BaseFormatter} from '../formatter/baseformatter';
+import {CppFormatter} from '../formatter/cppformatter';
 
 export class FormattingEditProvider
   implements
     DocumentFormattingEditProvider,
     DocumentRangeFormattingEditProvider
 {
-  constructor() {}
+  private formatter: BaseFormatter|null;
+
+  constructor(setting: FormatterSetting) {
+    if (setting.lang == 'cpp') {
+      this.formatter = new CppFormatter(setting);
+    } else {
+      this.formatter = null;
+    }
+  }
 
   private async _provideEdits(
     document: TextDocument,
@@ -23,8 +36,12 @@ export class FormattingEditProvider
     token: CancellationToken,
     range?: Range,
   ): Promise<TextEdit[]> {
-    logger.info('format');
-    return [];
+    if (!this.formatter) {
+      logger.error('formatter was null');
+      window.showMessage('formatter was null');
+      return [];
+    }
+    return this.formatter.formatDocument(document, options, token, range);
   }
 
   provideDocumentFormattingEdits(

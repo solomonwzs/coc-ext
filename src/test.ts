@@ -1,8 +1,9 @@
 import { spawn } from 'child_process';
-// import { get_call_stack } from './utils/common';
 import { RequestOptions } from 'https';
 import { TextDecoder, TextEncoder } from 'util';
 import { simple_https_request } from './utils/http';
+import fs from 'fs';
+import { call_shell } from './utils/externalexec';
 
 async function http_test(): Promise<void> {
   const opts: RequestOptions = {
@@ -38,9 +39,9 @@ function fnvHash(data: string | Uint8Array, seed = 0): number {
   }
   return Number(hash);
 }
-console.log(fnvHash('👨👩👧👦'));
-console.log(fnvHash('1234'));
-console.log(fnvHash('中文'));
+// console.log(fnvHash('👨👩👧👦'));
+// console.log(fnvHash('1234'));
+// console.log(fnvHash('中文'));
 
 // const enc = new TextEncoder();
 // const bytes = enc.encode('👨👩👧👦');
@@ -93,3 +94,32 @@ function python_test() {
     console.log(`stdout: ${data}`);
   });
 }
+
+function writefile_test() {
+  fs.writeFile('/tmp/1.txt', 'hello', err => {
+    console.log(err);
+  });
+  // const ws = fs.createWriteStream('/tmp/1.txt');
+  // ws.write('hello');
+  // ws.on('finish', () => {
+  //   console.log('end');
+  // }).on('error', err => {
+  //   console.log(err);
+  // });
+}
+// writefile_test();
+
+async function call_test() {
+  const style = {
+    BasedOnStyle: 'Google',
+    AllowShortFunctionsOnASingleLine: 'Inline',
+  };
+  const resp = await call_shell('clang-format', [
+    '-style',
+    JSON.stringify(style),
+  ], "int main() { return 0;}");
+  if (resp.exitCode == 0 && resp.data) {
+    console.log(resp.data.toString());
+  }
+}
+call_test();

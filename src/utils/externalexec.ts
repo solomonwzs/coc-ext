@@ -1,17 +1,53 @@
 import { spawn } from 'child_process';
 import path from 'path';
 
-export interface PyResponse {
+export interface ExternalExecResponse {
   exitCode: number;
   data: Buffer | undefined;
   error: Buffer | undefined;
+}
+
+export async function call_shell(
+  cmd: string,
+  argv: string[],
+  input?: string | Buffer,
+): Promise<ExternalExecResponse> {
+  return new Promise(resolve => {
+    const sh = spawn(cmd, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+    if (input) {
+      sh.stdin.write(input);
+      sh.stdin.end();
+    }
+
+    let exitCode = 0;
+    const data: Buffer[] = [];
+    const error: Buffer[] = [];
+
+    sh.stdout.on('data', (d: Buffer) => {
+      data.push(d);
+    });
+    sh.stderr.on('data', (d: Buffer) => {
+      error.push(d);
+    });
+    sh.on('close', code => {
+      if (code) {
+        exitCode = code;
+      }
+      resolve({
+        exitCode,
+        data: data.length == 0 ? undefined : Buffer.concat(data),
+        error: error.length == 0 ? undefined : Buffer.concat(error),
+      });
+    });
+  });
 }
 
 export async function call_python(
   module: string,
   func: string,
   argv: any[],
-): Promise<PyResponse> {
+): Promise<ExternalExecResponse> {
   return new Promise(resolve => {
     const msg = JSON.stringify({
       module,

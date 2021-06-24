@@ -24,6 +24,14 @@
           "type": "number",
           "default": 1,
           "description": "debug"
+        },
+        "coc-ext.formatting": {
+          "type": "array",
+          "default": [],
+          "description": "Formatting setting",
+          "items": {
+            "type": "object"
+          }
         }
       }
     },

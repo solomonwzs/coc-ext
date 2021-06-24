@@ -1,14 +1,23 @@
 import {
-  DocumentFormattingEditProvider,
-  DocumentRangeFormattingEditProvider,
   TextDocument,
   FormattingOptions,
   CancellationToken,
   Range,
   TextEdit,
-  ProviderResult,
-  Uri,
-  workspace,
 } from 'coc.nvim';
-import { logger } from '../utils/logger';
-import path from 'path';
+import { FormatterSetting } from '../utils/types';
+
+export abstract class BaseFormatter {
+  protected setting: FormatterSetting;
+
+  constructor(public readonly s: FormatterSetting) {
+    this.setting = s;
+  }
+
+  public abstract formatDocument(
+    document: TextDocument,
+    options: FormattingOptions,
+    token: CancellationToken,
+    range?: Range,
+  ): Promise<TextEdit[]>;
+}

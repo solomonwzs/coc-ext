@@ -19,8 +19,10 @@ import { bing_translate } from './translators/bing';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
-import { call_python } from './utils/python';
+import { call_python } from './utils/externalexec';
 import { FormattingEditProvider } from './formatter/formatprovider';
+import { FormatterSetting } from './utils/types';
+import getcfg from './utils/config';
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
@@ -75,7 +77,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(process.env.COC_VIMCONFIG);
 
   // const { nvim } = workspace;
-  const formatProvider = new FormattingEditProvider();
+  const formatterSettings = getcfg<FormatterSetting[]>('formatting', []);
+  formatterSettings.forEach(setting => {
+    const selector = [{ scheme: 'file', language: setting.lang }];
+    const provider = new FormattingEditProvider(setting);
+    context.subscriptions.push(
+      languages.registerDocumentFormatProvider(selector, provider, 1),
+      languages.registerDocumentRangeFormatProvider(selector, provider, 1),
+    );
+  });
 
   context.subscriptions.push(
     commands.registerCommand(
@@ -133,12 +143,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     listManager.registerList(new ExtList(workspace.nvim)),
     listManager.registerList(new CommandsList(workspace.nvim)),
-
-    languages.registerDocumentFormatProvider(
-      [{ scheme: 'file', language: 'cpp' }],
-      formatProvider,
-      1,
-    ),
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id
