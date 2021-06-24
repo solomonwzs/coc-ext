@@ -79,7 +79,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // const { nvim } = workspace;
   const formatterSettings = getcfg<LangFormatterSetting[]>('formatting', []);
   formatterSettings.forEach(s => {
-    s.langs.forEach(lang => {
+    s.languages.forEach(lang => {
       const selector = [{ scheme: 'file', language: lang }];
       const provider = new FormattingEditProvider(s.setting);
       context.subscriptions.push(

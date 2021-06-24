@@ -15,6 +15,7 @@ import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from '../formatter/baseformatter';
 import { ClfFormatter } from '../formatter/clfformatter';
 import { PrettierFormatter } from '../formatter/prettierformatter';
+import { BazelFormatter } from '../formatter/bazelformatter';
 
 export class FormattingEditProvider
   implements
@@ -28,6 +29,8 @@ export class FormattingEditProvider
       this.formatter = new ClfFormatter(setting);
     } else if (setting.provider == 'prettier') {
       this.formatter = new PrettierFormatter(setting);
+    } else if (setting.provider == 'bazel-buildifier') {
+      this.formatter = new BazelFormatter(setting);
     } else {
       this.formatter = null;
     }
@@ -37,7 +40,7 @@ export class FormattingEditProvider
     document: TextDocument,
     options: FormattingOptions,
     token: CancellationToken,
-    range?: Range,
+    range?: Range
   ): Promise<TextEdit[]> {
     if (!this.formatter) {
       logger.error('formatter was null');
@@ -50,7 +53,7 @@ export class FormattingEditProvider
   provideDocumentFormattingEdits(
     document: TextDocument,
     options: FormattingOptions,
-    token: CancellationToken,
+    token: CancellationToken
   ): ProviderResult<TextEdit[]> {
     return this._provideEdits(document, options, token);
   }
@@ -59,7 +62,7 @@ export class FormattingEditProvider
     document: TextDocument,
     range: Range,
     options: FormattingOptions,
-    token: CancellationToken,
+    token: CancellationToken
   ): ProviderResult<TextEdit[]> {
     return this._provideEdits(document, options, token, range);
   }

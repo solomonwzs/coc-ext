@@ -11,7 +11,6 @@ export interface ExecutionInfo {
 }
 
 export interface FormatterSetting {
-  langs: string[];
   provider: string;
   exec?: string;
   args?: string[];
@@ -20,6 +19,6 @@ export interface FormatterSetting {
 }
 
 export interface LangFormatterSetting {
-  langs: string[];
+  languages: string[];
   setting: FormatterSetting;
 }
