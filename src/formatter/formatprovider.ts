@@ -12,19 +12,22 @@ import {
 import { logger } from '../utils/logger';
 // import getcfg from '../utils/config';
 import { FormatterSetting } from '../utils/types';
-import {BaseFormatter} from '../formatter/baseformatter';
-import {CppFormatter} from '../formatter/cppformatter';
+import { BaseFormatter } from '../formatter/baseformatter';
+import { ClfFormatter } from '../formatter/clfformatter';
+import { PrettierFormatter } from '../formatter/prettierformatter';
 
 export class FormattingEditProvider
   implements
     DocumentFormattingEditProvider,
     DocumentRangeFormattingEditProvider
 {
-  private formatter: BaseFormatter|null;
+  private formatter: BaseFormatter | null;
 
   constructor(setting: FormatterSetting) {
-    if (setting.lang == 'cpp') {
-      this.formatter = new CppFormatter(setting);
+    if (setting.provider == 'clang-format') {
+      this.formatter = new ClfFormatter(setting);
+    } else if (setting.provider == 'prettier') {
+      this.formatter = new PrettierFormatter(setting);
     } else {
       this.formatter = null;
     }

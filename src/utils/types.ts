@@ -11,9 +11,15 @@ export interface ExecutionInfo {
 }
 
 export interface FormatterSetting {
-  lang: string;
+  langs: string[];
   provider: string;
   exec?: string;
   args?: string[];
   clangFormStyle?: Record<string, string>;
+  prettierOptions?: string[];
+}
+
+export interface LangFormatterSetting {
+  langs: string[];
+  setting: FormatterSetting;
 }

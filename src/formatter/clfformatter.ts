@@ -11,7 +11,7 @@ import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { call_shell } from '../utils/externalexec';
 
-export class CppFormatter extends BaseFormatter {
+export class ClfFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
     super(setting);
   }
@@ -39,13 +39,22 @@ export class CppFormatter extends BaseFormatter {
     if (options.insertSpaces !== undefined && !setting['UseTab']) {
       setting['UseTab'] = options.insertSpaces ? 'false' : 'true';
     }
-    const argv: string[] = ['-style', JSON.stringify(setting), filepath];
+    if (!setting['BasedOnStyle']) {
+      setting['BasedOnStyle'] = 'Google';
+    }
+    const argv: string[] = [
+      '-style',
+      JSON.stringify(setting),
+      '--assume-filename',
+      filepath,
+    ];
 
     // if (range) {
     //   argv.push('-lines', `${range.start.line + 1}:${range.end.line + 1}`);
     // }
 
-    const resp = await call_shell('clang-format', argv);
+    const exec = this.setting.exec ? this.setting.exec : 'clang-format';
+    const resp = await call_shell(exec, argv, document.getText());
     if (resp.exitCode != 0) {
       if (resp.error) {
         logger.error(resp.error.toString());

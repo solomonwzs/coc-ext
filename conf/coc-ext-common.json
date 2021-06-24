@@ -28,7 +28,7 @@
         "coc-ext.formatting": {
           "type": "array",
           "default": [],
-          "description": "Formatting setting",
+          "description": "Language formatting setting",
           "items": {
             "type": "object"
           }
