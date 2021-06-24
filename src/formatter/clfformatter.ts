@@ -5,6 +5,7 @@ import {
   Range,
   TextEdit,
   Uri,
+  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
@@ -20,7 +21,7 @@ export class ClfFormatter extends BaseFormatter {
     document: TextDocument,
     options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range,
+    range?: Range
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
@@ -56,17 +57,19 @@ export class ClfFormatter extends BaseFormatter {
     const exec = this.setting.exec ? this.setting.exec : 'clang-format';
     const resp = await call_shell(exec, argv, document.getText());
     if (resp.exitCode != 0) {
+      window.showMessage(`clang-format fail, ret ${resp.exitCode}`);
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
+      window.showMessage('clang-format ok');
       return [
         TextEdit.replace(
           {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString(),
+          resp.data.toString()
         ),
       ];
     }

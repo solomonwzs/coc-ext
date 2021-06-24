@@ -4,6 +4,7 @@ import {
   CancellationToken,
   Range,
   TextEdit,
+  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
@@ -21,7 +22,7 @@ export class PrettierFormatter extends BaseFormatter {
     document: TextDocument,
     _options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range,
+    range?: Range
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
@@ -38,17 +39,19 @@ export class PrettierFormatter extends BaseFormatter {
     const resp = await call_shell(exec, argv);
     fs.unlinkSync(filepath);
     if (resp.exitCode != 0) {
+      window.showMessage(`prettier fail, ret ${resp.exitCode}`);
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
+      window.showMessage('prettier ok');
       return [
         TextEdit.replace(
           {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString(),
+          resp.data.toString()
         ),
       ];
     }
