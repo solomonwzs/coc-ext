@@ -18,6 +18,10 @@ export class PrettierFormatter extends BaseFormatter {
     super(setting);
   }
 
+  public supportRangeFormat(): boolean {
+    return false;
+  }
+
   public async formatDocument(
     document: TextDocument,
     _options: FormattingOptions,

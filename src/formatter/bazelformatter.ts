@@ -15,6 +15,10 @@ export class BazelFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
     super(setting);
   }
+  
+  public supportRangeFormat(): boolean {
+    return false;
+  }
 
   public async formatDocument(
     document: TextDocument,

@@ -4,13 +4,14 @@ import {
   ExtensionContext,
   listManager,
   // sources,
-  // window,
+  window,
+  Window,
   workspace,
   MapMode,
   ProviderResult,
   TextEdit,
   languages,
-  DocumentSelector,
+  // DocumentSelector,
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
@@ -78,14 +79,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   // const { nvim } = workspace;
   const formatterSettings = getcfg<LangFormatterSetting[]>('formatting', []);
-  formatterSettings.forEach(s => {
-    s.languages.forEach(lang => {
+  formatterSettings.forEach((s) => {
+    s.languages.forEach((lang) => {
       const selector = [{ scheme: 'file', language: lang }];
       const provider = new FormattingEditProvider(s.setting);
       context.subscriptions.push(
         languages.registerDocumentFormatProvider(selector, provider, 1),
-        languages.registerDocumentRangeFormatProvider(selector, provider, 1),
       );
+      if (provider.supportRangeFormat()) {
+        context.subscriptions.push(
+          languages.registerDocumentRangeFormatProvider(selector, provider, 1)
+        );
+      }
     });
   });
 
@@ -93,6 +98,22 @@ export async function activate(context: ExtensionContext): Promise<void> {
     commands.registerCommand(
       'ext-debug',
       async () => {
+        const id: number = await workspace.nvim.call('ui#window#new', {
+          position: 'top',
+        });
+        const w = workspace.nvim.createWindow(id);
+        logger.info(w.id);
+
+        const doc = await workspace.document;
+        const ed = TextEdit.replace(
+          {
+            start: { line: 0, character: 0 },
+            end: { line: doc.lineCount, character: 0 },
+          },
+          'hello world'
+        );
+        await doc.applyEdits([ed]);
+        await workspace.nvim.command('setlocal nomodifiable');
         // const doc = await workspace.document;
         // logger.debug(doc.lineCount);
         // logger.debug(workspace.document.lineCount);
@@ -103,7 +124,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         // ).toString();
         // window.showMessage(`${tt}`);
       },
-      { sync: false },
+      { sync: false }
     ),
 
     workspace.registerKeymap(['n'], 'ext-translate', translateFn('n'), {
@@ -140,11 +161,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
       },
       {
         sync: false,
-      },
+      }
     ),
 
     listManager.registerList(new ExtList(workspace.nvim)),
-    listManager.registerList(new CommandsList(workspace.nvim)),
+    listManager.registerList(new CommandsList(workspace.nvim))
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id

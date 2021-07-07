@@ -18,6 +18,8 @@ export abstract class BaseFormatter {
     document: TextDocument,
     options: FormattingOptions,
     token: CancellationToken,
-    range?: Range,
+    range?: Range
   ): Promise<TextEdit[]>;
+
+  public abstract supportRangeFormat(): boolean;
 }

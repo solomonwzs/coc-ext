@@ -50,6 +50,13 @@ export class FormattingEditProvider
     return this.formatter.formatDocument(document, options, token, range);
   }
 
+  supportRangeFormat(): boolean {
+    if (this.formatter) {
+      return this.formatter.supportRangeFormat();
+    }
+    return false;
+  }
+
   provideDocumentFormattingEdits(
     document: TextDocument,
     options: FormattingOptions,
