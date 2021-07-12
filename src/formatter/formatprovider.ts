@@ -16,6 +16,7 @@ import { BaseFormatter } from '../formatter/baseformatter';
 import { ClfFormatter } from '../formatter/clfformatter';
 import { PrettierFormatter } from '../formatter/prettierformatter';
 import { BazelFormatter } from '../formatter/bazelformatter';
+import { LuaFormatter } from '../formatter/luaformatter';
 
 export class FormattingEditProvider
   implements
@@ -31,6 +32,8 @@ export class FormattingEditProvider
       this.formatter = new PrettierFormatter(setting);
     } else if (setting.provider == 'bazel-buildifier') {
       this.formatter = new BazelFormatter(setting);
+    } else if (setting.provider == 'lua-format') {
+      this.formatter = new LuaFormatter(setting);
     } else {
       this.formatter = null;
     }

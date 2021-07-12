@@ -16,6 +16,7 @@ export interface FormatterSetting {
   args?: string[];
   clangFormStyle?: Record<string, string>;
   prettierOptions?: string[];
+  luaFormatOptions?: string[];
 }
 
 export interface LangFormatterSetting {

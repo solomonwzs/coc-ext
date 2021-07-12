@@ -95,7 +95,7 @@ export default class Manager {
     workspace.nvim.call(
       'coc#util#echo_messages',
       ['MoreMsg', content.split('\n')],
-      true,
+      true
     );
   }
 
