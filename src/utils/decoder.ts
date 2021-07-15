@@ -1,5 +1,5 @@
 import { TextDecoder } from 'util';
-// import { logger } from './logger';
+import { logger } from './logger';
 
 export function decode_str(str: string, enc: string): string {
   const re = /\x(..)/g;
@@ -14,7 +14,7 @@ export function decode_str(str: string, enc: string): string {
 }
 
 export function decode_mime_encode_str(str: string): string {
-  const re = /=\?(.*)\?([BbQq])\?(.*)\?=/g;
+  const re = /=\?(.+?)\?([BbQq])\?(.+?)\?=/g;
   const res: RegExpExecArray[] = [];
   let expl = re.exec(str);
   while (expl) {

@@ -61,7 +61,7 @@ export async function popup(
     return;
   }
   if (!filetype) {
-    filetype = 'markdown';
+    filetype = 'text';
   }
   if (!cfg) {
     cfg = defauleFloatWinConfig();

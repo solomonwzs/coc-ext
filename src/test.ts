@@ -90,13 +90,13 @@ function python_test() {
   py.stdin.write('hello');
   py.stdin.write('hello');
   py.stdin.end();
-  py.stdout.on('data', data => {
+  py.stdout.on('data', (data) => {
     console.log(`stdout: ${data}`);
   });
 }
 
 function writefile_test() {
-  fs.writeFile('/tmp/1.txt', 'hello', err => {
+  fs.writeFile('/tmp/1.txt', 'hello', (err) => {
     console.log(err);
   });
   // const ws = fs.createWriteStream('/tmp/1.txt');
@@ -114,12 +114,25 @@ async function call_test() {
     BasedOnStyle: 'Google',
     AllowShortFunctionsOnASingleLine: 'Inline',
   };
-  const resp = await call_shell('clang-format', [
-    '-style',
-    JSON.stringify(style),
-  ], "int main() { return 0;}");
+  const resp = await call_shell(
+    'clang-format',
+    ['-style', JSON.stringify(style)],
+    'int main() { return 0;}'
+  );
   if (resp.exitCode == 0 && resp.data) {
     console.log(resp.data.toString());
   }
 }
-call_test();
+// call_test();
+
+async function re_test() {
+  const str =
+    "Subject: =?utf-8?Q?[Plateforme_de_l'Or]_Un_ami_vous_a_envoy=C3=A9_un_l?=  =?utf-8?Q?ien_vers_10F_OR_-_Marianne/_Coq?=";
+  const re = /=\?(.+?)\?([BbQq])\?(.+?)\?=/g;
+  let expl = re.exec(str);
+  while (expl) {
+    console.log(expl);
+    expl = re.exec(str);
+  }
+}
+re_test();

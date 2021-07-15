@@ -1,17 +1,17 @@
 import {
-  commands,
   // CompleteResult,
+  // DocumentSelector,
   ExtensionContext,
-  listManager,
-  // sources,
-  window,
-  Window,
-  workspace,
+  // FloatFactory,
   MapMode,
   ProviderResult,
   TextEdit,
+  commands,
   languages,
-  // DocumentSelector,
+  listManager,
+  // sources,
+  // window,
+  workspace,
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
@@ -84,7 +84,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const selector = [{ scheme: 'file', language: lang }];
       const provider = new FormattingEditProvider(s.setting);
       context.subscriptions.push(
-        languages.registerDocumentFormatProvider(selector, provider, 1),
+        languages.registerDocumentFormatProvider(selector, provider, 1)
       );
       if (provider.supportRangeFormat()) {
         context.subscriptions.push(
@@ -114,6 +114,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
         );
         await doc.applyEdits([ed]);
         await workspace.nvim.command('setlocal nomodifiable');
+
+        // const doc = [{
+        //   content: '[title]\n\nabc@edf.com',
+        //   filetype: 'markdown',
+        // }]
+        // const win = new FloatFactory(workspace.nvim);
+        // await win.show(doc);
+
         // const doc = await workspace.document;
         // logger.debug(doc.lineCount);
         // logger.debug(workspace.document.lineCount);
@@ -157,7 +165,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       async () => {
         const text = await getText('v');
         const tt = decode_mime_encode_str(text);
-        popup(`[Mime decode]\n\n${tt}`);
+        popup(`[Mime decode]\n\n${tt}`, 'ui_float');
       },
       {
         sync: false,
