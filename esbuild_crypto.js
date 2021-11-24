@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 async function start(watch) {
   await require('esbuild').build({
-    entryPoints: ['src/test.ts'],
+    entryPoints: ['src/coc-ext-crypto.ts'],
     bundle: true,
     watch,
     // minify: process.env.NODE_ENV === 'production',
     minify: false,
     sourcemap: process.env.NODE_ENV === 'development',
     mainFields: ['module', 'main'],
-    external: [],
+    external: ['coc.nvim'],
     platform: 'node',
     target: 'node10.12',
-    outfile: 'lib/test.js',
+    outfile: 'lib/coc-ext-crypto.js',
   });
 }
 

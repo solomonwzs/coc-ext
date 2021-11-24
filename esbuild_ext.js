@@ -29,6 +29,6 @@ if (process.argv.length > 2 && process.argv[2] === '--watch') {
   };
 }
 
-start(watch).catch(e => {
+start(watch).catch((e) => {
   console.error(e);
 });
