@@ -4,6 +4,10 @@ import { TextDecoder, TextEncoder } from 'util';
 import { simple_https_request } from './utils/http';
 import fs from 'fs';
 import { call_shell } from './utils/externalexec';
+import path from 'path';
+import { fs_ex } from './utils/file';
+
+console.log('========');
 
 async function http_test(): Promise<void> {
   const opts: RequestOptions = {
@@ -135,4 +139,39 @@ async function re_test() {
     expl = re.exec(str);
   }
 }
-re_test();
+// re_test();
+
+function get_enc_filename(filename: string): string {
+  const dir = path.dirname(filename);
+  const name = path.basename(filename);
+  return path.join(dir, `.${name}.enc`);
+}
+
+function get_dec_filename(filename: string): string | undefined {
+  const dir = path.dirname(filename);
+  const name = path.basename(filename);
+
+  if (
+    name.length >= 6 &&
+    name[0] == '.' &&
+    name.substr(name.length - 4) == '.enc'
+  ) {
+    const new_name = name.substr(1, name.length - 5);
+    return path.join(dir, new_name);
+  }
+  return undefined;
+}
+
+async function path_test() {
+  console.log(path.join('/home', '1.txt'));
+  console.log(path.basename('/a/b/c/d').split(/\s+/));
+  console.log(get_enc_filename('/1/2/3/1.txt'));
+  console.log(get_dec_filename('/1/2/3/.1.txt.enc'));
+
+  const res = await fs_ex.stat('/tmp/1.c');
+  console.log(res);
+  if (res.stats) {
+    console.log(res.stats.isFile());
+  }
+}
+path_test();

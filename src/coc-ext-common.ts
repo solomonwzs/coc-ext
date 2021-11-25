@@ -191,6 +191,22 @@ export async function activate(context: ExtensionContext): Promise<void> {
     //   },
     // })
   );
+
+  workspace.nvim.command('nmap <silent> <leader>t <Plug>(coc-ext-translate)');
+  workspace.nvim.command('vmap <silent> <leader>t <Plug>(coc-ext-translate-v)');
+
+  workspace.nvim.command(
+    'vmap <silent> <leader>du <Plug>(coc-ext-decode-utf8)'
+  );
+  workspace.nvim.command('vmap <silent> <leader>dg <Plug>(coc-ext-decode-gbk)');
+  workspace.nvim.command(
+    'vmap <silent> <leader>dm <Plug>(coc-ext-decode-mime)'
+  );
+
+  workspace.nvim.command(
+    'vmap <silent> <leader>eu <Plug>(coc-ext-encode-utf8)'
+  );
+  workspace.nvim.command('vmap <silent> <leader>eg <Plug>(coc-ext-encode-gbk)');
 }
 
 // async function getCompletionItems(): Promise<CompleteResult> {

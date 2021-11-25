@@ -23,3 +23,10 @@ export interface LangFormatterSetting {
   languages: string[];
   setting: FormatterSetting;
 }
+
+export interface CryptoSetting {
+  password: string;
+  openssl: string;
+  auto_enc: boolean;
+  salt: boolean;
+}

@@ -1,3 +1,3 @@
 {
-  "activationEvents": ["*"]
+  "activationEvents": ["workspaceContains:.crypto.json"]
 }
