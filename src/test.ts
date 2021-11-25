@@ -141,10 +141,8 @@ async function re_test() {
 }
 // re_test();
 
-function get_enc_filename(filename: string): string {
-  const dir = path.dirname(filename);
-  const name = path.basename(filename);
-  return path.join(dir, `.${name}.enc`);
+function get_enc_filename(filename: string, password: string): string {
+  return '';
 }
 
 function get_dec_filename(filename: string): string | undefined {
@@ -165,13 +163,14 @@ function get_dec_filename(filename: string): string | undefined {
 async function path_test() {
   console.log(path.join('/home', '1.txt'));
   console.log(path.basename('/a/b/c/d').split(/\s+/));
-  console.log(get_enc_filename('/1/2/3/1.txt'));
-  console.log(get_dec_filename('/1/2/3/.1.txt.enc'));
 
   const res = await fs_ex.stat('/tmp/1.c');
   console.log(res);
   if (res.stats) {
     console.log(res.stats.isFile());
   }
+
+  const s = '123=456=76\\';
+  console.log(s.replace(/=/gi, '-').replace(/\\/gi, '_'));
 }
 path_test();

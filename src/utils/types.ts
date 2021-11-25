@@ -29,4 +29,5 @@ export interface CryptoSetting {
   openssl: string;
   auto_enc: boolean;
   salt: boolean;
+  output_dir: string;
 }
