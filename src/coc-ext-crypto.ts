@@ -8,11 +8,12 @@ import {
   window,
   workspace,
 } from 'coc.nvim';
+import minimatch from 'minimatch';
 import path from 'path';
 import { CryptoSetting } from './utils/types';
-import { logger } from './utils/logger';
 import { call_shell, ExternalExecResponse } from './utils/externalexec';
 import { fs_ex } from './utils/file';
+import { logger } from './utils/logger';
 
 function get_enc_filename(filename: string): string {
   const dir = path.dirname(filename);
@@ -20,20 +21,20 @@ function get_enc_filename(filename: string): string {
   return path.join(dir, `.${name}.encrypted`);
 }
 
-// function get_dec_filename(filename: string): string | undefined {
-//   const dir = path.dirname(filename);
-//   const name = path.basename(filename);
+function get_dec_filename(filename: string): string | undefined {
+  const dir = path.dirname(filename);
+  const name = path.basename(filename);
 
-//   if (
-//     name.length >= 12 &&
-//     name[0] == '.' &&
-//     name.substr(name.length - 10) == '.encrypted'
-//   ) {
-//     const new_name = name.substr(1, name.length - 11);
-//     return path.join(dir, new_name);
-//   }
-//   return undefined;
-// }
+  if (
+    name.length >= 12 &&
+    name[0] == '.' &&
+    name.substr(name.length - 10) == '.encrypted'
+  ) {
+    const new_name = name.substr(1, name.length - 11);
+    return path.join(dir, new_name);
+  }
+  return undefined;
+}
 
 async function encrypt(
   doc: Document,
@@ -99,19 +100,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     setting = <CryptoSetting>JSON.parse(content);
   } catch (e) {
     window.showMessage(`open config file ${confpath} fail`);
-    return;
-  }
-
-  if (!setting.output_dir) {
-    window.showMessage(`no output_dir`);
-    return;
-  }
-  const stats = await fs_ex.stat(setting.output_dir);
-  if (
-    stats.error != undefined ||
-    (stats.stats != undefined && !stats.stats.isDirectory())
-  ) {
-    window.showMessage(`${setting.output_dir} was invalid`);
     return;
   }
 

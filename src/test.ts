@@ -6,6 +6,8 @@ import fs from 'fs';
 import { call_shell } from './utils/externalexec';
 import path from 'path';
 import { fs_ex } from './utils/file';
+import minimatch from 'minimatch';
+import { encode_aes256_str } from './utils/decoder';
 
 console.log('========');
 
@@ -172,5 +174,21 @@ async function path_test() {
 
   const s = '123=456=76\\';
   console.log(s.replace(/=/gi, '-').replace(/\\/gi, '_'));
+
+  const pattern = path.resolve('./**/*');
+  const mm = new minimatch.Minimatch(pattern, {
+    matchBase: true,
+  });
+  // console.log(mm.match('/home/solomon/workspace/js/coc-ext/lib/test.js'));
+  console.log(mm.match(path.resolve('./src/lists/commands.ts')));
 }
-path_test();
+// path_test();
+
+async function aes256_test() {
+  const s0 = await encode_aes256_str('hello world', {
+    password: '1234abcd',
+    prefix: '.enc_',
+  });
+  console.log(s0);
+}
+aes256_test();

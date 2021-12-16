@@ -1,5 +1,6 @@
 import { TextDecoder } from 'util';
-import { logger } from './logger';
+import { call_shell } from './externalexec';
+// import { logger } from './logger';
 
 export function decode_str(str: string, enc: string): string {
   const re = /\x(..)/g;
@@ -70,4 +71,32 @@ export function decode_mime_encode_str(str: string): string {
   text += decoder.decode(buf);
 
   return text;
+}
+
+export interface AES256Options {
+  password: string;
+  prefix?: string;
+  openssl?: string;
+}
+
+export async function encode_aes256_str(
+  str: string,
+  opts: AES256Options
+): Promise<string | null> {
+  const exec = opts.openssl ? opts.openssl : 'openssl';
+  const argv: string[] = [
+    'enc',
+    '-e',
+    '-pbkdf2',
+    '-pass',
+    `pass:${opts.password}`,
+    '-base64',
+    '-A',
+  ];
+  const res = await call_shell(exec, argv, str);
+  if (res.exitCode == 0 && res.data) {
+    const s = res.data.toString().replace(/\+/gi, '-').replace(/\//gi, '_');
+    return opts.prefix ? `${opts.prefix}${s}` : s;
+  }
+  return null;
 }

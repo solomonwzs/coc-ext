@@ -5,7 +5,9 @@
   "author": "solomon <solomon.wzs@gmail.com>",
   "license": "MIT",
   "main": "lib/index.js",
-  "keywords": ["coc.nvim"],
+  "keywords": [
+    "coc.nvim"
+  ],
   "engines": {
     "coc": "^0.0.80"
   },
@@ -39,6 +41,7 @@
   },
   "dependencies": {
     "@types/fs-extra": "^9.0.13",
+    "@types/minimatch": "^3.0.5",
     "@types/node": "^14.14.30",
     "vscode-uri": "^3.0.2"
   }
