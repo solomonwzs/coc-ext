@@ -76,7 +76,29 @@ export function decode_mime_encode_str(str: string): string {
 export interface AES256Options {
   password: string;
   prefix?: string;
+  suffix?: string;
   openssl?: string;
+  salt?: boolean;
+}
+
+function encode_safe_b64str(str: string): string {
+  if (str.length == 0) {
+    return '0';
+  }
+  let padding = 0;
+  if (str[str.length - 1] == '=') {
+    padding = str.length >= 2 && str[str.length - 2] == '=' ? 2 : 1;
+  }
+  const s = str.substr(0, str.length - padding);
+  return `${s.replace(/\+/gi, '-').replace(/\//gi, '_')}${padding}`;
+}
+
+function decode_safe_b64str(str: string): string {
+  const padding = str.charCodeAt(str.length - 1) - '0'.charCodeAt(0);
+  return `${str
+    .substr(0, str.length - 1)
+    .replace(/-/gi, '+')
+    .replace(/_/gi, '/')}${'='.repeat(padding)}`;
 }
 
 export async function encode_aes256_str(
@@ -87,16 +109,56 @@ export async function encode_aes256_str(
   const argv: string[] = [
     'enc',
     '-e',
+    '-aes256',
     '-pbkdf2',
     '-pass',
     `pass:${opts.password}`,
+    opts.salt ? '-salt' : '-nosalt',
     '-base64',
     '-A',
   ];
   const res = await call_shell(exec, argv, str);
   if (res.exitCode == 0 && res.data) {
-    const s = res.data.toString().replace(/\+/gi, '-').replace(/\//gi, '_');
-    return opts.prefix ? `${opts.prefix}${s}` : s;
+    return `${opts.prefix ? opts.prefix : ''}${encode_safe_b64str(
+      res.data.toString()
+    )}${opts.suffix ? opts.suffix : ''}`;
+  }
+  return null;
+}
+
+export async function decode_aes256_str(
+  str: string,
+  opts: AES256Options
+): Promise<string | null> {
+  let s = str;
+  if (opts.prefix) {
+    if (s.length <= opts.prefix.length) {
+      return null;
+    }
+    s = s.substr(opts.prefix.length);
+  }
+  if (opts.suffix) {
+    if (s.length <= opts.suffix.length) {
+      return null;
+    }
+    s = s.substr(1, s.length - opts.suffix.length);
+  }
+  s = decode_safe_b64str(s);
+  const exec = opts.openssl ? opts.openssl : 'openssl';
+  const argv: string[] = [
+    'des',
+    '-d',
+    '-aes256',
+    '-pbkdf2',
+    '-pass',
+    `pass:${opts.password}`,
+    opts.salt ? '-salt' : '-nosalt',
+    '-base64',
+    '-A',
+  ];
+  const res = await call_shell(exec, argv, s);
+  if (res.exitCode == 0 && res.data) {
+    return res.data.toString();
   }
   return null;
 }

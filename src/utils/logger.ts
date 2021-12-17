@@ -32,13 +32,14 @@ export class Logger {
           const line = expl[4];
           // const char = expl[5];
           this.channel.appendLine(
-            `${now.toISOString()} ${level} [${file}:${line}] ${str}`,
+            `${now.toISOString()} ${level} [${file}:${line}] ${str}`
           );
           return;
         }
       }
     }
-    this.channel.appendLine(`${now.toISOString()} ${level} ${str}`);
+    const fn = path.basename(__filename);
+    this.channel.appendLine(`${level} [${fn}] ${str}`);
   }
 
   public debug(value: any): void {

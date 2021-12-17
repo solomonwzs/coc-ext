@@ -7,7 +7,11 @@ import { call_shell } from './utils/externalexec';
 import path from 'path';
 import { fs_ex } from './utils/file';
 import minimatch from 'minimatch';
-import { encode_aes256_str } from './utils/decoder';
+import {
+  encode_aes256_str,
+  decode_aes256_str,
+  AES256Options,
+} from './utils/decoder';
 
 console.log('========');
 
@@ -181,14 +185,25 @@ async function path_test() {
   });
   // console.log(mm.match('/home/solomon/workspace/js/coc-ext/lib/test.js'));
   console.log(mm.match(path.resolve('./src/lists/commands.ts')));
+  console.log(path.resolve('/src/lists/commands.ts'));
+
+  const l = ['a', 'b', 'c'];
+  for (const i of l) {
+    console.log(i);
+  }
 }
-// path_test();
+path_test();
 
 async function aes256_test() {
-  const s0 = await encode_aes256_str('hello world', {
+  const opts: AES256Options = {
     password: '1234abcd',
     prefix: '.enc_',
-  });
+  };
+  const s0 = await encode_aes256_str('hello world', opts);
   console.log(s0);
+  if (s0) {
+    const s1 = await decode_aes256_str(s0, opts);
+    console.log(s1);
+  }
 }
-aes256_test();
+// aes256_test();
