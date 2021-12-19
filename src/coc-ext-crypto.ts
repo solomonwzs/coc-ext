@@ -10,16 +10,15 @@ import {
 } from 'coc.nvim';
 import minimatch from 'minimatch';
 import path from 'path';
-import { CryptoSetting } from './utils/types';
+import { CryptoSetting, Execution } from './utils/types';
 import { call_shell, ExternalExecResponse } from './utils/externalexec';
-import { fs_ex } from './utils/file';
+import { fs_stat, get_filelist } from './utils/file';
 import { logger } from './utils/logger';
 import {
   encode_aes256_str,
   decode_aes256_str,
   AES256Options,
 } from './utils/decoder';
-import fs from 'fs';
 
 const g_conf_filename = 'coc-ext-crypto.json';
 
@@ -69,6 +68,40 @@ class CryptoHandler {
     }
   }
 
+  private getEncryptCmd(filename: string): Execution {
+    return {
+      exec: this.setting.openssl ? this.setting.openssl : 'openssl',
+      args: [
+        'enc',
+        '-e',
+        '-aes256',
+        '-pbkdf2',
+        '-pass',
+        `pass:${this.setting.password}`,
+        this.setting.salt ? '-salt' : '-nosalt',
+        '-out',
+        filename,
+      ],
+    };
+  }
+
+  private getDecryptCmd(filename: string): Execution {
+    return {
+      exec: this.setting.openssl ? this.setting.openssl : 'openssl',
+      args: [
+        'des',
+        '-d',
+        '-aes256',
+        '-pbkdf2',
+        '-pass',
+        `pass:${this.setting.password}`,
+        this.setting.salt ? '-salt' : '-nosalt',
+        '-in',
+        filename,
+      ],
+    };
+  }
+
   public shouldEncrypt(filepath: string): boolean {
     const fp = path.resolve(filepath);
     for (const p of this.exclude_pattern) {
@@ -107,43 +140,38 @@ class CryptoHandler {
   public async encryptToFile(
     doc: Document
   ): Promise<ExternalExecResponse | null> {
-    const exec = this.setting.openssl ? this.setting.openssl : 'openssl';
     const filename = await this.getEncFilename(Uri.parse(doc.uri).fsPath);
     if (filename == null) {
       return null;
     }
-    const argv: string[] = [
-      'enc',
-      '-e',
-      '-aes256',
-      '-pbkdf2',
-      '-pass',
-      `pass:${this.setting.password}`,
-      this.setting.salt ? '-salt' : '-nosalt',
-      '-out',
-      filename,
-    ];
-    return call_shell(exec, argv, doc.textDocument.getText());
+    const cmd = this.getEncryptCmd(filename);
+    return call_shell(cmd.exec, cmd.args, doc.textDocument.getText());
+  }
+
+  public async encryptAllFiles() {
+    const includes: string[] = [];
+    if (this.setting.includes) {
+      for (const i of this.setting.includes) {
+        includes.push(path.resolve(i));
+      }
+    }
+    const fl = await get_filelist(workspace.root, 'find', includes);
+    if (!fl) {
+      window.showMessage('get file list fail');
+      return;
+    }
+    for (const f of fl) {
+      logger.debug([f, this.shouldEncrypt(f)]);
+    }
   }
 
   public async decryptFromFile(doc: Document): Promise<boolean> {
-    const exec = this.setting.openssl ? this.setting.openssl : 'openssl';
     const filename = await this.getEncFilename(Uri.parse(doc.uri).fsPath);
     if (filename == null) {
       return false;
     }
-    const argv: string[] = [
-      'des',
-      '-d',
-      '-aes256',
-      '-pbkdf2',
-      '-pass',
-      `pass:${this.setting.password}`,
-      this.setting.salt ? '-salt' : '-nosalt',
-      '-in',
-      filename,
-    ];
-    const res = await call_shell(exec, argv);
+    const cmd = this.getDecryptCmd(filename);
+    const res = await call_shell(cmd.exec, cmd.args);
     if (res.error != undefined || res.data == undefined) {
       return false;
     }
@@ -167,14 +195,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-crypto works`);
   logger.info(`coc-ext-crypto works`);
 
-  fs.readdir('.', (err, files) => {
-    files.forEach((file) => {
-      logger.info(file);
-    });
-  });
-
   const conf_path = path.join(workspace.root, g_conf_filename);
-  const stat = await fs_ex.stat(conf_path);
+  const stat = await fs_stat(conf_path);
   if (!(!stat.error && stat.stats && stat.stats.isFile())) {
     return;
   }
@@ -188,6 +210,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     commands.registerCommand('ext-decrypt', async () => {
       const doc = await workspace.document;
       await handler.decryptFromFile(doc);
+    }),
+
+    commands.registerCommand('ext-encrypt-all', async () => {
+      handler.encryptAllFiles();
     })
   );
 

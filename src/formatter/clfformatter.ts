@@ -47,7 +47,7 @@ export class ClfFormatter extends BaseFormatter {
     if (!setting['BasedOnStyle']) {
       setting['BasedOnStyle'] = 'Google';
     }
-    const argv: string[] = [
+    const args: string[] = [
       '-style',
       JSON.stringify(setting),
       '--assume-filename',
@@ -55,11 +55,11 @@ export class ClfFormatter extends BaseFormatter {
     ];
 
     // if (range) {
-    //   argv.push('--lines', `${range.start.line}:${range.end.line}`);
+    //   args.push('--lines', `${range.start.line}:${range.end.line}`);
     // }
 
     const exec = this.setting.exec ? this.setting.exec : 'clang-format';
-    const resp = await call_shell(exec, argv, document.getText());
+    const resp = await call_shell(exec, args, document.getText());
     if (resp.exitCode != 0) {
       window.showMessage(`clang-format fail, ret ${resp.exitCode}`);
       if (resp.error) {

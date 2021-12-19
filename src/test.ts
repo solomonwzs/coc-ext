@@ -191,6 +191,9 @@ async function path_test() {
   for (const i of l) {
     console.log(i);
   }
+
+  const fl = await fs_ex.get_filelist('/home/solomon/tmp/note');
+  console.log(fl);
 }
 path_test();
 

@@ -9,11 +9,11 @@ export interface ExternalExecResponse {
 
 export async function call_shell(
   cmd: string,
-  argv: string[],
+  args: string[],
   input?: string | Buffer,
 ): Promise<ExternalExecResponse> {
   return new Promise(resolve => {
-    const sh = spawn(cmd, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const sh = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
     if (input) {
       sh.stdin.write(input);
@@ -46,13 +46,13 @@ export async function call_shell(
 export async function call_python(
   module: string,
   func: string,
-  argv: any[],
+  args: any[],
 ): Promise<ExternalExecResponse> {
   return new Promise(resolve => {
     const msg = JSON.stringify({
       module,
       func,
-      argv,
+      args,
     });
 
     let root_dir = process.env.COC_VIMCONFIG;

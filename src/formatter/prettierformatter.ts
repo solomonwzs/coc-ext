@@ -33,14 +33,14 @@ export class PrettierFormatter extends BaseFormatter {
     }
 
     const filepath = await getTempFileWithDocumentContents(document);
-    const argv: string[] = [];
+    const args: string[] = [];
     if (this.setting.prettierOptions) {
-      argv.push(...this.setting.prettierOptions);
+      args.push(...this.setting.prettierOptions);
     }
-    argv.push(filepath);
+    args.push(filepath);
 
     const exec = this.setting.exec ? this.setting.exec : 'prettier';
-    const resp = await call_shell(exec, argv);
+    const resp = await call_shell(exec, args);
     fs.unlinkSync(filepath);
     if (resp.exitCode != 0) {
       window.showMessage(`prettier fail, ret ${resp.exitCode}`);

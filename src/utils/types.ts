@@ -4,9 +4,8 @@ export declare type KeymapMode = 'v' | 'n' | undefined;
 
 export declare type Nullable<T> = T | null | undefined;
 
-export interface ExecutionInfo {
-  execPath: string;
-  moduleName?: string;
+export interface Execution {
+  exec: string;
   args: string[];
 }
 

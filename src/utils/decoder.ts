@@ -106,7 +106,7 @@ export async function encode_aes256_str(
   opts: AES256Options
 ): Promise<string | null> {
   const exec = opts.openssl ? opts.openssl : 'openssl';
-  const argv: string[] = [
+  const args: string[] = [
     'enc',
     '-e',
     '-aes256',
@@ -117,7 +117,7 @@ export async function encode_aes256_str(
     '-base64',
     '-A',
   ];
-  const res = await call_shell(exec, argv, str);
+  const res = await call_shell(exec, args, str);
   if (res.exitCode == 0 && res.data) {
     return `${opts.prefix ? opts.prefix : ''}${encode_safe_b64str(
       res.data.toString()
@@ -145,7 +145,7 @@ export async function decode_aes256_str(
   }
   s = decode_safe_b64str(s);
   const exec = opts.openssl ? opts.openssl : 'openssl';
-  const argv: string[] = [
+  const args: string[] = [
     'des',
     '-d',
     '-aes256',
@@ -156,7 +156,7 @@ export async function decode_aes256_str(
     '-base64',
     '-A',
   ];
-  const res = await call_shell(exec, argv, s);
+  const res = await call_shell(exec, args, s);
   if (res.exitCode == 0 && res.data) {
     return res.data.toString();
   }
