@@ -1,5 +1,6 @@
-import { spawn } from 'child_process';
 import path from 'path';
+import { Execution } from './types';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 
 export interface ExternalExecResponse {
   exitCode: number;
@@ -7,12 +8,78 @@ export interface ExternalExecResponse {
   error: Buffer | undefined;
 }
 
+export async function call_multi_cmd_shell(
+  cmd_list: Execution[],
+  input?: string | Buffer
+): Promise<ExternalExecResponse> {
+  if (cmd_list.length == 0) {
+    return {
+      exitCode: -1,
+      data: undefined,
+      error: undefined,
+    };
+  }
+  return new Promise((resolve) => {
+    const pl: ChildProcessWithoutNullStreams[] = [];
+    for (const i of cmd_list) {
+      pl.push(spawn(i.exec, i.args, { stdio: ['pipe', 'pipe', 'pipe'] }));
+    }
+    if (input) {
+      pl[0].stdin.write(input);
+      pl[0].stdin.end();
+    }
+
+    let exitCode = 0;
+    const data: Buffer[] = [];
+    const error: Buffer[] = [];
+    for (let i = 1; i < pl.length; ++i) {
+      pl[i - 1].stdout.on('data', (d: Buffer) => {
+        pl[i].stdin.write(d);
+      });
+      pl[i - 1].stderr.on('data', (d: Buffer) => {
+        error.push(d);
+      });
+      pl[i - 1].on('close', (code, signal) => {
+        pl[i].stdin.end();
+        if (code) {
+          exitCode = code;
+        }
+        if (code != 0 || signal) {
+          resolve({
+            exitCode,
+            data: undefined,
+            error: error.length == 0 ? undefined : Buffer.concat(error),
+          });
+        }
+      });
+    }
+
+    const last = pl.length - 1;
+    pl[last].stdout.on('data', (d: Buffer) => {
+      data.push(d);
+    });
+    pl[last].stderr.on('data', (d: Buffer) => {
+      error.push(d);
+    });
+    pl[last].on('close', (code) => {
+      if (code) {
+        exitCode = code;
+      }
+      resolve({
+        exitCode,
+        data: data.length == 0 ? undefined : Buffer.concat(data),
+        error: error.length == 0 ? undefined : Buffer.concat(error),
+      });
+    });
+  });
+}
+
 export async function call_shell(
   cmd: string,
   args: string[],
-  input?: string | Buffer,
+  input?: string | Buffer
 ): Promise<ExternalExecResponse> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const sh = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
     if (input) {
@@ -30,7 +97,7 @@ export async function call_shell(
     sh.stderr.on('data', (d: Buffer) => {
       error.push(d);
     });
-    sh.on('close', code => {
+    sh.on('close', (code) => {
       if (code) {
         exitCode = code;
       }
@@ -46,9 +113,9 @@ export async function call_shell(
 export async function call_python(
   module: string,
   func: string,
-  args: any[],
+  args: any[]
 ): Promise<ExternalExecResponse> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const msg = JSON.stringify({
       module,
       func,
@@ -74,7 +141,7 @@ export async function call_python(
     py.stderr.on('data', (d: Buffer) => {
       error.push(d);
     });
-    py.on('close', code => {
+    py.on('close', (code) => {
       if (code) {
         exitCode = code;
       }

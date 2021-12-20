@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { call_shell } from './externalexec';
-import { logger } from './logger';
+// import { logger } from './logger';
 
 export interface Stats {
   stats: fs.Stats | undefined;
@@ -51,7 +51,7 @@ export async function get_filelist(
       }
       args.push(')');
     }
-    logger.debug(args);
+    // logger.debug(args);
   } else {
     return null;
   }
@@ -59,7 +59,7 @@ export async function get_filelist(
   const res = await call_shell(exec, args);
   if (res.exitCode != 0) {
     if (res.error) {
-      logger.error(res.error.toString());
+      // logger.error(res.error.toString());
     }
     return null;
   }
