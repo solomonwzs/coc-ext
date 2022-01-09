@@ -27,8 +27,7 @@ export async function fs_stat(filename: string): Promise<Stats> {
 
 export async function get_filelist(
   dir_path: string,
-  cmd?: string,
-  includes?: string[]
+  cmd?: string
 ): Promise<string[] | null> {
   let args: string[];
   let exec: string;
@@ -38,20 +37,6 @@ export async function get_filelist(
   } else if (cmd == 'find' || cmd == undefined) {
     exec = 'find';
     args = [dir_path, '-type', 'f'];
-    if (includes && includes.length != 0) {
-      args.push('(');
-      let cnt = 0;
-      for (const i of includes) {
-        if (cnt != 0) {
-          args.push('-o');
-        }
-        args.push('-iwholename');
-        args.push(i);
-        cnt += 1;
-      }
-      args.push(')');
-    }
-    // logger.debug(args);
   } else {
     return null;
   }

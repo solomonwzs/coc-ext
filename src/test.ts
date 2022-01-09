@@ -147,7 +147,7 @@ async function call_test() {
     console.log(res.data.toString());
   }
 }
-call_test();
+// call_test();
 
 async function re_test() {
   const str =
@@ -174,7 +174,7 @@ async function path_test() {
   const s = '123=456=76\\';
   console.log(s.replace(/=/gi, '-').replace(/\\/gi, '_'));
 
-  const pattern = path.resolve('./**/*');
+  const pattern = path.resolve('**/*.ts');
   const mm = new minimatch.Minimatch(pattern, {
     matchBase: true,
   });
@@ -190,7 +190,7 @@ async function path_test() {
   const fl = await get_filelist('/home/solomon/tmp/note');
   console.log(fl);
 }
-// path_test();
+path_test();
 
 async function aes256_test() {
   const opts: AES256Options = {

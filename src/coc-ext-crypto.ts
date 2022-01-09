@@ -68,37 +68,45 @@ class CryptoHandler {
     }
   }
 
-  private getEncryptCmd(filename: string): Execution {
+  private getEncryptCmd(output_file: string, input_file?: string): Execution {
+    const args: string[] = [
+      'enc',
+      '-e',
+      '-aes256',
+      '-pbkdf2',
+      '-pass',
+      `pass:${this.setting.password}`,
+      this.setting.salt ? '-salt' : '-nosalt',
+      '-out',
+      output_file,
+    ];
+    if (input_file && input_file.length != 0) {
+      args.push('-in', input_file);
+    }
     return {
       exec: this.setting.openssl ? this.setting.openssl : 'openssl',
-      args: [
-        'enc',
-        '-e',
-        '-aes256',
-        '-pbkdf2',
-        '-pass',
-        `pass:${this.setting.password}`,
-        this.setting.salt ? '-salt' : '-nosalt',
-        '-out',
-        filename,
-      ],
+      args,
     };
   }
 
-  private getDecryptCmd(filename: string): Execution {
+  private getDecryptCmd(input_file: string, output_file?: string): Execution {
+    const args: string[] = [
+      'des',
+      '-d',
+      '-aes256',
+      '-pbkdf2',
+      '-pass',
+      `pass:${this.setting.password}`,
+      this.setting.salt ? '-salt' : '-nosalt',
+      '-in',
+      input_file,
+    ];
+    if (output_file && output_file.length != 0) {
+      args.push('-out', output_file);
+    }
     return {
       exec: this.setting.openssl ? this.setting.openssl : 'openssl',
-      args: [
-        'des',
-        '-d',
-        '-aes256',
-        '-pbkdf2',
-        '-pass',
-        `pass:${this.setting.password}`,
-        this.setting.salt ? '-salt' : '-nosalt',
-        '-in',
-        filename,
-      ],
+      args,
     };
   }
 
@@ -155,13 +163,23 @@ class CryptoHandler {
         includes.push(path.resolve(i));
       }
     }
-    const fl = await get_filelist(workspace.root, 'find', includes);
+    const fl = await get_filelist(workspace.root, 'find');
     if (!fl) {
       window.showMessage('get file list fail');
       return;
     }
     for (const f of fl) {
-      logger.debug([f, this.shouldEncrypt(f)]);
+      if (this.shouldEncrypt(f)) {
+        const new_name = await this.getEncFilename(Uri.parse(f).fsPath);
+        if (new_name == null) {
+          continue;
+        }
+        const cmd = this.getEncryptCmd(new_name, f);
+        const res = await call_shell(cmd.exec, cmd.args);
+        if (res.exitCode != 0) {
+          logger.error(`encrypt ${f} fail`);
+        }
+      }
     }
   }
 
