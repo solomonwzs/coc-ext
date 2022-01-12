@@ -23,12 +23,12 @@ export class LuaFormatter extends BaseFormatter {
     this.opts_has_indent_width = false;
     this.opts_has_usetab = false;
     if (this.setting.luaFormatOptions) {
-      for (const i in this.setting.luaFormatOptions) {
-        this.opts.push(this.setting.luaFormatOptions[i]);
+      for (const i of this.setting.luaFormatOptions) {
+        this.opts.push(i);
 
-        if (this.setting.luaFormatOptions[i].search('indent-width') != -1) {
+        if (i.search('indent-width') != -1) {
           this.opts_has_indent_width = true;
-        } else if (this.setting.luaFormatOptions[i].search('use-tab') != -1) {
+        } else if (i.search('use-tab') != -1) {
           this.opts_has_usetab = true;
         }
       }

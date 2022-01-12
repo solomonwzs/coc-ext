@@ -17,6 +17,7 @@ import { ClfFormatter } from '../formatter/clfformatter';
 import { PrettierFormatter } from '../formatter/prettierformatter';
 import { BazelFormatter } from '../formatter/bazelformatter';
 import { LuaFormatter } from '../formatter/luaformatter';
+import { ShellFormatter } from '../formatter/shellformatter';
 
 export class FormattingEditProvider
   implements
@@ -34,6 +35,8 @@ export class FormattingEditProvider
       this.formatter = new BazelFormatter(setting);
     } else if (setting.provider == 'lua-format') {
       this.formatter = new LuaFormatter(setting);
+    } else if (setting.provider == 'shfmt') {
+      this.formatter = new ShellFormatter(setting);
     } else {
       this.formatter = null;
     }
