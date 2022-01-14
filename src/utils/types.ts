@@ -12,11 +12,7 @@ export interface Execution {
 export interface FormatterSetting {
   provider: string;
   exec?: string;
-  args?: string[];
-  clangFormStyle?: Record<string, string>;
-  prettierOptions?: string[];
-  luaFormatOptions?: string[];
-  shellFormatOptions?: string[];
+  args?: string[] | Record<string, string>;
 }
 
 export interface LangFormatterSetting {

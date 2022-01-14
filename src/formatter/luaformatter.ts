@@ -22,8 +22,8 @@ export class LuaFormatter extends BaseFormatter {
     this.opts = [];
     this.opts_has_indent_width = false;
     this.opts_has_usetab = false;
-    if (this.setting.luaFormatOptions) {
-      for (const i of this.setting.luaFormatOptions) {
+    if (this.setting.args) {
+      for (const i of this.setting.args as string[]) {
         this.opts.push(i);
 
         if (i.search('indent-width') != -1) {

@@ -32,3 +32,11 @@ export function stringify(value: any): string {
     return JSON.stringify(value, null, 2);
   }
 }
+
+export function pad(n: string, total: number): string {
+  const l = total - n.length;
+  if (l <= 0) {
+    return '';
+  }
+  return new Array(l).fill(' ').join('');
+}

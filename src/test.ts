@@ -189,6 +189,9 @@ async function path_test() {
 
   const fl = await get_filelist('/home/solomon/tmp/note');
   console.log(fl);
+
+  const color_codes: Record<string, [number, number]> = { a: [1, 2] };
+  console.log(color_codes['b']);
 }
 path_test();
 

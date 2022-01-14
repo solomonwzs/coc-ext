@@ -15,6 +15,7 @@ import {
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
+import MapkeyList from './lists/mapkey';
 import { google_translate } from './translators/google';
 import { bing_translate } from './translators/bing';
 import { logger } from './utils/logger';
@@ -22,8 +23,50 @@ import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
 import { call_python } from './utils/externalexec';
 import { FormattingEditProvider } from './formatter/formatprovider';
-import { LangFormatterSetting } from './utils/types';
+import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import getcfg from './utils/config';
+
+const cppFmtSetting: FormatterSetting = {
+  provider: 'clang-format',
+  args: {
+    AlignConsecutiveMacros: 'true',
+    AlignEscapedNewlines: 'Left',
+    AllowShortFunctionsOnASingleLine: 'Inline',
+    BasedOnStyle: 'Google',
+    Standard: 'C++11',
+  },
+};
+
+const jsFmtSetting: FormatterSetting = {
+  provider: 'prettier',
+  args: ['--config-precedence', 'cli-override', '--print-width', '80'],
+};
+
+const bzlFmtSteeing: FormatterSetting = {
+  provider: 'bazel-buildifier',
+};
+
+const luaFmtSteeing: FormatterSetting = {
+  provider: 'lua-format',
+  args: ['--column-table-limit=80'],
+};
+
+const shFmtSetting: FormatterSetting = {
+  provider: 'shfmt',
+  args: ['-i', '4'],
+};
+
+const defaultFmtSetting: Record<string, FormatterSetting> = {
+  c: cppFmtSetting,
+  cpp: cppFmtSetting,
+  typescript: jsFmtSetting,
+  json: jsFmtSetting,
+  javascript: jsFmtSetting,
+  html: jsFmtSetting,
+  bzl: bzlFmtSteeing,
+  lua: luaFmtSteeing,
+  sh: shFmtSetting,
+};
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
@@ -71,6 +114,23 @@ function encodeStrFn(enc: string): () => ProviderResult<any> {
   };
 }
 
+function addFormatter(
+  context: ExtensionContext,
+  lang: string,
+  setting: FormatterSetting
+) {
+  const selector = [{ scheme: 'file', language: lang }];
+  const provider = new FormattingEditProvider(setting);
+  context.subscriptions.push(
+    languages.registerDocumentFormatProvider(selector, provider, 1)
+  );
+  if (provider.supportRangeFormat()) {
+    context.subscriptions.push(
+      languages.registerDocumentRangeFormatProvider(selector, provider, 1)
+    );
+  }
+}
+
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
   logger.info(`coc-ext-common works`);
@@ -78,21 +138,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(process.env.COC_VIMCONFIG);
 
   // const { nvim } = workspace;
+  const langFmtSet = new Set<string>();
   const formatterSettings = getcfg<LangFormatterSetting[]>('formatting', []);
   formatterSettings.forEach((s) => {
     s.languages.forEach((lang) => {
-      const selector = [{ scheme: 'file', language: lang }];
-      const provider = new FormattingEditProvider(s.setting);
-      context.subscriptions.push(
-        languages.registerDocumentFormatProvider(selector, provider, 1)
-      );
-      if (provider.supportRangeFormat()) {
-        context.subscriptions.push(
-          languages.registerDocumentRangeFormatProvider(selector, provider, 1)
-        );
-      }
+      langFmtSet.add(lang);
+      addFormatter(context, lang, s.setting);
     });
   });
+  for (const k in defaultFmtSetting) {
+    if (!langFmtSet.has(k)) {
+      addFormatter(context, k, defaultFmtSetting[k]);
+    }
+  }
 
   context.subscriptions.push(
     commands.registerCommand(
@@ -173,7 +231,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ),
 
     listManager.registerList(new ExtList(workspace.nvim)),
-    listManager.registerList(new CommandsList(workspace.nvim))
+    listManager.registerList(new CommandsList(workspace.nvim)),
+    listManager.registerList(new MapkeyList(workspace.nvim))
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id
@@ -191,22 +250,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     //   },
     // })
   );
-
-  workspace.nvim.command('nmap <silent> <leader>t <Plug>(coc-ext-translate)');
-  workspace.nvim.command('vmap <silent> <leader>t <Plug>(coc-ext-translate-v)');
-
-  workspace.nvim.command(
-    'vmap <silent> <leader>du <Plug>(coc-ext-decode-utf8)'
-  );
-  workspace.nvim.command('vmap <silent> <leader>dg <Plug>(coc-ext-decode-gbk)');
-  workspace.nvim.command(
-    'vmap <silent> <leader>dm <Plug>(coc-ext-decode-mime)'
-  );
-
-  workspace.nvim.command(
-    'vmap <silent> <leader>eu <Plug>(coc-ext-encode-utf8)'
-  );
-  workspace.nvim.command('vmap <silent> <leader>eg <Plug>(coc-ext-encode-gbk)');
 }
 
 // async function getCompletionItems(): Promise<CompleteResult> {

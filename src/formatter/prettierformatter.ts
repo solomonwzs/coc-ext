@@ -34,8 +34,8 @@ export class PrettierFormatter extends BaseFormatter {
 
     const filepath = await getTempFileWithDocumentContents(document);
     const args: string[] = [];
-    if (this.setting.prettierOptions) {
-      args.push(...this.setting.prettierOptions);
+    if (this.setting.args) {
+      args.push(...(this.setting.args as string[]));
     }
     args.push(filepath);
 

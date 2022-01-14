@@ -33,9 +33,9 @@ export class ClfFormatter extends BaseFormatter {
 
     const filepath = Uri.parse(document.uri).fsPath;
     const setting: Record<string, string> = {};
-    if (this.setting.clangFormStyle) {
-      for (const k in this.setting.clangFormStyle) {
-        setting[k] = this.setting.clangFormStyle[k];
+    if (this.setting.args) {
+      for (const k in this.setting.args) {
+        setting[k] = this.setting.args[k];
       }
     }
     if (options.tabSize !== undefined && !setting['IndentWidth']) {

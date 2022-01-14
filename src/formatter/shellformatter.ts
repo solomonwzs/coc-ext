@@ -18,10 +18,8 @@ export class ShellFormatter extends BaseFormatter {
     super(setting);
 
     this.opts = [];
-    if (this.setting.shellFormatOptions) {
-      for (const i of this.setting.shellFormatOptions) {
-        this.opts.push(i);
-      }
+    if (this.setting.args) {
+      this.opts.push(...(this.setting.args as string[]));
     }
   }
 
