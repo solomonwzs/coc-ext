@@ -40,12 +40,12 @@ export class ShellFormatter extends BaseFormatter {
     const exec = this.setting.exec ? this.setting.exec : 'shfmt';
     const resp = await call_shell(exec, this.opts, document.getText());
     if (resp.exitCode != 0) {
-      window.showMessage(`buildifier fail, ret ${resp.exitCode}`);
+      window.showMessage(`shfmt fail, ret ${resp.exitCode}`);
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
-      window.showMessage('buildifier ok');
+      window.showMessage('shfmt ok');
       return [
         TextEdit.replace(
           {
