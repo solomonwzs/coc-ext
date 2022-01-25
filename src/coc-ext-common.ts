@@ -12,6 +12,8 @@ import {
   // sources,
   // window,
   workspace,
+  Document,
+  Range,
 } from 'coc.nvim';
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
@@ -21,7 +23,7 @@ import { bing_translate } from './translators/bing';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
-import { call_python } from './utils/externalexec';
+import { call_python, ExternalExecResponse } from './utils/externalexec';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import getcfg from './utils/config';
@@ -68,6 +70,19 @@ const defaultFmtSetting: Record<string, FormatterSetting> = {
   sh: shFmtSetting,
 };
 
+async function replaceExecText(
+  doc: Document,
+  range: Range,
+  res: ExternalExecResponse
+) {
+  if (res.exitCode == 0 && res.data) {
+    const ed = TextEdit.replace(range, res.data.toString('utf8'));
+    await doc.applyEdits([ed]);
+  } else {
+    logger.error(res.error?.toString('utf8'));
+  }
+}
+
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
     const text = await getText(mode);
@@ -86,8 +101,12 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
 
 function decodeStrFn(enc: string): () => ProviderResult<any> {
   return async () => {
+    const python_dir = getcfg<string>('python_dir', '');
     const text = await getText('v');
-    const res = await call_python('coder', 'decode_str', [text, enc]);
+    const res = await call_python(python_dir, 'coder', 'decode_str', [
+      text,
+      enc,
+    ]);
     if (res.exitCode == 0 && res.data) {
       popup(`[${enc.toUpperCase()} decode]\n\n${res.data.toString('utf8')}`);
     } else {
@@ -98,19 +117,18 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
 
 function encodeStrFn(enc: string): () => ProviderResult<any> {
   return async () => {
+    const python_dir = getcfg<string>('python_dir', '');
     const doc = await workspace.document;
     const range = await workspace.getSelectedRange('v', doc);
     if (!range) {
       return;
     }
     const text = doc.textDocument.getText(range);
-    const res = await call_python('coder', 'encode_str', [text, enc]);
-    if (res.exitCode == 0 && res.data) {
-      const ed = TextEdit.replace(range, res.data.toString('utf8'));
-      await doc.applyEdits([ed]);
-    } else {
-      logger.error(res.error?.toString('utf8'));
-    }
+    const res = await call_python(python_dir, 'coder', 'encode_str', [
+      text,
+      enc,
+    ]);
+    replaceExecText(doc, range, res);
   };
 }
 
@@ -216,6 +234,30 @@ export async function activate(context: ExtensionContext): Promise<void> {
     workspace.registerKeymap(['v'], 'ext-decode-gbk', decodeStrFn('gbk'), {
       sync: false,
     }),
+
+    workspace.registerKeymap(
+      ['v'],
+      'ext-change-name-rule',
+      async () => {
+        const python_dir = getcfg<string>('python_dir', '');
+        const doc = await workspace.document;
+        const range = await workspace.getSelectedRange('v', doc);
+        if (!range) {
+          return;
+        }
+        const name = doc.textDocument.getText(range);
+        const res = await call_python(
+          python_dir,
+          'common',
+          'change_name_rule',
+          [name]
+        );
+        replaceExecText(doc, range, res);
+      },
+      {
+        sync: false,
+      }
+    ),
 
     workspace.registerKeymap(
       ['v'],

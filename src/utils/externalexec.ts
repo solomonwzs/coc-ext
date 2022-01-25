@@ -111,22 +111,19 @@ export async function call_shell(
 }
 
 export async function call_python(
-  module: string,
-  func: string,
-  args: any[]
+  python_dir: string,
+  m: string,
+  f: string,
+  a: any[]
 ): Promise<ExternalExecResponse> {
   return new Promise((resolve) => {
-    const msg = JSON.stringify({
-      module,
-      func,
-      args,
-    });
+    const msg = JSON.stringify({ m, f, a });
 
     let root_dir = process.env.COC_VIMCONFIG;
     if (!root_dir) {
       root_dir = '.';
     }
-    const script = path.join(root_dir, 'pythonx', 'coc-ext.py');
+    const script = path.join(root_dir, python_dir, 'coc-ext.py');
     const py = spawn('python3', [script], { stdio: ['pipe', 'pipe', 'pipe'] });
     py.stdin.write(msg);
     py.stdin.end();

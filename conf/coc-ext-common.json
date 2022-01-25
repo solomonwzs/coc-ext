@@ -32,6 +32,11 @@
           "items": {
             "type": "object"
           }
+        },
+        "coc-ext.python_dir": {
+          "type": "string",
+          "default": "pythonx",
+          "description": "coc-ext python directory"
         }
       }
     },
