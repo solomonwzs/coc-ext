@@ -3,9 +3,9 @@ import { RequestOptions } from 'https';
 import { TextDecoder, TextEncoder } from 'util';
 import { simpleHttpsRequest } from './utils/http';
 import fs from 'fs';
-import { call_shell, call_multi_cmd_shell } from './utils/externalexec';
+import { callShell, callMultiCmdShell } from './utils/externalexec';
 import path from 'path';
-import { fs_stat, get_filelist } from './utils/file';
+import { fsStat, getFilesList } from './utils/file';
 import minimatch from 'minimatch';
 import {
   encode_aes256_str,
@@ -125,7 +125,7 @@ async function call_test() {
   //   BasedOnStyle: 'Google',
   //   AllowShortFunctionsOnASingleLine: 'Inline',
   // };
-  // const resp = await call_shell(
+  // const resp = await callShell(
   //   'clang-format',
   //   ['-style', JSON.stringify(style)],
   //   'int main() { return 0;}'
@@ -133,7 +133,7 @@ async function call_test() {
   // if (resp.exitCode == 0 && resp.data) {
   //   console.log(resp.data.toString());
   // }
-  const res = await call_multi_cmd_shell([
+  const res = await callMultiCmdShell([
     {
       exec: 'find',
       args: ['/home/solomon/tmp/note', '-type', 'f'],
@@ -166,7 +166,7 @@ async function path_test() {
   console.log(path.join('/home', '1.txt'));
   console.log(path.basename('/a/b/c/d').split(/\s+/));
 
-  const res = await fs_stat('/tmp/1.c');
+  const res = await fsStat('/tmp/1.c');
   console.log(res);
   if (res.stats) {
     console.log(res.stats.isFile());
@@ -188,7 +188,7 @@ async function path_test() {
     console.log(i);
   }
 
-  const fl = await get_filelist('/home/solomon/tmp/note');
+  const fl = await getFilesList('/home/solomon/tmp/note');
   console.log(fl);
 
   const color_codes: Record<string, [number, number]> = { a: [1, 2] };

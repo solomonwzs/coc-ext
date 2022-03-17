@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { call_shell } from './externalexec';
+import { callShell } from './externalexec';
 // import { logger } from './logger';
 
 export interface Stats {
@@ -7,7 +7,7 @@ export interface Stats {
   error: NodeJS.ErrnoException | undefined;
 }
 
-export async function fs_stat(filename: string): Promise<Stats> {
+export async function fsStat(filename: string): Promise<Stats> {
   return new Promise((resolve) => {
     fs.stat(filename, (err, stats) => {
       if (err == null) {
@@ -25,7 +25,7 @@ export async function fs_stat(filename: string): Promise<Stats> {
   });
 }
 
-export async function get_filelist(
+export async function getFilesList(
   dir_path: string,
   cmd?: string
 ): Promise<string[] | null> {
@@ -41,7 +41,7 @@ export async function get_filelist(
     return null;
   }
 
-  const res = await call_shell(exec, args);
+  const res = await callShell(exec, args);
   if (res.exitCode != 0) {
     if (res.error) {
       // logger.error(res.error.toString());

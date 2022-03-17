@@ -18,7 +18,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(workspace.getConfiguration('coc-ext.erlang'));
 
   const server_path: string = getcfg<string>(
-    'erlang.erlang_ls_path',
+    'erlang.erlangLsPath',
     '/bin/erlang_ls',
   );
 

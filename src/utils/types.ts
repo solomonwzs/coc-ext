@@ -23,7 +23,7 @@ export interface LangFormatterSetting {
 export interface CryptoSetting {
   password: string;
   openssl?: string;
-  auto_enc?: boolean;
+  autoEnc?: boolean;
   salt?: boolean;
   includes?: string[];
   excludes?: string[];

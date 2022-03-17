@@ -10,7 +10,7 @@ import {
   languages,
   listManager,
   // sources,
-  // window,
+  window,
   workspace,
   Document,
   Range,
@@ -23,7 +23,7 @@ import { bingTranslate } from './translators/bing';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
-import { call_python, ExternalExecResponse } from './utils/externalexec';
+import { callPython, ExternalExecResponse } from './utils/externalexec';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import getcfg from './utils/config';
@@ -101,12 +101,9 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
 
 function decodeStrFn(enc: string): () => ProviderResult<any> {
   return async () => {
-    const python_dir = getcfg<string>('python_dir', '');
+    const pythonDir = getcfg<string>('pythonDir', '');
     const text = await getText('v');
-    const res = await call_python(python_dir, 'coder', 'decode_str', [
-      text,
-      enc,
-    ]);
+    const res = await callPython(pythonDir, 'coder', 'decode_str', [text, enc]);
     if (res.exitCode == 0 && res.data) {
       popup(`[${enc.toUpperCase()} decode]\n\n${res.data.toString('utf8')}`);
     } else {
@@ -117,17 +114,14 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
 
 function encodeStrFn(enc: string): () => ProviderResult<any> {
   return async () => {
-    const python_dir = getcfg<string>('python_dir', '');
+    const pythonDir = getcfg<string>('pythonDir', '');
     const doc = await workspace.document;
     const range = await workspace.getSelectedRange('v', doc);
     if (!range) {
       return;
     }
     const text = doc.textDocument.getText(range);
-    const res = await call_python(python_dir, 'coder', 'encode_str', [
-      text,
-      enc,
-    ]);
+    const res = await callPython(pythonDir, 'coder', 'encode_str', [text, enc]);
     replaceExecText(doc, range, res);
   };
 }
@@ -174,23 +168,34 @@ export async function activate(context: ExtensionContext): Promise<void> {
     commands.registerCommand(
       'ext-debug',
       async () => {
-        const id: number = await workspace.nvim.call('ui#window#new', {
-          position: 'top',
-        });
-        const w = workspace.nvim.createWindow(id);
-        logger.info(w.id);
+        // const id: number = await workspace.nvim.call('ui#window#new', {
+        //   position: 'top',
+        // });
+        // const w = workspace.nvim.createWindow(id);
+        // logger.info(w.id);
 
-        const doc = await workspace.document;
-        const ed = TextEdit.replace(
-          {
-            start: { line: 0, character: 0 },
-            end: { line: doc.lineCount, character: 0 },
-          },
-          'hello world'
-        );
-        await doc.applyEdits([ed]);
-        await workspace.nvim.command('setlocal nomodifiable');
+        // const doc = await workspace.document;
+        // const ed = TextEdit.replace(
+        //   {
+        //     start: { line: 0, character: 0 },
+        //     end: { line: doc.lineCount, character: 0 },
+        //   },
+        //   'hello world'
+        // );
+        // await doc.applyEdits([ed]);
+        // await workspace.nvim.command('setlocal nomodifiable');
 
+        // const x = await workspace.nvim.call('luaeval', [
+        //   'print(_A[1] + _A[2])',
+        //   [2, 3],
+        // ]);
+        // logger.debug(x);
+        // await workspace.nvim.call('luaeval', ['vim.notify(_A)', 'hi']);
+        // await workspace.nvim.call('luaeval', [
+        //   'require("coc-ext").quickpick(_A[1], _A[2], _A[3])',
+        //   ['hello', [1, 2, 3], 'coc.quickpick.12345'],
+        // ]);
+        
         // const doc = [{
         //   content: '[title]\n\nabc@edf.com',
         //   filetype: 'markdown',
@@ -239,19 +244,16 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ['v'],
       'ext-change-name-rule',
       async () => {
-        const python_dir = getcfg<string>('python_dir', '');
+        const pythonDir = getcfg<string>('pythonDir', '');
         const doc = await workspace.document;
         const range = await workspace.getSelectedRange('v', doc);
         if (!range) {
           return;
         }
         const name = doc.textDocument.getText(range);
-        const res = await call_python(
-          python_dir,
-          'common',
-          'change_name_rule',
-          [name]
-        );
+        const res = await callPython(pythonDir, 'common', 'change_name_rule', [
+          name,
+        ]);
         replaceExecText(doc, range, res);
       },
       {

@@ -9,7 +9,7 @@ import {
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { call_shell } from '../utils/externalexec';
+import { callShell } from '../utils/externalexec';
 
 export class ShellFormatter extends BaseFormatter {
   private opts: string[];
@@ -38,7 +38,7 @@ export class ShellFormatter extends BaseFormatter {
     }
 
     const exec = this.setting.exec ? this.setting.exec : 'shfmt';
-    const resp = await call_shell(exec, this.opts, document.getText());
+    const resp = await callShell(exec, this.opts, document.getText());
     if (resp.exitCode != 0) {
       window.showMessage(`shfmt fail, ret ${resp.exitCode}`);
       if (resp.error) {

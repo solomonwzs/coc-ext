@@ -10,7 +10,7 @@ import {
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { call_shell } from '../utils/externalexec';
+import { callShell } from '../utils/externalexec';
 
 export class ClfFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
@@ -59,7 +59,7 @@ export class ClfFormatter extends BaseFormatter {
     // }
 
     const exec = this.setting.exec ? this.setting.exec : 'clang-format';
-    const resp = await call_shell(exec, args, document.getText());
+    const resp = await callShell(exec, args, document.getText());
     if (resp.exitCode != 0) {
       window.showMessage(`clang-format fail, ret ${resp.exitCode}`);
       if (resp.error) {

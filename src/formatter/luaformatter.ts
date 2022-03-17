@@ -9,7 +9,7 @@ import {
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { call_shell } from '../utils/externalexec';
+import { callShell } from '../utils/externalexec';
 
 export class LuaFormatter extends BaseFormatter {
   private opts: string[];
@@ -62,7 +62,7 @@ export class LuaFormatter extends BaseFormatter {
     }
 
     const exec = this.setting.exec ? this.setting.exec : 'lua-format';
-    const resp = await call_shell(
+    const resp = await callShell(
       exec,
       this.opts.concat(opts),
       document.getText()

@@ -1,5 +1,5 @@
 import { TextDecoder } from 'util';
-import { call_shell } from './externalexec';
+import { callShell } from './externalexec';
 // import { logger } from './logger';
 
 export function decode_str(str: string, enc: string): string {
@@ -117,7 +117,7 @@ export async function encode_aes256_str(
     '-base64',
     '-A',
   ];
-  const res = await call_shell(exec, args, str);
+  const res = await callShell(exec, args, str);
   if (res.exitCode == 0 && res.data) {
     return `${opts.prefix ? opts.prefix : ''}${encode_safe_b64str(
       res.data.toString()
@@ -156,7 +156,7 @@ export async function decode_aes256_str(
     '-base64',
     '-A',
   ];
-  const res = await call_shell(exec, args, s);
+  const res = await callShell(exec, args, s);
   if (res.exitCode == 0 && res.data) {
     return res.data.toString();
   }

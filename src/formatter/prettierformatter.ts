@@ -9,7 +9,7 @@ import {
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { call_shell } from '../utils/externalexec';
+import { callShell } from '../utils/externalexec';
 import { getTempFileWithDocumentContents } from '../utils/helper';
 import fs from 'fs';
 
@@ -40,7 +40,7 @@ export class PrettierFormatter extends BaseFormatter {
     args.push(filepath);
 
     const exec = this.setting.exec ? this.setting.exec : 'prettier';
-    const resp = await call_shell(exec, args);
+    const resp = await callShell(exec, args);
     fs.unlinkSync(filepath);
     if (resp.exitCode != 0) {
       window.showMessage(`prettier fail, ret ${resp.exitCode}`);

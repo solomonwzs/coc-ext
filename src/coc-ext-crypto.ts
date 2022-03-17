@@ -11,8 +11,8 @@ import {
 import minimatch from 'minimatch';
 import path from 'path';
 import { CryptoSetting, Execution } from './utils/types';
-import { call_shell, ExternalExecResponse } from './utils/externalexec';
-import { fs_stat, get_filelist } from './utils/file';
+import { callShell, ExternalExecResponse } from './utils/externalexec';
+import { fsStat, getFilesList } from './utils/file';
 import { logger } from './utils/logger';
 import {
   encode_aes256_str,
@@ -153,7 +153,7 @@ class CryptoHandler {
       return null;
     }
     const cmd = this.getEncryptCmd(filename);
-    return call_shell(cmd.exec, cmd.args, doc.textDocument.getText());
+    return callShell(cmd.exec, cmd.args, doc.textDocument.getText());
   }
 
   public async encryptAllFiles() {
@@ -163,7 +163,7 @@ class CryptoHandler {
         includes.push(path.resolve(i));
       }
     }
-    const fl = await get_filelist(workspace.root, 'find');
+    const fl = await getFilesList(workspace.root, 'find');
     if (!fl) {
       window.showMessage('get file list fail');
       return;
@@ -175,7 +175,7 @@ class CryptoHandler {
           continue;
         }
         const cmd = this.getEncryptCmd(new_name, f);
-        const res = await call_shell(cmd.exec, cmd.args);
+        const res = await callShell(cmd.exec, cmd.args);
         if (res.exitCode != 0) {
           logger.error(`encrypt ${f} fail`);
         }
@@ -189,7 +189,7 @@ class CryptoHandler {
       return false;
     }
     const cmd = this.getDecryptCmd(filename);
-    const res = await call_shell(cmd.exec, cmd.args);
+    const res = await callShell(cmd.exec, cmd.args);
     if (res.error != undefined || res.data == undefined) {
       return false;
     }
@@ -205,7 +205,7 @@ class CryptoHandler {
   }
 
   public isAutoEncrypt(): boolean {
-    return this.setting.auto_enc != undefined && this.setting.auto_enc;
+    return this.setting.autoEnc != undefined && this.setting.autoEnc;
   }
 }
 
@@ -214,7 +214,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(`coc-ext-crypto works`);
 
   const conf_path = path.join(workspace.root, g_conf_filename);
-  const stat = await fs_stat(conf_path);
+  const stat = await fsStat(conf_path);
   if (!(!stat.error && stat.stats && stat.stats.isFile())) {
     return;
   }

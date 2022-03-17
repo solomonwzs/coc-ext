@@ -8,7 +8,7 @@ export interface ExternalExecResponse {
   error: Buffer | undefined;
 }
 
-export async function call_multi_cmd_shell(
+export async function callMultiCmdShell(
   cmd_list: Execution[],
   input?: string | Buffer
 ): Promise<ExternalExecResponse> {
@@ -74,7 +74,7 @@ export async function call_multi_cmd_shell(
   });
 }
 
-export async function call_shell(
+export async function callShell(
   cmd: string,
   args: string[],
   input?: string | Buffer
@@ -110,8 +110,8 @@ export async function call_shell(
   });
 }
 
-export async function call_python(
-  python_dir: string,
+export async function callPython(
+  pythonDir: string,
   m: string,
   f: string,
   a: any[]
@@ -123,7 +123,7 @@ export async function call_python(
     if (!root_dir) {
       root_dir = '.';
     }
-    const script = path.join(root_dir, python_dir, 'coc-ext.py');
+    const script = path.join(root_dir, pythonDir, 'coc-ext.py');
     const py = spawn('python3', [script], { stdio: ['pipe', 'pipe', 'pipe'] });
     py.stdin.write(msg);
     py.stdin.end();

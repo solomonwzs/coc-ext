@@ -134,3 +134,16 @@ export function getTempFileWithDocumentContents(
     });
   });
 }
+
+export function luacall(
+  fname: string,
+  args: VimValue | VimValue[] = [],
+  isNotify?: boolean
+): Promise<any | null> | null {
+  const { nvim } = workspace;
+  // @ts-ignore
+  const _args = nvim.getArgs(args) as VimValue[];
+  const items = _args.map((_, index) => `_A[${index + 1}]`);
+  // @ts-ignore
+  return nvim.call('luaeval', [`${fname}(${items.join()})`, _args], isNotify);
+}

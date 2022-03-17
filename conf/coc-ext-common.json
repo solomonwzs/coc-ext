@@ -33,7 +33,7 @@
             "type": "object"
           }
         },
-        "coc-ext.python_dir": {
+        "coc-ext.pythonDir": {
           "type": "string",
           "default": "pythonx",
           "description": "coc-ext python directory"
