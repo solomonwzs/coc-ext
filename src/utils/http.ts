@@ -6,7 +6,7 @@ export interface HttpResponse {
   error: Error | undefined;
 }
 
-export async function simple_https_request(
+export async function simpleHttpsRequest(
   opts: https.RequestOptions,
   data?: any,
 ): Promise<HttpResponse> {

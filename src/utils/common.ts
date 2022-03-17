@@ -40,3 +40,10 @@ export function pad(n: string, total: number): string {
   }
   return new Array(l).fill(' ').join('');
 }
+
+export function get_random_command_id(scope?: string): string {
+  const ts = new Date().getTime().toString(16).slice(-8);
+  let r = Math.floor(Math.random() * 0xffff).toString(16);
+  r = '0'.repeat(4 - r.length) + r;
+  return scope && scope.length > 0 ? `${scope}-${ts}-${r}` : `${ts}-${r}`;
+}

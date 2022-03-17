@@ -1,4 +1,4 @@
-const ansihl_codes: Record<string, [number, number]> = {
+const ansihlCodes: Record<string, [number, number]> = {
   reset: [0, 0],
 
   bold: [1, 22],
@@ -58,7 +58,7 @@ const ansihl_codes: Record<string, [number, number]> = {
   whiteBG: [47, 49],
 };
 
-export function ansihl_str(str: string, color: string): string {
-  const codes = ansihl_codes[color];
+export function ansihlStr(str: string, color: string): string {
+  const codes = ansihlCodes[color];
   return codes ? `\u001b[${codes[0]}m${str}\u001b[${codes[1]}m` : '';
 }

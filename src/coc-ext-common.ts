@@ -18,8 +18,8 @@ import {
 import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
 import MapkeyList from './lists/mapkey';
-import { google_translate } from './translators/google';
-import { bing_translate } from './translators/bing';
+import { googleTranslate } from './translators/google';
+import { bingTranslate } from './translators/bing';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decode_mime_encode_str } from './utils/decoder';
@@ -86,9 +86,9 @@ async function replaceExecText(
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
     const text = await getText(mode);
-    let trans = await google_translate(text, 'auto', 'zh-CN');
+    let trans = await googleTranslate(text, 'auto', 'zh-CN');
     if (!trans) {
-      trans = await bing_translate(text, 'auto', 'zh-CN');
+      trans = await bingTranslate(text, 'auto', 'zh-CN');
     }
 
     if (trans) {

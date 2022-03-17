@@ -1,10 +1,11 @@
 import { ITranslation, createTranslation } from './base';
-import { simple_https_request } from '../utils/http';
+import { simpleHttpsRequest } from '../utils/http';
 import { RequestOptions } from 'https';
 import { logger } from '../utils/logger';
 
 function getParaphrase(html: string): string {
-  const re = /<span class="ht_pos">(.*?)<\/span><span class="ht_trs">(.*?)<\/span>/g;
+  const re =
+    /<span class="ht_pos">(.*?)<\/span><span class="ht_trs">(.*?)<\/span>/g;
   let expl = re.exec(html);
 
   const paraphrase: string[] = [];
@@ -15,10 +16,10 @@ function getParaphrase(html: string): string {
   return paraphrase.join('\n');
 }
 
-export async function bing_translate(
+export async function bingTranslate(
   text: string,
   sl: string,
-  tl: string,
+  tl: string
 ): Promise<ITranslation | null> {
   const opts: RequestOptions = {
     hostname: 'cn.bing.com',
@@ -31,7 +32,7 @@ export async function bing_translate(
       'Accept-Language': 'en-US,en;q=0.5',
     },
   };
-  const resp = await simple_https_request(opts);
+  const resp = await simpleHttpsRequest(opts);
   if (resp.error) {
     logger.error(resp.error.message);
     return null;

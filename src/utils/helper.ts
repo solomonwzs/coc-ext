@@ -7,12 +7,14 @@ import {
   Uri,
   window,
   workspace,
+  VimValue,
 } from 'coc.nvim';
 import getcfg from './config';
 import { Nullable } from './types';
 import path from 'path';
 import { TextEncoder } from 'util';
 import fs from 'fs';
+
 // import fs from 'fs-extra';
 // import md5 from 'md5';
 // import { logger } from './logger';
@@ -55,7 +57,7 @@ export async function getText(mode: MapMode): Promise<string> {
 export async function popup(
   content: string,
   filetype?: string,
-  cfg?: FloatWinConfig,
+  cfg?: FloatWinConfig
 ): Promise<void> {
   if (content.length == 0) {
     return;
@@ -78,7 +80,7 @@ export async function popup(
 
 export function getDocumentPath(
   document: TextDocument,
-  fallbackPath?: string,
+  fallbackPath?: string
 ): string {
   const filepath = Uri.parse(document.uri).fsPath;
   if (fallbackPath && path.basename(filepath) === filepath) {
@@ -118,13 +120,13 @@ export function fnvHash(data: string | Uint8Array, seed = 0): number {
 }
 
 export function getTempFileWithDocumentContents(
-  document: TextDocument,
+  document: TextDocument
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const fsPath = Uri.parse(document.uri).fsPath;
     const ext = path.extname(fsPath);
     const fileName = `${fsPath}.${fnvHash(document.uri)}${ext}`;
-    fs.writeFile(fileName, document.getText(), ex => {
+    fs.writeFile(fileName, document.getText(), (ex) => {
       if (ex) {
         reject(new Error(`Failed to create a temporary file, ${ex.message}`));
       }

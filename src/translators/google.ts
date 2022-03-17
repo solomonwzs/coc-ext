@@ -1,7 +1,7 @@
 import { ITranslation, createTranslation } from './base';
 import { logger } from '../utils/logger';
 import { RequestOptions } from 'https';
-import { simple_https_request } from '../utils/http';
+import { simpleHttpsRequest } from '../utils/http';
 
 function getParaphrase(obj: any): string {
   const paraphrase: string[] = [];
@@ -20,10 +20,10 @@ function getParaphrase(obj: any): string {
   return paraphrase.join('\n');
 }
 
-export async function google_translate(
+export async function googleTranslate(
   text: string,
   sl: string,
-  tl: string,
+  tl: string
 ): Promise<ITranslation | null> {
   const host = 'translate.googleapis.com';
   // if (/^zh/.test(tl)) {
@@ -45,7 +45,7 @@ export async function google_translate(
         'Safari/537.36',
     },
   };
-  const resp = await simple_https_request(opts);
+  const resp = await simpleHttpsRequest(opts);
   if (resp.error) {
     logger.error(resp.error.message);
     return null;

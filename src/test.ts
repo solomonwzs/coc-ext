@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import { RequestOptions } from 'https';
 import { TextDecoder, TextEncoder } from 'util';
-import { simple_https_request } from './utils/http';
+import { simpleHttpsRequest } from './utils/http';
 import fs from 'fs';
 import { call_shell, call_multi_cmd_shell } from './utils/externalexec';
 import path from 'path';
@@ -12,6 +12,7 @@ import {
   decode_aes256_str,
   AES256Options,
 } from './utils/decoder';
+import { get_random_command_id } from './utils/common';
 
 console.log('========');
 
@@ -21,7 +22,7 @@ async function http_test(): Promise<void> {
     method: 'GET',
     timeout: 100,
   };
-  const resp = await simple_https_request(opts);
+  const resp = await simpleHttpsRequest(opts);
   console.log(resp);
 }
 // http_test();
@@ -193,7 +194,7 @@ async function path_test() {
   const color_codes: Record<string, [number, number]> = { a: [1, 2] };
   console.log(color_codes['b']);
 }
-path_test();
+// path_test();
 
 async function aes256_test() {
   const opts: AES256Options = {
@@ -208,3 +209,8 @@ async function aes256_test() {
   }
 }
 // aes256_test();
+
+function utils_test() {
+  console.log(get_random_command_id('x'));
+}
+utils_test();
