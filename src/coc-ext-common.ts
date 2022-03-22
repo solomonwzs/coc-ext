@@ -10,7 +10,7 @@ import {
   languages,
   listManager,
   // sources,
-  window,
+  // window,
   workspace,
   Document,
   Range,
@@ -27,6 +27,7 @@ import { callPython, ExternalExecResponse } from './utils/externalexec';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import getcfg from './utils/config';
+import { debug } from './utils/debug';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -164,57 +165,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
   }
 
+  // const timer = setInterval(async () => {
+  //   logger.debug('...');
+  // }, 500);
+
   context.subscriptions.push(
-    commands.registerCommand(
-      'ext-debug',
-      async () => {
-        // const id: number = await workspace.nvim.call('ui#window#new', {
-        //   position: 'top',
-        // });
-        // const w = workspace.nvim.createWindow(id);
-        // logger.info(w.id);
+    // {
+    //   dispose() {
+    //     clearInterval(timer);
+    //   },
+    // },
 
-        // const doc = await workspace.document;
-        // const ed = TextEdit.replace(
-        //   {
-        //     start: { line: 0, character: 0 },
-        //     end: { line: doc.lineCount, character: 0 },
-        //   },
-        //   'hello world'
-        // );
-        // await doc.applyEdits([ed]);
-        // await workspace.nvim.command('setlocal nomodifiable');
-
-        // const x = await workspace.nvim.call('luaeval', [
-        //   'print(_A[1] + _A[2])',
-        //   [2, 3],
-        // ]);
-        // logger.debug(x);
-        // await workspace.nvim.call('luaeval', ['vim.notify(_A)', 'hi']);
-        // await workspace.nvim.call('luaeval', [
-        //   'require("coc-ext").quickpick(_A[1], _A[2], _A[3])',
-        //   ['hello', [1, 2, 3], 'coc.quickpick.12345'],
-        // ]);
-        
-        // const doc = [{
-        //   content: '[title]\n\nabc@edf.com',
-        //   filetype: 'markdown',
-        // }]
-        // const win = new FloatFactory(workspace.nvim);
-        // await win.show(doc);
-
-        // const doc = await workspace.document;
-        // logger.debug(doc.lineCount);
-        // logger.debug(workspace.document.lineCount);
-        // window.showMessage(`test, ${text}`);
-        // // workspace.nvim.command(`echo "${text}"`);
-        // const tt = (
-        //   await workspace.nvim.call('lib#common#visual_selection', 1)
-        // ).toString();
-        // window.showMessage(`${tt}`);
-      },
-      { sync: false }
-    ),
+    commands.registerCommand('ext-debug', debug, { sync: false }),
 
     workspace.registerKeymap(['n'], 'ext-translate', translateFn('n'), {
       sync: false,
