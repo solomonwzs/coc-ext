@@ -1,33 +1,29 @@
 import {
-  // CompleteResult,
-  // DocumentSelector,
+  Document,
   ExtensionContext,
-  // FloatFactory,
   MapMode,
   ProviderResult,
+  Range,
   TextEdit,
   commands,
   languages,
   listManager,
-  // sources,
-  // window,
   workspace,
-  Document,
-  Range,
 } from 'coc.nvim';
-import ExtList from './lists/lists';
 import CommandsList from './lists/commands';
+import ExtList from './lists/lists';
 import MapkeyList from './lists/mapkey';
-import { googleTranslate } from './translators/google';
-import { bingTranslate } from './translators/bing';
-import { logger } from './utils/logger';
-import { popup, getText } from './utils/helper';
-import { decode_mime_encode_str } from './utils/decoder';
-import { callPython, ExternalExecResponse } from './utils/externalexec';
+import getcfg from './utils/config';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
-import getcfg from './utils/config';
+import { bingTranslate } from './translators/bing';
+import { callPython, ExternalExecResponse } from './utils/externalexec';
 import { debug } from './utils/debug';
+import { decode_mime_encode_str } from './utils/decoder';
+import { getCursorSymbolList } from './utils/symbol';
+import { googleTranslate } from './translators/google';
+import { logger } from './utils/logger';
+import { popup, getText } from './utils/helper';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -82,6 +78,22 @@ async function replaceExecText(
   } else {
     logger.error(res.error?.toString('utf8'));
   }
+}
+
+async function getCursorSymbolInfo(): Promise<any> {
+  const infoList = await getCursorSymbolList();
+  if (!infoList) {
+    return;
+  }
+  let msg = '';
+  for (const i of infoList) {
+    const line = `[${i.kind[0]}] ${i.name}`;
+    if (msg.length != 0) {
+      msg += ` > `;
+    }
+    msg += line;
+  }
+  await popup(msg);
 }
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
@@ -177,6 +189,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: false }),
+
+    workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
+      sync: false,
+    }),
 
     workspace.registerKeymap(['n'], 'ext-translate', translateFn('n'), {
       sync: false,

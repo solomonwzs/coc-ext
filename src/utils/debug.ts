@@ -1,7 +1,7 @@
 import { workspace, TextEdit, FloatFactory, window } from 'coc.nvim';
 import { logger } from './logger';
 import { Lightbulb } from '../lightbulb/lightbulb';
-import { getDocumentSymbols } from './symbol';
+import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 
 export async function debugWindow(): Promise<any> {
   const id: number = await workspace.nvim.call('ui#window#new', {
@@ -78,10 +78,16 @@ export async function debugLightbulb(): Promise<any> {
   }
 }
 
-export async function debug(): Promise<any> {
+export async function debugSymbol(): Promise<any> {
   const { nvim } = workspace;
   const bufnr = await nvim.call('bufnr', '%');
   // logger.debug(workspace.bufnr);
   // logger.debug(bufnr);
-  await getDocumentSymbols(bufnr);
+  const sym = await getDocumentSymbols(bufnr);
+  logger.debug(sym);
+}
+
+export async function debug(): Promise<any> {
+  const x = await getCursorSymbolList();
+  logger.debug(x);
 }

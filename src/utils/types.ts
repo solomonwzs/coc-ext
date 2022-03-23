@@ -28,3 +28,9 @@ export interface CryptoSetting {
   includes?: string[];
   excludes?: string[];
 }
+
+export interface SimpleSymbolInfo {
+  name: string;
+  detail?: string;
+  kind: string;
+}

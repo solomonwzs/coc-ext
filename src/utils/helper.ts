@@ -2,12 +2,13 @@ import {
   FloatFactory,
   FloatWinConfig,
   MapMode,
+  Position,
   Range,
   TextDocument,
   Uri,
+  VimValue,
   window,
   workspace,
-  VimValue,
 } from 'coc.nvim';
 import getcfg from './config';
 import { Nullable } from './types';
@@ -29,6 +30,16 @@ function defauleFloatWinConfig(): FloatWinConfig {
     maxHeight: getcfg<any>('window.maxHeight', undefined),
     maxWidth: getcfg<any>('window.maxWidth', undefined),
   };
+}
+
+export function positionInRange(pos: Position, range: Range): boolean {
+  return (
+    (range.start.line < pos.line ||
+      (range.start.line == pos.line &&
+        range.start.character <= pos.character)) &&
+    (pos.line < range.end.line ||
+      (pos.line == range.end.line && pos.character <= range.end.character))
+  );
 }
 
 export async function getText(mode: MapMode): Promise<string> {
