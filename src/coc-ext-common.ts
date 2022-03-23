@@ -93,7 +93,7 @@ async function getCursorSymbolInfo(): Promise<any> {
     }
     msg += line;
   }
-  await popup(msg);
+  await popup('[Symbol]', msg);
 }
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
@@ -105,9 +105,9 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
     }
 
     if (trans) {
-      await popup(`[${trans.engine}]\n\n${trans.paraphrase}`, 'ui_float');
+      await popup(`[${trans.engine}]`, trans.paraphrase);
     } else {
-      await popup(`[Error]\n\ntranslate fail`);
+      await popup('[Error]', 'translate fail');
     }
   };
 }
@@ -118,7 +118,7 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
     const text = await getText('v');
     const res = await callPython(pythonDir, 'coder', 'decode_str', [text, enc]);
     if (res.exitCode == 0 && res.data) {
-      popup(`[${enc.toUpperCase()} decode]\n\n${res.data.toString('utf8')}`);
+      popup(`[${enc.toUpperCase()} decode]`, res.data.toString('utf8'));
     } else {
       logger.error(res.error?.toString('utf8'));
     }
