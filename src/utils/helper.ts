@@ -23,7 +23,7 @@ import fs from 'fs';
 function defauleFloatWinConfig(): FloatWinConfig {
   return {
     autoHide: true,
-    border: getcfg<boolean>('window.enableBorder', true)
+    border: getcfg<boolean>('window.enableBorder', false)
       ? [1, 1, 1, 1]
       : [0, 0, 0, 0],
     close: false,
@@ -66,8 +66,8 @@ export async function getText(mode: MapMode): Promise<string> {
 }
 
 export async function popup(
-  title: string,
   content: string,
+  title?: string,
   filetype?: string,
   cfg?: FloatWinConfig
 ): Promise<void> {
@@ -80,12 +80,9 @@ export async function popup(
   if (!cfg) {
     cfg = defauleFloatWinConfig();
   }
-  if (title.length != 0) {
-    cfg.title = title;
-  }
   const doc = [
     {
-      content: content,
+      content: title && title.length != 0 ? `${title}\n\n${content}` : content,
       filetype: filetype,
     },
   ];

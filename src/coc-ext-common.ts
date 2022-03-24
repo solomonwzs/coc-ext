@@ -93,7 +93,7 @@ async function getCursorSymbolInfo(): Promise<any> {
     }
     msg += line;
   }
-  await popup('[Symbol]', msg);
+  await popup(msg);
 }
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
@@ -105,9 +105,9 @@ function translateFn(mode: MapMode): () => ProviderResult<any> {
     }
 
     if (trans) {
-      await popup(`[${trans.engine}]`, trans.paraphrase);
+      await popup(trans.paraphrase, `[${trans.engine}]`);
     } else {
-      await popup('[Error]', 'translate fail');
+      await popup('translate fail', '[Error]');
     }
   };
 }
@@ -118,7 +118,7 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
     const text = await getText('v');
     const res = await callPython(pythonDir, 'coder', 'decode_str', [text, enc]);
     if (res.exitCode == 0 && res.data) {
-      popup(`[${enc.toUpperCase()} decode]`, res.data.toString('utf8'));
+      popup(res.data.toString('utf8'), `[${enc.toUpperCase()} decode]`);
     } else {
       logger.error(res.error?.toString('utf8'));
     }
@@ -245,7 +245,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       async () => {
         const text = await getText('v');
         const tt = decode_mime_encode_str(text);
-        popup(`[Mime decode]\n\n${tt}`, 'ui_float');
+        popup(tt, '[Mime decode]');
       },
       {
         sync: false,
