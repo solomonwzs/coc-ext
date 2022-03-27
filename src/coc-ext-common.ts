@@ -65,6 +65,7 @@ const defaultFmtSetting: Record<string, FormatterSetting> = {
   bzl: bzlFmtSteeing,
   lua: luaFmtSteeing,
   sh: shFmtSetting,
+  zsh: shFmtSetting,
 };
 
 async function replaceExecText(
