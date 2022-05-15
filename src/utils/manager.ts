@@ -6,9 +6,9 @@ import {
   window,
   workspace,
 } from 'coc.nvim';
-
 import getcfg from './config';
 import { ActionMode, KeymapMode, Nullable } from './types';
+import { showNotification } from '../utils/notify';
 
 // import { logger } from './logger';
 
@@ -101,7 +101,7 @@ export default class Manager {
 
   private async replace(content: string): Promise<void> {
     if (content.length == 0) {
-      window.showMessage('No paraphrase for replacement', 'error');
+      showNotification('No paraphrase for replacement');
     }
     this.nvim.pauseNotification();
     this.nvim.command('let reg_tmp=@a', true);

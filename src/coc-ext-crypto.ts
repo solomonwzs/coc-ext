@@ -5,7 +5,6 @@ import {
   Uri,
   commands,
   events,
-  window,
   workspace,
 } from 'coc.nvim';
 import minimatch from 'minimatch';
@@ -19,6 +18,7 @@ import {
   decode_aes256_str,
   AES256Options,
 } from './utils/decoder';
+import { showNotification } from './utils/notify';
 
 const g_conf_filename = 'coc-ext-crypto.json';
 
@@ -63,7 +63,7 @@ class CryptoHandler {
       const content = await workspace.readFile(conf_path);
       return new CryptoHandler(conf_path, content);
     } catch (e) {
-      window.showMessage(`parse config file ${conf_path} fail`);
+      showNotification(`parse config file ${conf_path} fail`);
       return null;
     }
   }
@@ -165,7 +165,7 @@ class CryptoHandler {
     }
     const fl = await getFilesList(workspace.root, 'find');
     if (!fl) {
-      window.showMessage('get file list fail');
+      showNotification('get file list fail');
       return;
     }
     for (const f of fl) {

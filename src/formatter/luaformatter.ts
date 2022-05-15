@@ -4,12 +4,12 @@ import {
   CancellationToken,
   Range,
   TextEdit,
-  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
+import { showNotification } from '../utils/notify';
 
 export class LuaFormatter extends BaseFormatter {
   private opts: string[];
@@ -68,12 +68,12 @@ export class LuaFormatter extends BaseFormatter {
       document.getText()
     );
     if (resp.exitCode != 0) {
-      window.showMessage(`lua-format fail, ret ${resp.exitCode}`);
+      showNotification(`lua-format fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
-      window.showMessage('lua-format ok');
+      showNotification('lua-format ok', 'formatter');
       return [
         TextEdit.replace(
           {

@@ -4,7 +4,6 @@ import {
   CancellationToken,
   Range,
   TextEdit,
-  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
@@ -12,6 +11,7 @@ import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
 import { getTempFileWithDocumentContents } from '../utils/helper';
 import fs from 'fs';
+import { showNotification } from '../utils/notify';
 
 export class PrettierFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
@@ -43,12 +43,12 @@ export class PrettierFormatter extends BaseFormatter {
     const resp = await callShell(exec, args);
     fs.unlinkSync(filepath);
     if (resp.exitCode != 0) {
-      window.showMessage(`prettier fail, ret ${resp.exitCode}`);
+      showNotification(`prettier fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
-      window.showMessage('prettier ok');
+      showNotification('prettier ok', 'formatter');
       return [
         TextEdit.replace(
           {

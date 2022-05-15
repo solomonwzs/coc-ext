@@ -4,8 +4,8 @@ import {
   ListContext,
   ListItem,
   Neovim,
-  window,
 } from 'coc.nvim';
+import { showNotification } from '../utils/notify';
 
 export default class ExtList extends BasicList {
   public readonly name = 'ext_list';
@@ -17,7 +17,7 @@ export default class ExtList extends BasicList {
     super(nvim);
 
     this.addAction('open', (item: ListItem) => {
-      window.showMessage(`${item.label}, ${item.data.name}`);
+      showNotification(`${item.label}, ${item.data.name}`);
     });
   }
 

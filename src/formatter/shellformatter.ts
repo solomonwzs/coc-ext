@@ -4,12 +4,12 @@ import {
   CancellationToken,
   Range,
   TextEdit,
-  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
+import { showNotification } from '../utils/notify';
 
 export class ShellFormatter extends BaseFormatter {
   private opts: string[];
@@ -40,12 +40,12 @@ export class ShellFormatter extends BaseFormatter {
     const exec = this.setting.exec ? this.setting.exec : 'shfmt';
     const resp = await callShell(exec, this.opts, document.getText());
     if (resp.exitCode != 0) {
-      window.showMessage(`shfmt fail, ret ${resp.exitCode}`);
+      showNotification(`shfmt fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
-      window.showMessage('shfmt ok');
+      showNotification('shfmt ok', 'formatter');
       return [
         TextEdit.replace(
           {

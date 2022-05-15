@@ -5,12 +5,12 @@ import {
   Range,
   TextEdit,
   Uri,
-  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
+import { showNotification } from '../utils/notify';
 
 export class ClfFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
@@ -61,12 +61,12 @@ export class ClfFormatter extends BaseFormatter {
     const exec = this.setting.exec ? this.setting.exec : 'clang-format';
     const resp = await callShell(exec, args, document.getText());
     if (resp.exitCode != 0) {
-      window.showMessage(`clang-format fail, ret ${resp.exitCode}`);
+      showNotification(`clang-format fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
         logger.error(resp.error.toString());
       }
     } else if (resp.data) {
-      window.showMessage('clang-format ok');
+      showNotification('clang-format ok', 'formatter');
       return [
         TextEdit.replace(
           {

@@ -5,10 +5,10 @@ import {
   LanguageClientOptions,
   TransportKind,
   ServerOptions,
-  window,
 } from 'coc.nvim';
 import { logger } from './utils/logger';
 import getcfg from './utils/config';
+import { showNotification } from './utils/notify';
 
 let client: LanguageClient;
 
@@ -19,7 +19,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   const server_path: string = getcfg<string>(
     'erlang.erlangLsPath',
-    '/bin/erlang_ls',
+    '/bin/erlang_ls'
   );
 
   const clientOptions: LanguageClientOptions = {
@@ -40,8 +40,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   client.onReady().then(() => {
     // client.registerProposedFeatures();
-    // workspace.showMessage('coc-erlang_ls is ready');
-    window.showMessage(`coc-erlangls is ready`);
+    showNotification(`coc-erlangls is ready`);
   });
 }
 

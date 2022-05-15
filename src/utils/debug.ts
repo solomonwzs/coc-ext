@@ -1,7 +1,8 @@
-import { workspace, TextEdit, FloatFactory, window } from 'coc.nvim';
+import { workspace, TextEdit, FloatFactory } from 'coc.nvim';
 import { logger } from './logger';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
+import { showNotification } from '../utils/notify';
 
 export async function debugWindow(): Promise<any> {
   const id: number = await workspace.nvim.call('ui#window#new', {
@@ -56,7 +57,7 @@ export async function debugSelection(): Promise<any> {
   const tt = (
     await workspace.nvim.call('lib#common#visual_selection', 1)
   ).toString();
-  window.showMessage(`${tt}`);
+  showNotification(`${tt}`);
 }
 
 export async function debugRange(): Promise<any> {

@@ -7,7 +7,6 @@ import {
   Range,
   TextEdit,
   ProviderResult,
-  window,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 // import getcfg from '../utils/config';
@@ -18,6 +17,7 @@ import { PrettierFormatter } from '../formatter/prettierformatter';
 import { BazelFormatter } from '../formatter/bazelformatter';
 import { LuaFormatter } from '../formatter/luaformatter';
 import { ShellFormatter } from '../formatter/shellformatter';
+import { showNotification } from '../utils/notify';
 
 export class FormattingEditProvider
   implements
@@ -50,7 +50,7 @@ export class FormattingEditProvider
   ): Promise<TextEdit[]> {
     if (!this.formatter) {
       logger.error('formatter was null');
-      window.showMessage('formatter was null');
+      showNotification('formatter was null', 'formatter');
       return [];
     }
     return this.formatter.formatDocument(document, options, token, range);
