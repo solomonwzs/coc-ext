@@ -87,12 +87,15 @@ async function getCursorSymbolInfo(): Promise<any> {
     return;
   }
   let msg = '';
+  let space = ' ';
   for (const i of infoList) {
-    const line = `[${i.kind[0]}] ${i.name}`;
-    if (msg.length != 0) {
-      msg += ` > `;
+    const line = `[${i.short_name}] ${i.name}`;
+    if (msg.length == 0) {
+      msg = ` ${line}`;
+    } else {
+      msg += `\n${space} ${line}`;
+      space += ' ';
     }
-    msg += line;
   }
   await popup(msg);
 }

@@ -10,33 +10,39 @@ import { positionInRange } from './helper';
 import { SimpleSymbolInfo } from './types';
 // import { logger } from './logger';
 
-const symbolKindName: Record<number, string> = {
-  1: 'File', // 
-  2: 'Module', // 
-  3: 'Namespace', // 
-  4: 'Package', // 
-  5: 'Class', // 
-  6: 'Method', // 
-  7: 'Property', // 襁
-  8: 'Field', // 
-  9: 'Constructor', // 
-  10: 'Enum',
-  11: 'Interface', // 
-  12: 'Function',
-  13: 'Variable',
-  14: 'Constant', // 
-  15: 'String', // 
-  16: 'Number', // 
-  17: 'Boolean',
-  18: 'Array', // 
-  19: 'Object', // 
-  20: 'Key', // 
-  21: 'Null', // ﳠ
-  22: 'EnumMember',
-  23: 'Struct', // 
-  24: 'Event', // 
-  25: 'Operator',
-  26: 'TypeParameter', // 
+interface symbolInfo {
+  name: string;
+  icon: string;
+  short_name: string;
+}
+
+const symbolKind2Info: Record<number, symbolInfo> = {
+  1: { name: 'File', icon: '', short_name: 'F' },
+  2: { name: 'Module', icon: '', short_name: 'M' },
+  3: { name: 'Namespace', icon: '', short_name: 'N' },
+  4: { name: 'Package', icon: '', short_name: 'P' },
+  5: { name: 'Class', icon: '', short_name: 'C' },
+  6: { name: 'Method', icon: '', short_name: 'f' },
+  7: { name: 'Property', icon: '襁', short_name: 'p' },
+  8: { name: 'Field', icon: '料', short_name: 'm' },
+  9: { name: 'Constructor', icon: '', short_name: 'c' },
+  10: { name: 'Enum', icon: '', short_name: 'E' },
+  11: { name: 'Interface', icon: '', short_name: 'I' },
+  12: { name: 'Function', icon: 'ƒ', short_name: 'f' },
+  13: { name: 'Variable', icon: '', short_name: 'v' },
+  14: { name: 'Constant', icon: '', short_name: 'C' },
+  15: { name: 'String', icon: '', short_name: 'S' },
+  16: { name: 'Number', icon: '', short_name: 'n' },
+  17: { name: 'Boolean', icon: '', short_name: 'b' },
+  18: { name: 'Array', icon: '', short_name: 'a' },
+  19: { name: 'Object', icon: '', short_name: 'O' },
+  20: { name: 'Key', icon: '', short_name: 'K' },
+  21: { name: 'Null', icon: 'ﳠ', short_name: 'n' },
+  22: { name: 'EnumMember', icon: '', short_name: 'm' },
+  23: { name: 'Struct', icon: 'פּ', short_name: 'S' },
+  24: { name: 'Event', icon: '鬒', short_name: 'e' },
+  25: { name: 'Operator', icon: 'Ψ', short_name: 'o' },
+  26: { name: 'TypeParameter', icon: '', short_name: 'T' },
 };
 // const symbolKindName: Map<number, string> = new Map([
 //   [SymbolKind.File, 'File'],
@@ -109,11 +115,13 @@ export async function getCursorSymbolList(): Promise<
     for (const s of slist) {
       // logger.debug([s.name, s.range, pos]);
       if (positionInRange(pos, s.range)) {
+        let info = symbolKind2Info[s.kind];
         symList.push({
           name: s.name,
+          short_name: info.short_name,
           detail: s.detail,
-          // kind: symbolKindName.get(s.kind) as string,
-          kind: symbolKindName[s.kind],
+          kind: info.name,
+          icon: info.icon,
         });
         slist = s.children;
         ok = true;

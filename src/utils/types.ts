@@ -31,6 +31,8 @@ export interface CryptoSetting {
 
 export interface SimpleSymbolInfo {
   name: string;
+  short_name: string,
   detail?: string;
   kind: string;
+  icon: string;
 }
