@@ -1,10 +1,4 @@
-import {
-  BasicList,
-  ListAction,
-  ListContext,
-  ListItem,
-  Neovim,
-} from 'coc.nvim';
+import { BasicList, ListAction, ListContext, ListItem, Neovim } from 'coc.nvim';
 import { showNotification } from '../utils/notify';
 
 export default class ExtList extends BasicList {
@@ -21,7 +15,7 @@ export default class ExtList extends BasicList {
     });
   }
 
-  public async loadItems(context: ListContext): Promise<ListItem[]> {
+  public async loadItems(_context: ListContext): Promise<ListItem[]> {
     return [
       {
         label: 'coc-ext-common list item 1',

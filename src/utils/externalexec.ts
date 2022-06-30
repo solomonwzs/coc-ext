@@ -80,12 +80,13 @@ export async function callShell(
   input?: string | Buffer
 ): Promise<ExternalExecResponse> {
   return new Promise((resolve) => {
-    const sh = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const stdin:CommonSpawnOptions.stdio = input ? 'stdin' : 'ignore';
+    const sh = spawn(cmd, args, { stdio: [stdin, 'pipe', 'pipe'] });
 
-    if (input) {
-      sh.stdin.write(input);
-      sh.stdin.end();
-    }
+    // if (input) {
+    //   sh.stdin.write(input);
+    //   sh.stdin.end();
+    // }
 
     let exitCode = 0;
     const data: Buffer[] = [];

@@ -1,5 +1,5 @@
 import { ListAction, ListContext, ListItem, Neovim, IList } from 'coc.nvim';
-// import { logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 export default class MapkeyList implements IList {
   public readonly name = 'vimmapkey';

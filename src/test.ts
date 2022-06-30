@@ -133,22 +133,26 @@ async function call_test() {
   // if (resp.exitCode == 0 && resp.data) {
   //   console.log(resp.data.toString());
   // }
-  const res = await callMultiCmdShell([
-    {
-      exec: 'find',
-      args: ['/home/solomon/tmp/note', '-type', 'f'],
-    },
-    {
-      exec: 'grep',
-      args: ['json'],
-    },
-  ]);
+  // const res = await callMultiCmdShell([
+  //   {
+  //     exec: 'find',
+  //     args: ['/home/solomon/tmp/note', '-type', 'f'],
+  //   },
+  //   {
+  //     exec: 'grep',
+  //     args: ['json'],
+  //   },
+  // ]);
+  const res = await callShell('ls', ['-l']);
   console.log(res);
   if (res.data) {
     console.log(res.data.toString());
   }
+  if (res.error) {
+    console.log(res.error.toString());
+  }
 }
-// call_test();
+call_test();
 
 async function re_test() {
   const str =
@@ -213,4 +217,4 @@ async function aes256_test() {
 function utils_test() {
   console.log(get_random_command_id('x'));
 }
-utils_test();
+// utils_test();
