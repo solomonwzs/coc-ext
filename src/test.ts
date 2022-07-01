@@ -13,6 +13,7 @@ import {
   AES256Options,
 } from './utils/decoder';
 import { get_random_command_id } from './utils/common';
+import { URI } from 'vscode-uri';
 
 console.log('========');
 
@@ -143,7 +144,7 @@ async function call_test() {
   //     args: ['json'],
   //   },
   // ]);
-  const res = await callShell('ls', ['-l']);
+  const res = await callShell('rg', ['list']);
   console.log(res);
   if (res.data) {
     console.log(res.data.toString());
@@ -152,7 +153,7 @@ async function call_test() {
     console.log(res.error.toString());
   }
 }
-call_test();
+// call_test();
 
 async function re_test() {
   const str =
@@ -197,8 +198,11 @@ async function path_test() {
 
   const color_codes: Record<string, [number, number]> = { a: [1, 2] };
   console.log(color_codes['b']);
+
+  console.log(path.resolve('./test'));
+  console.log(URI.file('~/tmp').toString());
 }
-// path_test();
+path_test();
 
 async function aes256_test() {
   const opts: AES256Options = {

@@ -1,6 +1,10 @@
 import path from 'path';
 import { Execution } from './types';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import {
+  spawn,
+  ChildProcessWithoutNullStreams,
+  StdioOptions,
+} from 'child_process';
 
 export interface ExternalExecResponse {
   exitCode: number;
@@ -80,24 +84,28 @@ export async function callShell(
   input?: string | Buffer
 ): Promise<ExternalExecResponse> {
   return new Promise((resolve) => {
-    const stdin:CommonSpawnOptions.stdio = input ? 'stdin' : 'ignore';
+    const stdin: StdioOptions = input ? 'pipe' : 'ignore';
     const sh = spawn(cmd, args, { stdio: [stdin, 'pipe', 'pipe'] });
 
-    // if (input) {
-    //   sh.stdin.write(input);
-    //   sh.stdin.end();
-    // }
+    if (input && sh.stdin) {
+      sh.stdin.write(input);
+      sh.stdin.end();
+    }
 
     let exitCode = 0;
     const data: Buffer[] = [];
     const error: Buffer[] = [];
 
-    sh.stdout.on('data', (d: Buffer) => {
-      data.push(d);
-    });
-    sh.stderr.on('data', (d: Buffer) => {
-      error.push(d);
-    });
+    if (sh.stdout) {
+      sh.stdout.on('data', (d: Buffer) => {
+        data.push(d);
+      });
+    }
+    if (sh.stderr) {
+      sh.stderr.on('data', (d: Buffer) => {
+        error.push(d);
+      });
+    }
     sh.on('close', (code) => {
       if (code) {
         exitCode = code;
