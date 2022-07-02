@@ -2,7 +2,7 @@ import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { callShell } from '../utils/externalexec';
 import { showNotification } from '../utils/notify';
 import { logger } from '../utils/logger';
-import { getIcons } from '../utils/icons';
+import { getDefxIcon } from '../utils/icons';
 import path from 'path';
 // import { URI } from 'vscode-uri';
 
@@ -59,14 +59,18 @@ export default class RgList extends BasicList {
 
     const items: ListItem[] = [];
     for (const i of list) {
-      let filename = path.basename(i);
-      let extname = path.extname(filename).slice(1);
-      let icon = getIcons(extname, filename);
-      let label = `${icon}  ${i}`;
+      let extname = path.extname(i).slice(1);
+      let icon = await getDefxIcon(extname, i);
+      let label = `${icon.icon}  ${i}`;
       items.push({
         label,
         data: { name: i, filetype: extname },
-        // ansiHighlights: [{ span: [4, i.length + 4], hlGroup: 'CocListFgRed' }],
+        ansiHighlights: [
+          {
+            span: [0, Buffer.byteLength(icon.icon)],
+            hlGroup: `DefxIcoFg_${icon.term_color}`,
+          },
+        ],
       });
     }
     return items;

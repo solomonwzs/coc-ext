@@ -31,8 +31,23 @@ export interface CryptoSetting {
 
 export interface SimpleSymbolInfo {
   name: string;
-  short_name: string,
+  short_name: string;
   detail?: string;
   kind: string;
   icon: string;
+}
+
+export interface DefxIcosInfo {
+  term_color: number;
+  icon: string;
+  color: string;
+}
+
+export interface DefxIcos {
+  icons: {
+    extensions: Map<string, DefxIcosInfo>;
+    exact_matches: Map<string, DefxIcosInfo>;
+    pattern_matches: Map<string, DefxIcosInfo>;
+  };
+  setting: Map<string, number>;
 }

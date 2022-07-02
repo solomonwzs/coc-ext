@@ -201,6 +201,11 @@ async function path_test() {
 
   console.log(path.resolve('./test'));
   console.log(URI.file('~/tmp').toString());
+
+  let ss: Set<number> = new Set();
+  ss.add(1);
+  console.log(ss);
+  console.log(JSON.stringify(ss));
 }
 path_test();
 
