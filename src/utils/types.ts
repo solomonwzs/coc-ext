@@ -41,6 +41,7 @@ export interface DefxIcosInfo {
   term_color: number;
   icon: string;
   color: string;
+  hlGroup?: string;
 }
 
 export interface DefxIcos {

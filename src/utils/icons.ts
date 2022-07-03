@@ -206,13 +206,22 @@ async function defx_init() {
   defx_icons = (await nvim.eval('defx_icons#get()')) as DefxIcos;
 
   let colors: Set<number> = new Set();
-  for (const i of Object.values(defx_icons.icons.exact_matches)) {
+  for (const i of Object.values(
+    defx_icons.icons.exact_matches
+  ) as DefxIcosInfo[]) {
+    i.hlGroup = `DefxIcoFg_${i.term_color}`;
     colors.add(i.term_color);
   }
-  for (const i of Object.values(defx_icons.icons.extensions)) {
+  for (const i of Object.values(
+    defx_icons.icons.extensions
+  ) as DefxIcosInfo[]) {
+    i.hlGroup = `DefxIcoFg_${i.term_color}`;
     colors.add(i.term_color);
   }
-  for (const i of Object.values(defx_icons.icons.pattern_matches)) {
+  for (const i of Object.values(
+    defx_icons.icons.pattern_matches
+  ) as DefxIcosInfo[]) {
+    i.hlGroup = `DefxIcoFg_${i.term_color}`;
     colors.add(i.term_color);
   }
   for (const i of colors) {
@@ -237,7 +246,7 @@ export async function getDefxIcon(
   }
 
   const filename = path.basename(filepath);
-  let info = defx_icons.icons.exact_matches[filename];
+  let info: DefxIcosInfo | undefined = defx_icons.icons.exact_matches[filename];
   if (info) {
     return info;
   }

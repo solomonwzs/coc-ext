@@ -65,12 +65,14 @@ export default class RgList extends BasicList {
       items.push({
         label,
         data: { name: i, filetype: extname },
-        ansiHighlights: [
-          {
-            span: [0, Buffer.byteLength(icon.icon)],
-            hlGroup: `DefxIcoFg_${icon.term_color}`,
-          },
-        ],
+        ansiHighlights: icon.hlGroup
+          ? [
+              {
+                span: [0, Buffer.byteLength(icon.icon)],
+                hlGroup: icon.hlGroup,
+              },
+            ]
+          : undefined,
       });
     }
     return items;
