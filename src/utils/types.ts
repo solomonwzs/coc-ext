@@ -52,3 +52,10 @@ export interface DefxIcos {
   };
   setting: Map<string, number>;
 }
+
+export interface HighlightInfo {
+  group_name: string;
+  desc: string;
+  last_set_file: string;
+  line: number;
+}
