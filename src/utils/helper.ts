@@ -10,11 +10,11 @@ import {
   window,
   workspace,
 } from 'coc.nvim';
-import getcfg from './config';
-import { Nullable } from './types';
-import path from 'path';
-import { TextEncoder } from 'util';
 import fs from 'fs';
+import getcfg from './config';
+import path from 'path';
+import { Nullable, OpenOptions } from './types';
+import { TextEncoder } from 'util';
 
 // import fs from 'fs-extra';
 // import md5 from 'md5';
@@ -158,4 +158,22 @@ export function luacall(
   const items = _args.map((_, index) => `_A[${index + 1}]`);
   // @ts-ignore
   return nvim.call('luaeval', [`${fname}(${items.join()})`, _args], isNotify);
+}
+
+export async function openFile(filepath: string, opts?: OpenOptions) {
+  const { nvim } = workspace;
+  let open = 'edit';
+  let cmd = '';
+  if (opts) {
+    if (opts.open) {
+      open = opts.open;
+    }
+    if (opts.key) {
+      cmd = `+/${opts.key}`;
+    } else if (opts.line) {
+      const column = opts.column ? opts.column : 0;
+      cmd = `+call\\ cursor(${opts.line},${column})`;
+    }
+  }
+  await nvim.command(`${open} ${cmd} ${filepath}`);
 }

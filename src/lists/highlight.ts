@@ -1,6 +1,6 @@
 import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { HighlightInfo } from '../utils/types';
-import { logger } from '../utils/logger';
+import { openFile } from '../utils/helper';
 
 function parse_highlight_info(str: string): HighlightInfo[] {
   let lines = str.split('\n');
@@ -12,7 +12,6 @@ function parse_highlight_info(str: string): HighlightInfo[] {
   let res: HighlightInfo[] = [];
   for (const l of lines) {
     let arr = l.split(/\s+/);
-    // logger.debug(arr);
     if (arr.length > 0 && arr[0].length > 0) {
       if (group_name.length > 0) {
         res.push({
@@ -48,8 +47,6 @@ function parse_highlight_info(str: string): HighlightInfo[] {
       line,
     });
   }
-  logger.debug(res);
-
   return res;
 }
 
@@ -61,26 +58,51 @@ export default class HighlightList extends BasicList {
 
   constructor(nvim: Neovim) {
     super(nvim);
-    this.actions.push({
-      name: 'execute',
-      execute: async (_item) => {},
+    this.addAction('open', async (item: ListItem, _context: ListContext) => {
+      let fp: string = item.data['last_set_file'];
+      if (fp.length == 0) {
+        return;
+      }
+      await openFile(fp, {
+        open: 'sp',
+        line: item.data['line'],
+      });
     });
   }
 
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
     const { nvim } = this;
-    // let list = (await nvim.commandOutput('verbose highlight')) as string[];
-    // list = list.slice(1);
-    let x = await nvim.commandOutput('verbose highlight');
-    parse_highlight_info(x);
+    let str = await nvim.commandOutput('verbose highlight');
+    const hiinfos = parse_highlight_info(str);
+
+    let max_gn_len = 0;
+    for (const i of hiinfos) {
+      if (i.group_name.length > max_gn_len) {
+        max_gn_len = i.group_name.length;
+      }
+    }
 
     const res: ListItem[] = [];
-    // for (const i of list) {
-    //   res.push({
-    //     label: i,
-    //     data: { name: '1' },
-    //   });
-    // }
+    for (const i of hiinfos) {
+      const spaces = ' '.repeat(max_gn_len - i.group_name.length + 2);
+      const label = `${i.group_name}${spaces}xxx  ${i.desc}  ${i.last_set_file}:${i.line}`;
+      const xoffset = i.group_name.length + spaces.length;
+      const fnoffset = xoffset + 3 + 2 + i.desc.length + 2;
+      res.push({
+        label,
+        data: { last_set_file: i.last_set_file, line: i.line },
+        ansiHighlights: [
+          {
+            span: [xoffset, xoffset + 3],
+            hlGroup: i.group_name,
+          },
+          {
+            span: [fnoffset, label.length],
+            hlGroup: 'Comment',
+          },
+        ],
+      });
+    }
     return res;
   }
 }

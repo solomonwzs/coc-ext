@@ -14,6 +14,7 @@ import {
 } from './utils/decoder';
 import { get_random_command_id } from './utils/common';
 import { URI } from 'vscode-uri';
+import os from 'os';
 
 console.log('========');
 
@@ -199,8 +200,10 @@ async function path_test() {
   const color_codes: Record<string, [number, number]> = { a: [1, 2] };
   console.log(color_codes['b']);
 
-  console.log(path.resolve('./test'));
-  console.log(URI.file('~/tmp').toString());
+  const p = '~/dotfiles/vim/bundle/gruvbox/colors/gruvbox.vim';
+  console.log(path.resolve(p));
+  console.log(URI.file(p).toString());
+  console.log(os.homedir());
 
   let ss: Set<number> = new Set();
   ss.add(1);

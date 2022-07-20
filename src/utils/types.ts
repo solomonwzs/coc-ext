@@ -59,3 +59,18 @@ export interface HighlightInfo {
   last_set_file: string;
   line: number;
 }
+
+export interface MapkeyInfo {
+  mode: string;
+  key: string;
+  desc: string;
+  last_set_file: string;
+  line: number;
+}
+
+export interface OpenOptions {
+  open?: string;
+  key?: string;
+  line?: number;
+  column?: number;
+}

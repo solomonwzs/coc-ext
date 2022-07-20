@@ -1,10 +1,10 @@
 import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
-import { callShell } from '../utils/externalexec';
-import { showNotification } from '../utils/notify';
-import { logger } from '../utils/logger';
-import { getDefxIcon } from '../utils/icons';
 import path from 'path';
-// import { URI } from 'vscode-uri';
+import { callShell } from '../utils/externalexec';
+import { getDefxIcon } from '../utils/icons';
+import { logger } from '../utils/logger';
+import { openFile } from '../utils/helper';
+import { showNotification } from '../utils/notify';
 
 export default class RgList extends BasicList {
   public readonly name = 'rg';
@@ -14,8 +14,11 @@ export default class RgList extends BasicList {
 
   constructor(nvim: Neovim) {
     super(nvim);
-    this.addAction('open', async (item: ListItem, _context: ListContext) => {
-      await this.jumpTo(path.resolve(item.data['name']));
+    this.addAction('open', async (item: ListItem, context: ListContext) => {
+      await openFile(item.data['name'], {
+        open: 'sp',
+        key: context.args[0],
+      });
     });
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
       let resp = await callShell('rg', [
