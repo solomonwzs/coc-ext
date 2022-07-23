@@ -8,7 +8,7 @@ common:
 	@cp "./lib/coc-ext-common.js" "$(OUTPUT_DIR)"
 	@cp "./conf/coc-ext-common.json" "$(OUTPUT_DIR)"
 	@cp "./lua/coc-ext.lua" "$(OUTPUT_DIR)/../lua"
-	@cp -r "./python/coc-ext.py" "$(OUTPUT_DIR)/../pythonx"
+	@cp -r "./python/coc_ext.py" "$(OUTPUT_DIR)/../pythonx"
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
 
 erl:
