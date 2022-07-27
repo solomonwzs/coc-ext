@@ -2,7 +2,7 @@ import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { HighlightInfo } from '../utils/types';
 import { openFile } from '../utils/helper';
 
-function parse_highlight_info(str: string): HighlightInfo[] {
+export function parse_highlight_info(str: string): HighlightInfo[] {
   let lines = str.split('\n');
   let group_name = '';
   let desc = '';

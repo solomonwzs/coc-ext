@@ -88,7 +88,10 @@ export async function debugSymbol(): Promise<any> {
   logger.debug(sym);
 }
 
-export async function debug(): Promise<any> {
-  const x = await getCursorSymbolList();
-  logger.debug(x);
+export async function debug(cmd: string, ...args: any[]): Promise<any> {
+  // const x = await getCursorSymbolList();
+  // logger.debug(x);
+  // await new Promise((resolve) => setTimeout(resolve, 2000));
+  logger.debug(cmd);
+  logger.debug(args);
 }
