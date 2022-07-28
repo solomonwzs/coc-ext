@@ -195,8 +195,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     //   },
     // },
 
-    commands.registerCommand('ext-debug', debug, { sync: false }),
-    commands.registerCommand('ext-leaderf', leader_recv, { sync: false }),
+    commands.registerCommand('ext-debug', debug, { sync: true }),
+    commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
       sync: false,

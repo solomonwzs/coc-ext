@@ -12,7 +12,7 @@ import {
   decode_aes256_str,
   AES256Options,
 } from './utils/decoder';
-import { get_random_command_id } from './utils/common';
+import { get_random_id } from './utils/common';
 import { URI } from 'vscode-uri';
 import os from 'os';
 
@@ -227,6 +227,6 @@ async function aes256_test() {
 // aes256_test();
 
 function utils_test() {
-  console.log(get_random_command_id('x'));
+  console.log(get_random_id('x'));
 }
 // utils_test();
