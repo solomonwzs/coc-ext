@@ -19,7 +19,11 @@ import getcfg from './utils/config';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import { bingTranslate } from './translators/bing';
-import { callPython, ExternalExecResponse } from './utils/externalexec';
+import {
+  callPython,
+  callShell,
+  ExternalExecResponse,
+} from './utils/externalexec';
 import { debug } from './utils/debug';
 import { decode_mime_encode_str } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
@@ -225,6 +229,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
     workspace.registerKeymap(['v'], 'ext-decode-gbk', decodeStrFn('gbk'), {
       sync: false,
     }),
+
+    workspace.registerKeymap(
+      ['v'],
+      'ext-copy-xclip',
+      async () => {
+        logger.debug('===');
+        const text = await getText('v');
+        await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
+      },
+      { sync: false }
+    ),
 
     workspace.registerKeymap(
       ['v'],
