@@ -42,13 +42,13 @@ export function positionInRange(pos: Position, range: Range): boolean {
   );
 }
 
-export async function getText(mode: MapMode): Promise<string> {
+export async function getText(mode: MapMode, e: number = 1): Promise<string> {
   const doc = await workspace.document;
   let range: Nullable<Range> = null;
   if (mode === 'v') {
     // range = await workspace.getSelectedRange('v', doc);
     const text: string = (
-      await workspace.nvim.call('lib#common#visual_selection', 1)
+      await workspace.nvim.call('lib#common#visual_selection', [e])
     ).toString();
     return text.trim();
   } else {
