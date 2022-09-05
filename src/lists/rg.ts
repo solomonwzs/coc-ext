@@ -12,14 +12,21 @@ export default class RgList extends BasicList {
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 
+  private async actionOpenSplit(item: ListItem, context: ListContext) {
+    await openFile(item.data['name'], {
+      open: 'sp',
+      key: context.args[0],
+    });
+  }
+
   constructor(nvim: Neovim) {
     super(nvim);
     this.addAction('open', async (item: ListItem, context: ListContext) => {
       await openFile(item.data['name'], {
-        open: 'sp',
         key: context.args[0],
       });
     });
+
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
       let resp = await callShell('rg', [
         '-B',
@@ -35,6 +42,8 @@ export default class RgList extends BasicList {
       let lines = resp.data.toString().split('\n');
       this.preview({ filetype: item.data['filetype'], lines }, context);
     });
+
+    this.addAction('ctrl-x', this.actionOpenSplit);
   }
 
   public async loadItems(context: ListContext): Promise<ListItem[] | null> {
