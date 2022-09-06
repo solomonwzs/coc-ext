@@ -41,6 +41,9 @@ export default class RgList extends BasicList {
       }
       let lines = resp.data.toString().split('\n');
       this.preview({ filetype: item.data['filetype'], lines }, context);
+
+      // let prew_wid = await this.nvim.call('coc#list#get_preview', 0);
+      // logger.debug(prew_wid);
     });
 
     this.addAction('ctrl-x', this.actionOpenSplit);

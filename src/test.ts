@@ -165,8 +165,15 @@ async function re_test() {
     console.log(expl);
     expl = re.exec(str);
   }
+
+  let s = "'1234'";
+  console.log(s.replace(/'/g, "''"));
+
+  s = '\\1\\?';
+  console.log(s);
+  console.log(Buffer.from(s.replace(/\\(?!")/g, '\\\\')));
 }
-// re_test();
+re_test();
 
 async function path_test() {
   console.log(path.join('/home', '1.txt'));
@@ -210,7 +217,7 @@ async function path_test() {
   console.log(ss);
   console.log(JSON.stringify(ss));
 }
-path_test();
+// path_test();
 
 async function aes256_test() {
   const opts: AES256Options = {
