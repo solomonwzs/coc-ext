@@ -49,3 +49,21 @@ export function get_random_id(scope?: string, sep: string = '-'): string {
     ? `${scope}${sep}${ts}${sep}${r}`
     : `${ts}${sep}${r}`;
 }
+
+export function str_find_first_of(str: string, ch: Set<string>): number {
+  for (let i = 0; i < str.length; ++i) {
+    if (ch.has(str[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+export function str_find_first_not_of(str: string, ch: Set<string>): number {
+  for (let i = 0; i < str.length; ++i) {
+    if (!ch.has(str[i])) {
+      return i;
+    }
+  }
+  return -1;
+}

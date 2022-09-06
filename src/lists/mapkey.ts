@@ -47,7 +47,7 @@ function parse_mapkey_info(str: string): MapkeyInfo[] {
 
 export default class MapkeyList extends BasicList {
   public readonly name = 'mapkey';
-  public readonly description = 'CocList for coc-ext-common (map key)';
+  public readonly description = 'CocList for coc-ext-common (mapkey)';
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 
