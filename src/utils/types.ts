@@ -60,6 +60,15 @@ export interface HighlightInfo {
   line: number;
 }
 
+export interface AutocmdInfo {
+  group: string;
+  event: string;
+  pattern: string;
+  setting: string;
+  file: string;
+  line: number;
+}
+
 export interface MapkeyInfo {
   mode: string;
   key: string;

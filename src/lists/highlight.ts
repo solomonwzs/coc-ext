@@ -52,7 +52,7 @@ export function parse_highlight_info(str: string): HighlightInfo[] {
 
 export default class HighlightList extends BasicList {
   public readonly name = 'highlight';
-  public readonly description = 'CocList for coc-ext-common (rg)';
+  public readonly description = 'CocList for coc-ext-common (highlight)';
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 

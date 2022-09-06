@@ -10,11 +10,12 @@ import {
   listManager,
   workspace,
 } from 'coc.nvim';
+import AutocmdList from './lists/autocmd';
 import CommandsList from './lists/commands';
 import ExtList from './lists/lists';
+import HighlightList from './lists/highlight';
 import MapkeyList from './lists/mapkey';
 import RgList from './lists/rg';
-import HighlightList from './lists/highlight';
 import getcfg from './utils/config';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
@@ -279,6 +280,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new CommandsList(workspace.nvim)),
     listManager.registerList(new MapkeyList(workspace.nvim)),
     listManager.registerList(new RgList(workspace.nvim)),
+    listManager.registerList(new AutocmdList(workspace.nvim)),
     listManager.registerList(new HighlightList(workspace.nvim))
 
     // sources.createSource({
