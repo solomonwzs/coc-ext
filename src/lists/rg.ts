@@ -28,7 +28,7 @@ export default class RgList extends BasicList {
     });
 
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
-      let resp = await callShell('rg', [
+      const resp = await callShell('rg', [
         '-B',
         '3',
         '-C',
@@ -39,11 +39,19 @@ export default class RgList extends BasicList {
       if (resp.exitCode != 0 || !resp.data) {
         return;
       }
-      let lines = resp.data.toString().split('\n');
+      const lines = resp.data.toString().split('\n');
       this.preview({ filetype: item.data['filetype'], lines }, context);
 
-      // let prew_wid = await this.nvim.call('coc#list#get_preview', 0);
-      // logger.debug(prew_wid);
+      const prew_wid = await this.nvim.call('coc#list#get_preview', 0);
+      await this.nvim.call('matchadd', [
+        'Search',
+        context.args[0],
+        9,
+        -1,
+        { window: prew_wid },
+      ]);
+      // const wids = await this.nvim.call('getmatches', prew_wid);
+      // logger.debug(wids);
     });
 
     this.addAction('ctrl-x', this.actionOpenSplit);
@@ -55,7 +63,7 @@ export default class RgList extends BasicList {
     }
 
     const args = [context.args[0], '--files-with-matches', '--color', 'never'];
-    let resp = await callShell('rg', args);
+    const resp = await callShell('rg', args);
     if (resp.exitCode != 0) {
       logger.error('rg fail');
       if (resp.error) {
