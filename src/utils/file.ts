@@ -7,18 +7,41 @@ export interface Stats {
   error: NodeJS.ErrnoException | undefined;
 }
 
+export interface FileData {
+  data: Buffer | undefined;
+  error: NodeJS.ErrnoException | undefined;
+}
+
 export async function fsStat(filename: string): Promise<Stats> {
   return new Promise((resolve) => {
-    fs.stat(filename, (err, stats) => {
-      if (err == null) {
+    fs.stat(filename, (error, stats) => {
+      if (error == null) {
         resolve({
-          stats: stats,
+          stats,
           error: undefined,
         });
       } else {
         resolve({
           stats: undefined,
-          error: err,
+          error,
+        });
+      }
+    });
+  });
+}
+
+export async function fsRead(filename: string): Promise<FileData> {
+  return new Promise((resolve) => {
+    fs.readFile(filename, (error, data) => {
+      if (error == null) {
+        resolve({
+          data,
+          error: undefined,
+        });
+      } else {
+        resolve({
+          data: undefined,
+          error,
         });
       }
     });

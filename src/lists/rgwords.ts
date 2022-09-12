@@ -4,6 +4,7 @@ import { callShell } from '../utils/externalexec';
 import { getDefxIcon } from '../utils/icons';
 import { logger } from '../utils/logger';
 import { openFile } from '../utils/helper';
+// import { fsRead } from '../utils/file';
 import { showNotification } from '../utils/notify';
 
 interface RgMatchData {
@@ -37,27 +38,27 @@ export default class RgwordsList extends BasicList {
     });
 
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
-      const resp = await callShell('rg', [
-        '-B',
-        '3',
-        '-C',
-        '3',
-        context.args[0],
-        item.data['name'],
-      ]);
+      const resp = await callShell('cat', [item.data['name']]);
       if (resp.exitCode != 0 || !resp.data) {
         return;
       }
       const lines = resp.data.toString().split('\n');
-      this.preview({ filetype: item.data['filetype'], lines }, context);
+      this.preview(
+        { filetype: item.data['filetype'], lines, lnum: item.data['line'] },
+        context
+      );
 
       const prew_wid = await this.nvim.call('coc#list#get_preview', 0);
       await this.nvim.call('matchadd', [
         'Search',
-        context.args[0],
+        `\\v${context.args[0]}`,
         9,
         -1,
         { window: prew_wid },
+      ]);
+      await this.nvim.call('win_execute', [
+        prew_wid,
+        `call matchadd('TermCursor', '\\%${item.data['line']}l', 8, -1, {'window': ${prew_wid}})`,
       ]);
       // const wids = await this.nvim.call('getmatches', prew_wid);
       // logger.debug(wids);
@@ -70,8 +71,8 @@ export default class RgwordsList extends BasicList {
     if (context.args.length == 0) {
       return null;
     }
-    const wid = await this.nvim.call('winnr');
-    logger.debug(wid);
+    // const wid = await this.nvim.call('winnr');
+    // logger.debug(wid);
 
     const args = [context.args[0], '--color', 'never', '--json'];
     const resp = await callShell('rg', args);
@@ -99,7 +100,7 @@ export default class RgwordsList extends BasicList {
       }
 
       const filename = match.data.path.text;
-      const line = match.data.line_number.toString();
+      const line = match.data.line_number;
       const extname = path.extname(filename).slice(1);
       const icon = await getDefxIcon(extname, filename);
       const label = `${icon.icon}  ${filename}:${line}:${match.data.lines.text}`;
@@ -108,7 +109,7 @@ export default class RgwordsList extends BasicList {
       const offset1 = offset0 + 2 + Buffer.byteLength(filename) + 2;
       items.push({
         label,
-        data: { name: filename, filetype: extname },
+        data: { name: filename, filetype: extname, line },
         // ansiHighlights: [
         //   {
         //     span: [0, offset0],

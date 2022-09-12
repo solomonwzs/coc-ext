@@ -239,5 +239,9 @@ function utils_test() {
 // utils_test();
 
 function read_test() {
-  fs.readFile();
+  fs.readFile("/tmp/3.txt", (err, data) => {
+    console.log(err);
+    console.log(data.toString());
+  });
 }
+read_test();
