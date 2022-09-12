@@ -6,9 +6,9 @@ import { logger } from '../utils/logger';
 import { openFile } from '../utils/helper';
 import { showNotification } from '../utils/notify';
 
-export default class RgList extends BasicList {
-  public readonly name = 'rg';
-  public readonly description = 'CocList for coc-ext-common (rg)';
+export default class RgfilesList extends BasicList {
+  public readonly name = 'rgfiles';
+  public readonly description = 'CocList for coc-ext-common (rg files)';
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 
@@ -62,7 +62,13 @@ export default class RgList extends BasicList {
       return null;
     }
 
-    const args = [context.args[0], '--files-with-matches', '--color', 'never'];
+    const args = [
+      context.args[0],
+      '--files-with-matches',
+      '--color',
+      'never',
+      '--count-matches',
+    ];
     const resp = await callShell('rg', args);
     if (resp.exitCode != 0) {
       logger.error('rg fail');
@@ -82,20 +88,27 @@ export default class RgList extends BasicList {
 
     const items: ListItem[] = [];
     for (const i of list) {
-      let extname = path.extname(i).slice(1);
-      let icon = await getDefxIcon(extname, i);
-      let label = `${icon.icon}  ${i}`;
+      const arr = i.split(':');
+
+      const extname = path.extname(arr[0]).slice(1);
+      const icon = await getDefxIcon(extname, arr[0]);
+      const label = `${icon.icon}  ${arr[0]}  [${arr[1]}]`;
+
+      const offset0 = Buffer.byteLength(icon.icon);
+      const offset1 = offset0 + 2 + Buffer.byteLength(arr[0]) + 2;
       items.push({
         label,
-        data: { name: i, filetype: extname },
-        ansiHighlights: icon.hlGroup
-          ? [
-              {
-                span: [0, Buffer.byteLength(icon.icon)],
-                hlGroup: icon.hlGroup,
-              },
-            ]
-          : undefined,
+        data: { name: arr[0], filetype: extname },
+        ansiHighlights: [
+          {
+            span: [0, offset0],
+            hlGroup: icon.hlGroup ? icon.hlGroup : 'Normal',
+          },
+          {
+            span: [offset1, offset1 + arr[1].length + 2],
+            hlGroup: 'Number',
+          },
+        ],
       });
     }
     return items;

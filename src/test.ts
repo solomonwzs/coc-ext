@@ -173,7 +173,7 @@ async function re_test() {
   console.log(s);
   console.log(Buffer.from(s.replace(/\\(?!")/g, '\\\\')));
 }
-re_test();
+// re_test();
 
 async function path_test() {
   console.log(path.join('/home', '1.txt'));
@@ -237,3 +237,7 @@ function utils_test() {
   console.log(get_random_id('x'));
 }
 // utils_test();
+
+function read_test() {
+  fs.readFile();
+}

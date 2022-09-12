@@ -15,7 +15,8 @@ import CommandsList from './lists/commands';
 import ExtList from './lists/lists';
 import HighlightList from './lists/highlight';
 import MapkeyList from './lists/mapkey';
-import RgList from './lists/rg';
+import RgfilesList from './lists/rgfiles';
+import RgwordsList from './lists/rgwords';
 import getcfg from './utils/config';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
@@ -279,7 +280,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new ExtList(workspace.nvim)),
     listManager.registerList(new CommandsList(workspace.nvim)),
     listManager.registerList(new MapkeyList(workspace.nvim)),
-    listManager.registerList(new RgList(workspace.nvim)),
+    listManager.registerList(new RgfilesList(workspace.nvim)),
+    listManager.registerList(new RgwordsList(workspace.nvim)),
     listManager.registerList(new AutocmdList(workspace.nvim)),
     listManager.registerList(new HighlightList(workspace.nvim))
 

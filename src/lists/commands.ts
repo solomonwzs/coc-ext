@@ -1,7 +1,7 @@
 import { IList, ListAction, ListContext, ListItem, Neovim } from 'coc.nvim';
 
 export default class Commands implements IList {
-  public readonly name = 'vimcommand';
+  public readonly name = 'vimcmd';
   public readonly description = 'CocList for coc-ext-common (command)';
   public readonly defaultAction = 'execute';
   public actions: ListAction[] = [];
