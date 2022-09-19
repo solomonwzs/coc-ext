@@ -6,15 +6,7 @@ import { logger } from '../utils/logger';
 import { openFile } from '../utils/helper';
 // import { fsRead } from '../utils/file';
 import { showNotification } from '../utils/notify';
-
-interface RgMatchData {
-  type: string;
-  data: {
-    path: { text: string };
-    lines: { text: string };
-    line_number: number;
-  };
-}
+import { RgMatchData } from '../utils/types';
 
 export default class RgwordsList extends BasicList {
   public readonly name = 'rgwords';
@@ -33,6 +25,7 @@ export default class RgwordsList extends BasicList {
     super(nvim);
     this.addAction('open', async (item: ListItem, context: ListContext) => {
       await openFile(item.data['name'], {
+        line: item.data['line'],
         key: context.args[0],
       });
     });
@@ -44,7 +37,11 @@ export default class RgwordsList extends BasicList {
       }
       const lines = resp.data.toString().split('\n');
       this.preview(
-        { filetype: item.data['filetype'], lines, lnum: item.data['line'] },
+        {
+          lines,
+          lnum: item.data['line'],
+          bufname: item.data['name'],
+        },
         context
       );
 
@@ -56,10 +53,21 @@ export default class RgwordsList extends BasicList {
         -1,
         { window: prew_wid },
       ]);
-      await this.nvim.call('win_execute', [
-        prew_wid,
-        `call matchadd('TermCursor', '\\%${item.data['line']}l', 8, -1, {'window': ${prew_wid}})`,
+      await this.nvim.call('matchadd', [
+        'TermCursor',
+        `\\%${item.data['line']}l`,
+        8,
+        -1,
+        { window: prew_wid },
       ]);
+      // await this.nvim.call('win_execute', [
+      //   prew_wid,
+      //   `call matchadd('TermCursor', '\\%${item.data['line']}l', 8, -1, {'window': ${prew_wid}})`,
+      // ]);
+      // await this.nvim.call('win_execute', [
+      //   prew_wid,
+      //   `setf javascript`
+      // ]);
       // const wids = await this.nvim.call('getmatches', prew_wid);
       // logger.debug(wids);
     });
@@ -101,25 +109,31 @@ export default class RgwordsList extends BasicList {
 
       const filename = match.data.path.text;
       const line = match.data.line_number;
+      const strline = line.toString();
       const extname = path.extname(filename).slice(1);
       const icon = await getDefxIcon(extname, filename);
-      const label = `${icon.icon}  ${filename}:${line}:${match.data.lines.text}`;
+      const label = `${icon.icon}  ${filename}:${strline}:${match.data.lines.text}`;
 
       const offset0 = Buffer.byteLength(icon.icon);
-      const offset1 = offset0 + 2 + Buffer.byteLength(filename) + 2;
+      const offset1 = offset0 + 2 + Buffer.byteLength(filename);
+      const offset2 = offset1 + 2 + strline.length;
       items.push({
         label,
-        data: { name: filename, filetype: extname, line },
-        // ansiHighlights: [
-        //   {
-        //     span: [0, offset0],
-        //     hlGroup: icon.hlGroup ? icon.hlGroup : 'Normal',
-        //   },
-        //   {
-        //     span: [offset1, offset1 + line.length + 2],
-        //     hlGroup: 'Number',
-        //   },
-        // ],
+        data: { name: filename, line },
+        ansiHighlights: [
+          {
+            span: [0, offset0],
+            hlGroup: icon.hlGroup ? icon.hlGroup : 'Normal',
+          },
+          {
+            span: [offset0, offset1],
+            hlGroup: 'Directory',
+          },
+          {
+            span: [offset1, offset2],
+            hlGroup: 'Number',
+          },
+        ],
       });
     }
     return items;

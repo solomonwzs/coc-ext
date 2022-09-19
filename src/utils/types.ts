@@ -83,3 +83,12 @@ export interface OpenOptions {
   line?: number;
   column?: number;
 }
+
+export interface RgMatchData {
+  type: string;
+  data: {
+    path: { text: string };
+    lines: { text: string };
+    line_number: number;
+  };
+}

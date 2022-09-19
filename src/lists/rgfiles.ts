@@ -5,6 +5,7 @@ import { getDefxIcon } from '../utils/icons';
 import { logger } from '../utils/logger';
 import { openFile } from '../utils/helper';
 import { showNotification } from '../utils/notify';
+import { RgMatchData } from '../utils/types';
 
 export default class RgfilesList extends BasicList {
   public readonly name = 'rgfiles';
@@ -33,6 +34,10 @@ export default class RgfilesList extends BasicList {
         '3',
         '-C',
         '3',
+        '--color',
+        'never',
+        '--context-separator',
+        '\n================\n',
         context.args[0],
         item.data['name'],
       ]);
@@ -40,12 +45,12 @@ export default class RgfilesList extends BasicList {
         return;
       }
       const lines = resp.data.toString().split('\n');
-      this.preview({ filetype: item.data['filetype'], lines }, context);
+      this.preview({ bufname: item.data['name'], lines }, context);
 
       const prew_wid = await this.nvim.call('coc#list#get_preview', 0);
       await this.nvim.call('matchadd', [
         'Search',
-        context.args[0],
+        `\\v${context.args[0]}`,
         9,
         -1,
         { window: prew_wid },
@@ -98,7 +103,7 @@ export default class RgfilesList extends BasicList {
       const offset1 = offset0 + 2 + Buffer.byteLength(arr[0]) + 2;
       items.push({
         label,
-        data: { name: arr[0], filetype: extname },
+        data: { name: arr[0] },
         ansiHighlights: [
           {
             span: [0, offset0],
