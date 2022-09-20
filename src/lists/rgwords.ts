@@ -79,10 +79,9 @@ export default class RgwordsList extends BasicList {
     if (context.args.length == 0) {
       return null;
     }
-    // const wid = await this.nvim.call('winnr');
-    // logger.debug(wid);
 
-    const args = [context.args[0], '--color', 'never', '--json'];
+    const pattern = `"${context.args[0].replace(/"/g, '\\"')}"`;
+    const args = ['--color', 'never', '--json', pattern];
     const resp = await callShell('rg', args);
     if (resp.exitCode != 0) {
       logger.error('rg fail');

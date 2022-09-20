@@ -85,7 +85,10 @@ export async function callShell(
 ): Promise<ExternalExecResponse> {
   return new Promise((resolve) => {
     const stdin: StdioOptions = input ? 'pipe' : 'ignore';
-    const sh = spawn(cmd, args, { stdio: [stdin, 'pipe', 'pipe'] });
+    const sh = spawn(cmd, args, {
+      stdio: [stdin, 'pipe', 'pipe'],
+      shell: true,
+    });
 
     if (input && sh.stdin) {
       sh.stdin.write(input);

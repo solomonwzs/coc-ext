@@ -37,11 +37,12 @@ export default class RgfilesList extends BasicList {
         '--color',
         'never',
         '--context-separator',
-        '\n================\n',
+        '\\\\n================\\\\n',
         context.args[0],
         item.data['name'],
       ]);
       if (resp.exitCode != 0 || !resp.data) {
+        logger.error("rg fail");
         return;
       }
       const lines = resp.data.toString().split('\n');
@@ -67,12 +68,13 @@ export default class RgfilesList extends BasicList {
       return null;
     }
 
+    const pattern = `"${context.args[0].replace(/"/g, '\\"')}"`;
     const args = [
-      context.args[0],
       '--files-with-matches',
       '--color',
       'never',
       '--count-matches',
+      pattern,
     ];
     const resp = await callShell('rg', args);
     if (resp.exitCode != 0) {
