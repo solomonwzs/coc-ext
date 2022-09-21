@@ -5,7 +5,6 @@ import { getDefxIcon } from '../utils/icons';
 import { logger } from '../utils/logger';
 import { openFile } from '../utils/helper';
 import { showNotification } from '../utils/notify';
-import { RgMatchData } from '../utils/types';
 
 export default class RgfilesList extends BasicList {
   public readonly name = 'rgfiles';
@@ -29,20 +28,25 @@ export default class RgfilesList extends BasicList {
     });
 
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
-      const resp = await callShell('rg', [
-        '-B',
-        '3',
-        '-C',
-        '3',
-        '--color',
-        'never',
-        '--context-separator',
-        '\\\\n================\\\\n',
-        context.args[0],
-        item.data['name'],
-      ]);
+      const resp = await callShell(
+        'rg',
+        [
+          '-B',
+          '3',
+          '-C',
+          '3',
+          '--color',
+          'never',
+          '--context-separator',
+          '\\\\n================\\\\n',
+          context.args[0],
+          item.data['name'],
+        ],
+        undefined,
+        { shell: true }
+      );
       if (resp.exitCode != 0 || !resp.data) {
-        logger.error("rg fail");
+        logger.error('rg fail');
         return;
       }
       const lines = resp.data.toString().split('\n');
@@ -76,7 +80,7 @@ export default class RgfilesList extends BasicList {
       '--count-matches',
       pattern,
     ];
-    const resp = await callShell('rg', args);
+    const resp = await callShell('rg', args, undefined, { shell: true });
     if (resp.exitCode != 0) {
       logger.error('rg fail');
       if (resp.error) {

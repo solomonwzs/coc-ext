@@ -92,3 +92,7 @@ export interface RgMatchData {
     line_number: number;
   };
 }
+
+export interface CallShellOptions {
+  shell?: boolean;
+}

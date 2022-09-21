@@ -1,5 +1,5 @@
 import path from 'path';
-import { Execution } from './types';
+import { CallShellOptions, Execution } from './types';
 import {
   spawn,
   ChildProcessWithoutNullStreams,
@@ -81,13 +81,14 @@ export async function callMultiCmdShell(
 export async function callShell(
   cmd: string,
   args: string[],
-  input?: string | Buffer
+  input?: string | Buffer,
+  opts?: CallShellOptions
 ): Promise<ExternalExecResponse> {
   return new Promise((resolve) => {
     const stdin: StdioOptions = input ? 'pipe' : 'ignore';
     const sh = spawn(cmd, args, {
       stdio: [stdin, 'pipe', 'pipe'],
-      shell: true,
+      shell: opts?.shell,
     });
 
     if (input && sh.stdin) {
