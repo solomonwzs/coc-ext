@@ -96,3 +96,11 @@ export interface RgMatchData {
 export interface CallShellOptions {
   shell?: boolean;
 }
+
+export interface CocExtFloatConfig {
+  border?: boolean;
+  highlight?: string;
+  borderhighlight?: string;
+  maxHeight?: number;
+  maxWidth?: number;
+}

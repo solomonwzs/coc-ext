@@ -13,22 +13,24 @@ import {
 import fs from 'fs';
 import getcfg from './config';
 import path from 'path';
-import { Nullable, OpenOptions } from './types';
+import { Nullable, OpenOptions, CocExtFloatConfig } from './types';
 import { TextEncoder } from 'util';
+import { logger } from './logger';
 
 // import fs from 'fs-extra';
 // import md5 from 'md5';
-// import { logger } from './logger';
 
 function defauleFloatWinConfig(): FloatWinConfig {
+  let conf = getcfg<CocExtFloatConfig>('floatConfig', {});
+  logger.debug(conf);
   return {
     autoHide: true,
-    border: getcfg<boolean>('window.enableBorder', false)
-      ? [1, 1, 1, 1]
-      : [0, 0, 0, 0],
+    border: conf.border ? [1, 1, 1, 1] : [0, 0, 0, 0],
     close: false,
-    maxHeight: getcfg<any>('window.maxHeight', undefined),
-    maxWidth: getcfg<any>('window.maxWidth', undefined),
+    maxHeight: conf.maxHeight,
+    maxWidth: conf.maxWidth,
+    highlight: conf.highlight,
+    borderhighlight: conf.borderhighlight,
   };
 }
 

@@ -10,6 +10,7 @@
           "default": true,
           "description": "Enable coc-ext extension"
         },
+
         "coc-ext.log.detail": {
           "type": "boolean",
           "default": false,
@@ -20,11 +21,13 @@
           "default": 1,
           "description": "log level"
         },
+
         "coc-ext.debug": {
           "type": "number",
           "default": 1,
           "description": "debug"
         },
+
         "coc-ext.formatting": {
           "type": "array",
           "default": [],
@@ -33,10 +36,37 @@
             "type": "object"
           }
         },
+
         "coc-ext.pythonDir": {
           "type": "string",
           "default": "pythonx",
           "description": "coc-ext python directory"
+        },
+
+        "coc-ext.floatConfig": {
+          "type": "object",
+          "default": {},
+          "description": "Configure float window style of coc-ext message.",
+          "properties": {
+            "border": {
+              "type": "boolean",
+              "default": false
+            },
+            "highlight": {
+              "type": "string",
+              "default": "CocFloating"
+            },
+            "borderhighlight": {
+              "type": "string",
+              "default": "CocFloating"
+            },
+            "maxHeight": {
+              "type": "number"
+            },
+            "maxWidth": {
+              "type": "number"
+            }
+          }
         }
       }
     },

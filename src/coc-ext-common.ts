@@ -113,9 +113,9 @@ async function getCursorSymbolInfo(): Promise<any> {
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   return async () => {
     const text = await getText(mode);
-    let trans = await googleTranslate(text, 'auto', 'zh-CN');
+    let trans = await bingTranslate(text, 'auto', 'zh-CN');
     if (!trans) {
-      trans = await bingTranslate(text, 'auto', 'zh-CN');
+      trans = await googleTranslate(text, 'auto', 'zh-CN');
     }
 
     if (trans) {
