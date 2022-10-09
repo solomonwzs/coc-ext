@@ -67,7 +67,7 @@ export default class Manager {
       const pos = await window.getCursorPosition();
       range = doc.getWordRangeAtPosition(pos);
     } else {
-      range = await workspace.getSelectedRange('v', doc);
+      range = await window.getSelectedRange('v');
     }
     let text = '';
     if (!range) {

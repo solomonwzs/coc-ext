@@ -3,8 +3,8 @@ import {
   CancellationTokenSource,
   Document,
   diagnosticManager,
-  workspace,
   languages,
+  window,
 } from 'coc.nvim';
 // import { logger } from '../utils/logger';
 
@@ -16,7 +16,7 @@ export class Lightbulb {
     this.tokenSource = new CancellationTokenSource();
     const token = this.tokenSource.token;
 
-    const range = await workspace.getSelectedRange('cursor', doc);
+    const range = await window.getSelectedRange('cursor');
 
     if (!range) {
       return false;

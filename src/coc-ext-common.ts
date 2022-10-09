@@ -8,6 +8,7 @@ import {
   commands,
   languages,
   listManager,
+  window,
   workspace,
 } from 'coc.nvim';
 import AutocmdList from './lists/autocmd';
@@ -140,12 +141,13 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
 
 function encodeStrFn(enc: string): () => ProviderResult<any> {
   return async () => {
-    const pythonDir = getcfg<string>('pythonDir', '');
-    const doc = await workspace.document;
-    const range = await workspace.getSelectedRange('v', doc);
+    const range = await window.getSelectedRange('v');
     if (!range) {
       return;
     }
+
+    const pythonDir = getcfg<string>('pythonDir', '');
+    const doc = await workspace.document;
     const text = doc.textDocument.getText(range);
     const res = await callPython(pythonDir, 'coder', 'encode_str', [text, enc]);
     replaceExecText(doc, range, res);
@@ -247,12 +249,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ['v'],
       'ext-change-name-rule',
       async () => {
-        const pythonDir = getcfg<string>('pythonDir', '');
-        const doc = await workspace.document;
-        const range = await workspace.getSelectedRange('v', doc);
+        const range = await window.getSelectedRange('v');
         if (!range) {
           return;
         }
+
+        const pythonDir = getcfg<string>('pythonDir', '');
+        const doc = await workspace.document;
         const name = doc.textDocument.getText(range);
         const res = await callPython(pythonDir, 'common', 'change_name_rule', [
           name,

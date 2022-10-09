@@ -1,4 +1,4 @@
-import { workspace, TextEdit, FloatFactory } from 'coc.nvim';
+import { window, workspace, TextEdit, FloatFactory } from 'coc.nvim';
 import { logger } from './logger';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
@@ -61,8 +61,7 @@ export async function debugSelection(): Promise<any> {
 }
 
 export async function debugRange(): Promise<any> {
-  const doc = await workspace.document;
-  const range = await workspace.getSelectedRange('cursor', doc);
+  const range = await window.getSelectedRange('cursor');
   logger.debug(range);
 }
 

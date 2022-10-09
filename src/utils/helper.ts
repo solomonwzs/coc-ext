@@ -46,7 +46,7 @@ export async function getText(mode: MapMode, e: number = 1): Promise<string> {
   const doc = await workspace.document;
   let range: Nullable<Range> = null;
   if (mode === 'v') {
-    // range = await workspace.getSelectedRange('v', doc);
+    // range = await window.getSelectedRange('v');
     const text: string = (
       await workspace.nvim.call('lib#common#visual_selection', [e])
     ).toString();
