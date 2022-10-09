@@ -37,7 +37,8 @@ export async function bingTranslate(
     logger.error(resp.error.message);
     return null;
   }
-  if (!resp.data) {
+  if (resp.statusCode != 200 || !resp.data || resp.data.length == 0) {
+    logger.error(`status: ${resp.statusCode}`);
     return null;
   }
 

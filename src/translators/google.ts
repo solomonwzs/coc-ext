@@ -50,7 +50,7 @@ export async function googleTranslate(
     logger.error(resp.error.message);
     return null;
   }
-  if (!resp.data || resp.statusCode != 200) {
+  if (resp.statusCode != 200 || !resp.data || resp.data.length == 0) {
     logger.error(`status: ${resp.statusCode}`);
     return null;
   }
