@@ -1,5 +1,5 @@
 import { ITranslation, createTranslation } from './base';
-import { simpleHttpsRequest } from '../utils/http';
+import { sendHttpRequest, HttpRequest } from '../utils/http';
 import { RequestOptions } from 'https';
 import { logger } from '../utils/logger';
 
@@ -21,28 +21,31 @@ export async function bingTranslate(
   sl: string,
   tl: string
 ): Promise<ITranslation | null> {
-  const opts: RequestOptions = {
-    hostname: 'cn.bing.com',
-    path: `/dict/SerpHoverTrans?q=${encodeURIComponent(text)}`,
-    method: 'GET',
-    timeout: 1000,
-    headers: {
-      Host: 'cn.bing.com',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
+  const req: HttpRequest = {
+    args: {
+      host: 'cn.bing.com',
+      path: `/dict/SerpHoverTrans?q=${encodeURIComponent(text)}`,
+      method: 'GET',
+      timeout: 1000,
+      headers: {
+        Host: 'cn.bing.com',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
     },
   };
-  const resp = await simpleHttpsRequest(opts);
+  const resp = await sendHttpRequest(req);
   if (resp.error) {
     logger.error(resp.error.message);
     return null;
   }
-  if (resp.statusCode != 200 || !resp.data || resp.data.length == 0) {
+  if (resp.statusCode != 200 || !resp.body || resp.body.length == 0) {
     logger.error(`status: ${resp.statusCode}`);
     return null;
   }
 
   const ret = createTranslation('Bing', sl, tl, text);
-  ret.paraphrase = getParaphrase(resp.data.toString());
+  ret.paraphrase = getParaphrase(resp.body.toString());
   return ret;
 }

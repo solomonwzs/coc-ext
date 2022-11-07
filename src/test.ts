@@ -1,7 +1,13 @@
 import { spawn } from 'child_process';
-import { RequestOptions } from 'https';
+import https from 'https';
+import http from 'http';
 import { TextDecoder, TextEncoder } from 'util';
-import { simpleHttpsRequest } from './utils/http';
+import {
+  simpleHttpRequest,
+  simpleHttpsProxy,
+  sendHttpRequest,
+  HttpRequest,
+} from './utils/http';
 import fs from 'fs';
 import { callShell, callMultiCmdShell } from './utils/externalexec';
 import path from 'path';
@@ -14,20 +20,166 @@ import {
 } from './utils/decoder';
 import { get_random_id } from './utils/common';
 import { URI } from 'vscode-uri';
+import { URL } from 'url';
 import os from 'os';
 
 console.log('========');
 
 async function http_test(): Promise<void> {
-  const opts: RequestOptions = {
-    hostname: 'www.google.com',
+  // const url = new URL("https://www.google.com/c?a=1&b=2");
+  // console.log(url.pathname);
+  // console.log(url.search);
+  const opts: https.RequestOptions = {
+    protocol: 'http:',
+    host: 'www.baidu.com',
     method: 'GET',
-    timeout: 100,
+    timeout: 1000,
   };
-  const resp = await simpleHttpsRequest(opts);
+  const resp = await simpleHttpRequest(opts);
   console.log(resp);
 }
 // http_test();
+
+function proxy_test() {
+  http
+    .request({
+      hostname: '127.0.0.1',
+      port: 1087,
+      path: 'www.google.com:443',
+      method: 'CONNECT',
+    })
+    .on('connect', (resp, socket, head) => {
+      if (resp.statusCode == 200) {
+        console.log('ok');
+        const agent = new https.Agent({ socket });
+        // https.get(
+        //   { hostname: 'www.google.com', path: '/', method: 'GET', agent },
+        //   (res) => {
+        //     res.on('data', (chunk: Buffer) => {
+        //       console.log(chunk.toString('utf8'));
+        //     });
+        //   }
+        // );
+        https
+          .request(
+            {
+              hostname: 'www.google.com',
+              path: '/',
+              method: 'GET',
+              agent,
+              // timeout: 5000,
+            },
+            (res) => {
+              res
+                .on('data', (chunk: Buffer) => {
+                  console.log(chunk.toString('utf8'));
+                })
+                .on('end', () => {
+                  console.log('end');
+                });
+            }
+          )
+          .on('timeout', () => {
+            console.log('query timeout');
+          })
+          .on('error', (err) => {
+            console.log(err);
+          })
+          .end();
+      } else {
+        console.log(resp);
+      }
+    })
+    .on('timeout', () => {
+      console.log('proxy timeout');
+    })
+    .end();
+}
+// proxy_test();
+
+async function proxy_test2() {
+  const agent = await simpleHttpsProxy('127.0.0.1', 7890, 'www.google.com:443');
+  if (agent.error) {
+    console.log(agent.error);
+    return;
+  }
+  https
+    .request(
+      {
+        host: 'www.google.com',
+        path: '/ncr',
+        method: 'GET',
+        agent: agent.agent,
+        // timeout: 5000,
+      },
+      (res) => {
+        res
+          .on('data', (chunk: Buffer) => {
+            console.log(chunk.toString('utf8'));
+          })
+          .on('end', () => {
+            console.log('==== end ====');
+          });
+      }
+    )
+    .on('timeout', () => {
+      console.log('query timeout');
+    })
+    .on('error', (err) => {
+      console.log(err);
+    })
+    .end();
+}
+// proxy_test2();
+
+function foo(opts: http.RequestOptions) {
+  const opts2 = Object.assign({}, opts);
+  opts2.headers = Object.assign({}, opts.headers);
+  console.log(opts);
+  console.log(opts2);
+}
+
+function proxy_test3() {
+  const opts = {
+    host: '127.0.0.1',
+    port: 7890,
+    method: 'GET',
+    path: 'http://www.google.com/ncr',
+    headers: {
+      Host: 'www.google.com',
+    },
+  };
+  foo(opts);
+  http
+    .request(opts, (res) => {
+      console.log(res.headers);
+      res
+        .on('data', (chunk: Buffer) => {
+          console.log(chunk.toString('utf8'));
+        })
+        .on('end', () => {
+          console.log('==== end ====');
+        });
+    })
+    .on('timeout', () => {
+      console.log('query timeout');
+    })
+    .on('error', (err) => {
+      console.log(err);
+    })
+    .end();
+}
+// proxy_test3();
+
+async function proxy_test4() {
+  const req: HttpRequest = {
+    args: { host: 'www.google.com', protocol: 'http:', method: 'GET' },
+    proxy: { host: '127.0.0.1', port: 1087 },
+  };
+  const resp = await sendHttpRequest(req);
+  console.log(resp);
+}
+proxy_test4();
 
 function fnvHash(data: string | Uint8Array, seed = 0): number {
   const fnvPrime = BigInt(0x811c9dc5);
@@ -239,9 +391,9 @@ function utils_test() {
 // utils_test();
 
 function read_test() {
-  fs.readFile("/tmp/3.txt", (err, data) => {
+  fs.readFile('/tmp/3.txt', (err, data) => {
     console.log(err);
     console.log(data.toString());
   });
 }
-read_test();
+// read_test();
