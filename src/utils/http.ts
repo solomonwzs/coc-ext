@@ -1,5 +1,6 @@
 import https from 'https';
 import http from 'http';
+// import { logger } from './logger';
 
 export interface HttpRequest {
   args: http.ClientRequestArgs;
@@ -90,7 +91,7 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
   }
   const is_https = req.args.protocol == 'https:';
   if (!req.proxy) {
-    return await simpleHttpRequest(req.args, req.data, is_https);
+    return await simpleHttpRequest(req.args, is_https, req.data);
   } else if (is_https) {
     const agent = await simpleHttpsProxy(
       req.proxy.host,

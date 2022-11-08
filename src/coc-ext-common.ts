@@ -28,7 +28,8 @@ import {
   ExternalExecResponse,
 } from './utils/externalexec';
 import { debug } from './utils/debug';
-import { decode_mime_encode_str } from './utils/decoder';
+import { getEnvHttpProxy } from './utils/common';
+import { decodeMimeEncodeStr } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
 import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
@@ -111,11 +112,12 @@ async function getCursorSymbolInfo(): Promise<any> {
 }
 
 function translateFn(mode: MapMode): () => ProviderResult<any> {
+  const proxy = getEnvHttpProxy(true);
   return async () => {
     const text = await getText(mode);
-    let trans = await googleTranslate(text, 'auto', 'zh-CN');
+    let trans = await bingTranslate(text, 'auto', 'zh-CN', proxy);
     if (!trans) {
-      trans = await googleTranslate(text, 'auto', 'zh-CN');
+      trans = await googleTranslate(text, 'auto', 'zh-CN', proxy);
     }
 
     if (trans) {
@@ -272,7 +274,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       'ext-decode-mime',
       async () => {
         const text = await getText('v');
-        const tt = decode_mime_encode_str(text);
+        const tt = decodeMimeEncodeStr(text);
         popup(tt, '[Mime decode]');
       },
       {

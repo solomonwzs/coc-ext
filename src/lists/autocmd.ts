@@ -1,7 +1,7 @@
 import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { AutocmdInfo } from '../utils/types';
-import { logger } from '../utils/logger';
-import { str_find_first_of, str_find_first_not_of } from '../utils/common';
+// import { logger } from '../utils/logger';
+import { strFindFirstOf, strFindFirstNotOf } from '../utils/common';
 
 export interface AutocmdGroupInfo {
   group: string;
@@ -9,7 +9,7 @@ export interface AutocmdGroupInfo {
   infos: AutocmdInfo[];
 }
 
-export function parse_autocmd_info(str: string): AutocmdGroupInfo[] {
+export function parseAutocmdInfo(str: string): AutocmdGroupInfo[] {
   let lines = str.split('\n');
   let group = '';
   let event = '';
@@ -33,7 +33,7 @@ export function parse_autocmd_info(str: string): AutocmdGroupInfo[] {
 
   const spaces = new Set<string>([' ', '\t']);
   for (const l of lines) {
-    const sn = str_find_first_not_of(l, spaces);
+    const sn = strFindFirstNotOf(l, spaces);
     if (sn == 0) {
       // group name
       let arr = l.split(/\s+/);
@@ -61,13 +61,13 @@ export function parse_autocmd_info(str: string): AutocmdGroupInfo[] {
       setting = '';
 
       const ltmp = l.slice(sn);
-      const offset0 = str_find_first_of(ltmp, spaces);
+      const offset0 = strFindFirstOf(ltmp, spaces);
       if (offset0 == -1) {
         pattern = ltmp;
       } else {
         pattern = ltmp.slice(0, offset0);
 
-        const offset1 = str_find_first_not_of(ltmp.slice(offset0), spaces);
+        const offset1 = strFindFirstNotOf(ltmp.slice(offset0), spaces);
         if (offset1 != -1) {
           setting = ltmp.slice(offset0 + offset1);
         }
@@ -120,8 +120,8 @@ export default class AutocmdList extends BasicList {
 
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
     const { nvim } = this;
-    let str = await nvim.commandOutput('verbose autocmd');
-    const infos = parse_autocmd_info(str);
+    let str = await nvim.exec('verbose autocmd', true);
+    const infos = parseAutocmdInfo(str);
 
     let max_gn_len = 0;
     let max_en_len = 0;

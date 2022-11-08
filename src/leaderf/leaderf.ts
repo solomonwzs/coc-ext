@@ -1,10 +1,10 @@
-import { highlight_source } from './highlight';
+import { highlightSource } from './highlight';
 
 export async function leader_recv(
   cmd: string,
   ...args: string[]
 ): Promise<any> {
   if (cmd == 'highlight') {
-    await highlight_source();
+    await highlightSource();
   }
 }

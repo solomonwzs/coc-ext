@@ -1,7 +1,7 @@
 import { ITranslation, createTranslation } from './base';
 import { sendHttpRequest, HttpRequest } from '../utils/http';
-import { RequestOptions } from 'https';
 import { logger } from '../utils/logger';
+import { URL } from 'url';
 
 function getParaphrase(html: string): string {
   const re =
@@ -19,8 +19,12 @@ function getParaphrase(html: string): string {
 export async function bingTranslate(
   text: string,
   sl: string,
-  tl: string
+  tl: string,
+  proxy_url?: URL
 ): Promise<ITranslation | null> {
+  const proxy = proxy_url
+    ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
+    : undefined;
   const req: HttpRequest = {
     args: {
       host: 'cn.bing.com',
@@ -33,7 +37,9 @@ export async function bingTranslate(
           'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
       },
+      protocol: 'https:',
     },
+    proxy,
   };
   const resp = await sendHttpRequest(req);
   if (resp.error) {

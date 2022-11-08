@@ -2,7 +2,7 @@ import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { MapkeyInfo } from '../utils/types';
 import { openFile } from '../utils/helper';
 
-function parse_mapkey_info(str: string): MapkeyInfo[] {
+function parseMapkeyInfo(str: string): MapkeyInfo[] {
   let lines = str.split('\n');
   let mode = '';
   let key = '';
@@ -67,8 +67,8 @@ export default class MapkeyList extends BasicList {
 
   public async loadItems(_context: ListContext): Promise<ListItem[]> {
     const { nvim } = this;
-    let str = await nvim.commandOutput('verbose map');
-    const mapinfos = parse_mapkey_info(str);
+    let str = await nvim.exec('verbose map', true);
+    const mapinfos = parseMapkeyInfo(str);
 
     let max_key_len = 0;
     for (const i of mapinfos) {

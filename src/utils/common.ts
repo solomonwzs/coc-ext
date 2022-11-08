@@ -1,11 +1,30 @@
 import path from 'path';
+import { URL } from 'url';
 
 export interface CallStack {
   file: string;
   line: number;
 }
 
-export function get_call_stack(): CallStack[] {
+export interface Address {
+  host: string;
+  port: number;
+}
+
+export function getEnvHttpProxy(is_https?: boolean): URL | undefined {
+  const proxy = process.env[is_https ? 'https_proxy' : 'http_proxy'];
+  if (proxy) {
+    try {
+      return new URL(proxy);
+    } catch (e) {
+      return undefined;
+    }
+  } else {
+    return undefined;
+  }
+}
+
+export function getCallStack(): CallStack[] {
   const res: CallStack[] = [];
   const stack = new Error().stack?.split('\n');
   const re = /at ((.*) \()?([^:]+):(\d+):(\d+)\)?/g;
@@ -41,7 +60,7 @@ export function pad(n: string, total: number): string {
   return new Array(l).fill(' ').join('');
 }
 
-export function get_random_id(scope?: string, sep: string = '-'): string {
+export function getRandomId(scope?: string, sep: string = '-'): string {
   const ts = new Date().getTime().toString(16).slice(-8);
   let r = Math.floor(Math.random() * 0xffff).toString(16);
   r = '0'.repeat(4 - r.length) + r;
@@ -50,7 +69,7 @@ export function get_random_id(scope?: string, sep: string = '-'): string {
     : `${ts}${sep}${r}`;
 }
 
-export function str_find_first_of(str: string, ch: Set<string>): number {
+export function strFindFirstOf(str: string, ch: Set<string>): number {
   for (let i = 0; i < str.length; ++i) {
     if (ch.has(str[i])) {
       return i;
@@ -59,7 +78,7 @@ export function str_find_first_of(str: string, ch: Set<string>): number {
   return -1;
 }
 
-export function str_find_first_not_of(str: string, ch: Set<string>): number {
+export function strFindFirstNotOf(str: string, ch: Set<string>): number {
   for (let i = 0; i < str.length; ++i) {
     if (!ch.has(str[i])) {
       return i;

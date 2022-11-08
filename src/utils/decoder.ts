@@ -2,7 +2,7 @@ import { TextDecoder } from 'util';
 import { callShell } from './externalexec';
 // import { logger } from './logger';
 
-export function decode_str(str: string, enc: string): string {
+export function decodeStr(str: string, enc: string): string {
   const re = /\x(..)/g;
   let expl = re.exec(str);
   const buf: number[] = [];
@@ -14,7 +14,7 @@ export function decode_str(str: string, enc: string): string {
   return decoder.decode(Buffer.from(buf));
 }
 
-export function decode_mime_encode_str(str: string): string {
+export function decodeMimeEncodeStr(str: string): string {
   const re = /=\?(.+?)\?([BbQq])\?(.+?)\?=/g;
   const res: RegExpExecArray[] = [];
   let expl = re.exec(str);
@@ -81,7 +81,7 @@ export interface AES256Options {
   salt?: boolean;
 }
 
-function encode_safe_b64str(str: string): string {
+function encodeSafeB64str(str: string): string {
   if (str.length == 0) {
     return '0';
   }
@@ -89,19 +89,19 @@ function encode_safe_b64str(str: string): string {
   if (str[str.length - 1] == '=') {
     padding = str.length >= 2 && str[str.length - 2] == '=' ? 2 : 1;
   }
-  const s = str.substr(0, str.length - padding);
+  const s = str.substring(0, str.length - padding);
   return `${s.replace(/\+/gi, '-').replace(/\//gi, '_')}${padding}`;
 }
 
-function decode_safe_b64str(str: string): string {
+function decodeSafeB64str(str: string): string {
   const padding = str.charCodeAt(str.length - 1) - '0'.charCodeAt(0);
   return `${str
-    .substr(0, str.length - 1)
+    .substring(0, str.length - 1)
     .replace(/-/gi, '+')
     .replace(/_/gi, '/')}${'='.repeat(padding)}`;
 }
 
-export async function encode_aes256_str(
+export async function encodeAes256Str(
   str: string,
   opts: AES256Options
 ): Promise<string | null> {
@@ -119,14 +119,14 @@ export async function encode_aes256_str(
   ];
   const res = await callShell(exec, args, str);
   if (res.exitCode == 0 && res.data) {
-    return `${opts.prefix ? opts.prefix : ''}${encode_safe_b64str(
+    return `${opts.prefix ? opts.prefix : ''}${encodeSafeB64str(
       res.data.toString()
     )}${opts.suffix ? opts.suffix : ''}`;
   }
   return null;
 }
 
-export async function decode_aes256_str(
+export async function decodeAes256Str(
   str: string,
   opts: AES256Options
 ): Promise<string | null> {
@@ -135,15 +135,15 @@ export async function decode_aes256_str(
     if (s.length <= opts.prefix.length) {
       return null;
     }
-    s = s.substr(opts.prefix.length);
+    s = s.substring(opts.prefix.length);
   }
   if (opts.suffix) {
     if (s.length <= opts.suffix.length) {
       return null;
     }
-    s = s.substr(1, s.length - opts.suffix.length);
+    s = s.substring(1, s.length - opts.suffix.length);
   }
-  s = decode_safe_b64str(s);
+  s = decodeSafeB64str(s);
   const exec = opts.openssl ? opts.openssl : 'openssl';
   const args: string[] = [
     'des',

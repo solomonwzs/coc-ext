@@ -1,6 +1,6 @@
 import { OutputChannel, window } from 'coc.nvim';
 import getcfg from './config';
-import { stringify, get_call_stack } from './common';
+import { stringify, getCallStack } from './common';
 import path from 'path';
 
 export class Logger {

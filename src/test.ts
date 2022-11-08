@@ -14,11 +14,11 @@ import path from 'path';
 import { fsStat, getFilesList } from './utils/file';
 import minimatch from 'minimatch';
 import {
-  encode_aes256_str,
-  decode_aes256_str,
+  encodeAes256Str,
+  decodeAes256Str,
   AES256Options,
 } from './utils/decoder';
-import { get_random_id } from './utils/common';
+import { getRandomId, getEnvHttpProxy } from './utils/common';
 import { URI } from 'vscode-uri';
 import { URL } from 'url';
 import os from 'os';
@@ -26,7 +26,8 @@ import os from 'os';
 console.log('========');
 
 async function http_test(): Promise<void> {
-  // const url = new URL("https://www.google.com/c?a=1&b=2");
+  console.log(getEnvHttpProxy());
+  // const url = new URL('www.google.com/c?a=1&b=2');
   // console.log(url.pathname);
   // console.log(url.search);
   const opts: https.RequestOptions = {
@@ -376,17 +377,17 @@ async function aes256_test() {
     password: '1234abcd',
     prefix: '.enc_',
   };
-  const s0 = await encode_aes256_str('hello world', opts);
+  const s0 = await encodeAes256Str('hello world', opts);
   console.log(s0);
   if (s0) {
-    const s1 = await decode_aes256_str(s0, opts);
+    const s1 = await decodeAes256Str(s0, opts);
     console.log(s1);
   }
 }
 // aes256_test();
 
 function utils_test() {
-  console.log(get_random_id('x'));
+  console.log(getRandomId('x'));
 }
 // utils_test();
 

@@ -14,8 +14,8 @@ import { callShell, ExternalExecResponse } from './utils/externalexec';
 import { fsStat, getFilesList } from './utils/file';
 import { logger } from './utils/logger';
 import {
-  encode_aes256_str,
-  decode_aes256_str,
+  encodeAes256Str,
+  decodeAes256Str,
   AES256Options,
 } from './utils/decoder';
 import { showNotification } from './utils/notify';
@@ -134,14 +134,14 @@ class CryptoHandler {
   public async getEncFilename(filename: string): Promise<string | null> {
     const dir = path.dirname(filename);
     const name = path.basename(filename);
-    const new_name = await encode_aes256_str(name, this.aes256key);
+    const new_name = await encodeAes256Str(name, this.aes256key);
     return new_name ? path.join(dir, new_name) : null;
   }
 
   public async getDesFilename(filename: string): Promise<string | null> {
     const dir = path.dirname(filename);
     const name = path.basename(filename);
-    const new_name = await decode_aes256_str(name, this.aes256key);
+    const new_name = await decodeAes256Str(name, this.aes256key);
     return new_name ? path.join(dir, new_name) : null;
   }
 

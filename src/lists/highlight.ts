@@ -2,7 +2,7 @@ import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { HighlightInfo } from '../utils/types';
 import { openFile } from '../utils/helper';
 
-export function parse_highlight_info(str: string): HighlightInfo[] {
+export function parseHighlightInfo(str: string): HighlightInfo[] {
   let lines = str.split('\n');
   let group_name = '';
   let desc = '';
@@ -72,8 +72,8 @@ export default class HighlightList extends BasicList {
 
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
     const { nvim } = this;
-    let str = await nvim.commandOutput('verbose highlight');
-    const hiinfos = parse_highlight_info(str);
+    let str = await nvim.exec('verbose highlight', true);
+    const hiinfos = parseHighlightInfo(str);
 
     let max_gn_len = 0;
     for (const i of hiinfos) {

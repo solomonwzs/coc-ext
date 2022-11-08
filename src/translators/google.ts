@@ -1,7 +1,7 @@
 import { ITranslation, createTranslation } from './base';
 import { logger } from '../utils/logger';
-import { RequestOptions } from 'https';
 import { sendHttpRequest, HttpRequest } from '../utils/http';
+import { URL } from 'url';
 
 function getParaphrase(obj: any): string {
   const paraphrase: string[] = [];
@@ -23,16 +23,20 @@ function getParaphrase(obj: any): string {
 export async function googleTranslate(
   text: string,
   sl: string,
-  tl: string
+  tl: string,
+  proxy_url?: URL
 ): Promise<ITranslation | null> {
   // const host = 'translate.googleapis.com';
   // if (/^zh/.test(tl)) {
   //   host = 'translate.google.cn';
   // }
   const host = 'translate.google.com';
+  const proxy = proxy_url
+    ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
+    : undefined;
   const req: HttpRequest = {
     args: {
-      hostname: host,
+      host,
       path:
         `/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=at&dt=bd` +
         `&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&dj=1` +
@@ -46,7 +50,9 @@ export async function googleTranslate(
           'Chrome/75.0.3770.100 ' +
           'Safari/537.36',
       },
+      protocol: 'https:',
     },
+    proxy,
   };
   const resp = await sendHttpRequest(req);
   if (resp.error) {
