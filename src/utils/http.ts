@@ -3,7 +3,16 @@ import http from 'http';
 // import { logger } from './logger';
 
 export interface HttpRequest {
-  args: http.ClientRequestArgs;
+  args: {
+    host: string;
+    protocol?: 'http:' | 'https:';
+    port?: number;
+    headers?: http.OutgoingHttpHeaders;
+    method?: string;
+    agent?: http.Agent;
+    path?: string;
+    timeout?: number;
+  };
   data?: any;
   proxy?: {
     host: string;
@@ -85,10 +94,6 @@ export async function simpleHttpRequest(
 }
 
 export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
-  const host = req.args.hostname ? req.args.hostname : req.args.host;
-  if (!host) {
-    return { error: { name: 'ERR_PARA', message: 'no host' } };
-  }
   const is_https = req.args.protocol == 'https:';
   if (!req.proxy) {
     return await simpleHttpRequest(req.args, is_https, req.data);
@@ -96,7 +101,7 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
     const agent = await simpleHttpsProxy(
       req.proxy.host,
       req.proxy.port,
-      `${host}:${req.args.port ? req.args.port : 443}`
+      `${req.args.host}:${req.args.port ? req.args.port : 443}`
     );
     if (agent.error) {
       return { error: agent.error };
@@ -109,7 +114,7 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
     const opts = Object.assign({}, req.args);
     opts.headers = Object.assign({}, req.args.headers);
 
-    var path = `${is_https ? 'https' : 'http'}://${host}`;
+    var path = `${is_https ? 'https' : 'http'}://${req.args.host}`;
     if (opts.port) {
       path += `:${opts.port}`;
     }
@@ -120,7 +125,7 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
     opts.host = req.proxy.host;
     opts.port = req.proxy.port;
     opts.path = path;
-    opts.headers.Host = host;
+    opts.headers.Host = req.args.host;
     return await simpleHttpRequest(opts, is_https, req.data);
   }
 }
