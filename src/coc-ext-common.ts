@@ -47,7 +47,7 @@ const cppFmtSetting: FormatterSetting = {
   },
 };
 
-const jsFmtSetting: FormatterSetting = {
+const prettierFmtSetting: FormatterSetting = {
   provider: 'prettier',
   args: ['--config-precedence', 'cli-override', '--print-width', '80'],
 };
@@ -67,15 +67,17 @@ const shFmtSetting: FormatterSetting = {
 };
 
 const defaultFmtSetting: Record<string, FormatterSetting> = {
+  bzl: bzlFmtSteeing,
   c: cppFmtSetting,
   cpp: cppFmtSetting,
-  typescript: jsFmtSetting,
-  json: jsFmtSetting,
-  javascript: jsFmtSetting,
-  html: jsFmtSetting,
-  bzl: bzlFmtSteeing,
+  html: prettierFmtSetting,
+  javascript: prettierFmtSetting,
+  json: prettierFmtSetting,
   lua: luaFmtSteeing,
+  markdown: prettierFmtSetting,
   sh: shFmtSetting,
+  typescript: prettierFmtSetting,
+  yaml: prettierFmtSetting,
   zsh: shFmtSetting,
 };
 

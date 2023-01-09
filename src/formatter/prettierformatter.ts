@@ -1,17 +1,20 @@
 import {
-  TextDocument,
-  FormattingOptions,
   CancellationToken,
+  FormattingOptions,
   Range,
+  TextDocument,
   TextEdit,
+  workspace,
 } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
-import { getTempFileWithDocumentContents } from '../utils/helper';
-import fs from 'fs';
 import { showNotification } from '../utils/notify';
+
+const filetype2Parser: Record<string, string> = {
+  javascript: 'babel-flow',
+};
 
 export class PrettierFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
@@ -32,16 +35,22 @@ export class PrettierFormatter extends BaseFormatter {
       return [];
     }
 
-    const filepath = await getTempFileWithDocumentContents(document);
     const args: string[] = [];
     if (this.setting.args) {
       args.push(...(this.setting.args as string[]));
     }
-    args.push(filepath);
+
+    const { nvim } = workspace;
+    const filetype = (await nvim.eval('&filetype')) as string;
+    const parser = filetype2Parser[filetype];
+    if (parser) {
+      args.push(`--parser=${parser}`);
+    } else {
+      args.push(`--parser=${filetype}`);
+    }
 
     const exec = this.setting.exec ? this.setting.exec : 'prettier';
-    const resp = await callShell(exec, args);
-    fs.unlinkSync(filepath);
+    const resp = await callShell(exec, args, document.getText());
     if (resp.exitCode != 0) {
       showNotification(`prettier fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
