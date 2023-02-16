@@ -51,8 +51,8 @@ export default class MapkeyList extends BasicList {
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 
-  constructor(nvim: Neovim) {
-    super(nvim);
+  constructor(_nvim: Neovim) {
+    super();
     this.addAction('open', async (item: ListItem, _context: ListContext) => {
       let fp: string = item.data['last_set_file'];
       if (fp.length == 0) {

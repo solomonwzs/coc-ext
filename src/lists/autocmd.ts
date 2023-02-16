@@ -98,8 +98,8 @@ export default class AutocmdList extends BasicList {
   public readonly defaultAction = 'preview';
   public actions: ListAction[] = [];
 
-  constructor(nvim: Neovim) {
-    super(nvim);
+  constructor(_nvim: Neovim) {
+    super();
 
     this.addAction('preview', async (item: ListItem, context: ListContext) => {
       if (!item.data) {

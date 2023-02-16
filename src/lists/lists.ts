@@ -7,8 +7,8 @@ export default class ExtList extends BasicList {
   public readonly defaultAction = 'open';
   public actions: ListAction[] = [];
 
-  constructor(nvim: Neovim) {
-    super(nvim);
+  constructor(_nvim: Neovim) {
+    super();
 
     this.addAction('open', (item: ListItem) => {
       showNotification(`${item.label}, ${item.data.name}`);

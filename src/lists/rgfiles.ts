@@ -19,8 +19,8 @@ export default class RgfilesList extends BasicList {
     });
   }
 
-  constructor(nvim: Neovim) {
-    super(nvim);
+  constructor(_nvim: Neovim) {
+    super();
     this.addAction('open', async (item: ListItem, context: ListContext) => {
       await openFile(item.data['name'], {
         key: context.args[0],

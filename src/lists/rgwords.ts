@@ -21,8 +21,8 @@ export default class RgwordsList extends BasicList {
     });
   }
 
-  constructor(nvim: Neovim) {
-    super(nvim);
+  constructor(_nvim: Neovim) {
+    super();
     this.addAction('open', async (item: ListItem, context: ListContext) => {
       await openFile(item.data['name'], {
         line: item.data['line'],
@@ -80,6 +80,7 @@ export default class RgwordsList extends BasicList {
       return null;
     }
 
+    logger.debug(context.args)
     const pattern = `"${context.args[0].replace(/"/g, '\\"')}"`;
     const args = ['--color', 'never', '--json', pattern];
     const resp = await callShell('rg', args, undefined, { shell: true });
