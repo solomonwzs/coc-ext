@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-async function start(watch) {
+async function start() {
   await require('esbuild').build({
     entryPoints: ['src/coc-ext-common.ts'],
     bundle: true,
-    watch,
+    // watch,
     minify: process.env.NODE_ENV === 'production',
     // minify: true,
     sourcemap: process.env.NODE_ENV === 'development',
