@@ -242,7 +242,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ['v'],
       'ext-copy-xclip',
       async () => {
-        logger.debug('===');
         const text = await getText('v', 0);
         await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
       },
