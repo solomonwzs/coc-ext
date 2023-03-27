@@ -4,7 +4,7 @@
 # @author   Solomon Ng <solomon.wzs@gmail.com>
 # @date     2022-01-25
 # @version  1.0
-# @license  MIT
+# @license  GPL-2.0+
 
 import sys
 
