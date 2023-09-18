@@ -7,9 +7,13 @@ function getParaphrase(obj: any): string {
   const paraphrase: string[] = [];
   const dict = obj['dict'];
   if (dict) {
+    const words: string[] = [];
     for (const i of dict) {
       const pos = i['pos'];
-      const terms = i['terms'].join(', ');
+      for (const e of i['entry']) {
+        words.push(e['word']);
+      }
+      const terms = words.join(', ');
       paraphrase.push(`${pos}: ${terms}`);
     }
   } else {
@@ -24,7 +28,7 @@ export async function googleTranslate(
   text: string,
   sl: string,
   tl: string,
-  proxy_url?: URL
+  proxy_url?: URL,
 ): Promise<ITranslation | null> {
   // const host = 'translate.googleapis.com';
   // if (/^zh/.test(tl)) {
