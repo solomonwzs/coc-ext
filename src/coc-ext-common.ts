@@ -77,6 +77,7 @@ const defaultFmtSetting: Record<string, FormatterSetting> = {
   markdown: prettierFmtSetting,
   sh: shFmtSetting,
   typescript: prettierFmtSetting,
+  xml: prettierFmtSetting,
   yaml: prettierFmtSetting,
   zsh: shFmtSetting,
 };
@@ -84,7 +85,7 @@ const defaultFmtSetting: Record<string, FormatterSetting> = {
 async function replaceExecText(
   doc: Document,
   range: Range,
-  res: ExternalExecResponse
+  res: ExternalExecResponse,
 ) {
   if (res.exitCode == 0 && res.data) {
     const ed = TextEdit.replace(range, res.data.toString('utf8'));
@@ -161,16 +162,16 @@ function encodeStrFn(enc: string): () => ProviderResult<any> {
 function addFormatter(
   context: ExtensionContext,
   lang: string,
-  setting: FormatterSetting
+  setting: FormatterSetting,
 ) {
   const selector = [{ scheme: 'file', language: lang }];
   const provider = new FormattingEditProvider(setting);
   context.subscriptions.push(
-    languages.registerDocumentFormatProvider(selector, provider, 1)
+    languages.registerDocumentFormatProvider(selector, provider, 1),
   );
   if (provider.supportRangeFormat()) {
     context.subscriptions.push(
-      languages.registerDocumentRangeFormatProvider(selector, provider, 1)
+      languages.registerDocumentRangeFormatProvider(selector, provider, 1),
     );
   }
 }
@@ -245,7 +246,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         const text = await getText('v', 0);
         await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
       },
-      { sync: false }
+      { sync: false },
     ),
 
     workspace.registerKeymap(
@@ -267,7 +268,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       },
       {
         sync: false,
-      }
+      },
     ),
 
     workspace.registerKeymap(
@@ -280,7 +281,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       },
       {
         sync: false,
-      }
+      },
     ),
 
     listManager.registerList(new ExtList(workspace.nvim)),
@@ -289,7 +290,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new RgfilesList(workspace.nvim)),
     listManager.registerList(new RgwordsList(workspace.nvim)),
     listManager.registerList(new AutocmdList(workspace.nvim)),
-    listManager.registerList(new HighlightList(workspace.nvim))
+    listManager.registerList(new HighlightList(workspace.nvim)),
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id

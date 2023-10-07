@@ -14,6 +14,7 @@ import { showNotification } from '../utils/notify';
 
 const filetype2Parser: Record<string, string> = {
   javascript: 'babel-flow',
+  xml: 'html',
 };
 
 export class PrettierFormatter extends BaseFormatter {
@@ -29,7 +30,7 @@ export class PrettierFormatter extends BaseFormatter {
     document: TextDocument,
     _options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range
+    range?: Range,
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
@@ -64,7 +65,7 @@ export class PrettierFormatter extends BaseFormatter {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString()
+          resp.data.toString(),
         ),
       ];
     }
