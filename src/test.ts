@@ -78,7 +78,7 @@ function proxy_test() {
                 .on('end', () => {
                   console.log('end');
                 });
-            }
+            },
           )
           .on('timeout', () => {
             console.log('query timeout');
@@ -121,7 +121,7 @@ async function proxy_test2() {
           .on('end', () => {
             console.log('==== end ====');
           });
-      }
+      },
     )
     .on('timeout', () => {
       console.log('query timeout');
@@ -180,7 +180,7 @@ async function proxy_test4() {
   const resp = await sendHttpRequest(req);
   console.log(resp);
 }
-proxy_test4();
+// proxy_test4();
 
 function fnvHash(data: string | Uint8Array, seed = 0): number {
   const fnvPrime = BigInt(0x811c9dc5);
@@ -388,6 +388,13 @@ async function aes256_test() {
 
 function utils_test() {
   console.log(getRandomId('x'));
+
+  const trafficID = Array.from({ length: 20 }, () =>
+    Math.floor(Math.random() * 36).toString(36),
+  ).join('');
+  console.log(trafficID);
+
+  console.log(process.env);
 }
 // utils_test();
 
@@ -398,3 +405,55 @@ function read_test() {
   });
 }
 // read_test();
+
+async function kimi_test() {
+  const trafficID = Array.from({ length: 20 }, () =>
+    Math.floor(Math.random() * 36).toString(36),
+  ).join('');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${process.env.MY_KIMI_ACCESS_TOKEN}`,
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41',
+    Origin: 'https://kimi.moonshot.cn',
+    Referer: 'https://kimi.moonshot.cn/',
+    'X-Traffic-Id': trafficID,
+  };
+
+  const test_req: HttpRequest = {
+    args: {
+      host: 'kimi.moonshot.cn',
+      path: '/api/chat',
+      method: 'POST',
+      protocol: 'https:',
+      headers,
+    },
+    data: JSON.stringify({ name: 'Kimi', is_example: false }),
+  };
+  var resp = await sendHttpRequest(test_req);
+  console.log(resp.statusCode);
+  console.log(resp.body?.toString());
+
+  if (resp.statusCode == 401) {
+    headers.Authorization = `Bearer ${process.env.MY_KIMI_REFRESH_TOKEN}`;
+    const refresh_req: HttpRequest = {
+      args: {
+        host: 'kimi.moonshot.cn',
+        path: '/api/auth/token/refresh',
+        method: 'GET',
+        protocol: 'https:',
+        headers,
+      },
+    };
+    resp = await sendHttpRequest(refresh_req);
+    console.log(resp.statusCode);
+    console.log(resp.body?.toString());
+
+    if (resp.statusCode == 200 && resp.body) {
+      const obj = JSON.parse(resp.body?.toString());
+      process.env.MY_KIMI_REFRESH_TOKEN = obj['access_token'];
+    }
+  }
+}
+kimi_test();
