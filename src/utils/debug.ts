@@ -1,4 +1,4 @@
-import { window, workspace, TextEdit, FloatFactory } from 'coc.nvim';
+import { window, workspace, TextEdit } from 'coc.nvim';
 import { logger } from './logger';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
@@ -19,7 +19,7 @@ export async function debugApplyEdit(): Promise<any> {
       start: { line: 0, character: 0 },
       end: { line: doc.lineCount, character: 0 },
     },
-    'hello world'
+    'hello world',
   );
   await doc.applyEdits([ed]);
   await workspace.nvim.command('setlocal nomodifiable');
@@ -45,7 +45,7 @@ export async function debugFloatFactory(): Promise<any> {
       filetype: 'markdown',
     },
   ];
-  const win = new FloatFactory(workspace.nvim);
+  const win = window.createFloatFactory({});
   await win.show(doc);
 }
 

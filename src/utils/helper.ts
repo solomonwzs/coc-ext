@@ -1,5 +1,4 @@
 import {
-  FloatFactory,
   FloatWinConfig,
   MapMode,
   Position,
@@ -69,7 +68,7 @@ export async function popup(
   content: string,
   title?: string,
   filetype?: string,
-  cfg?: FloatWinConfig
+  cfg?: FloatWinConfig,
 ): Promise<void> {
   if (content.length == 0) {
     return;
@@ -86,13 +85,13 @@ export async function popup(
       filetype: filetype,
     },
   ];
-  const win = new FloatFactory(workspace.nvim);
-  await win.show(doc, cfg);
+  const win = window.createFloatFactory(cfg);
+  await win.show(doc);
 }
 
 export function getDocumentPath(
   document: TextDocument,
-  fallbackPath?: string
+  fallbackPath?: string,
 ): string {
   const filepath = Uri.parse(document.uri).fsPath;
   if (fallbackPath && path.basename(filepath) === filepath) {
@@ -132,7 +131,7 @@ export function fnvHash(data: string | Uint8Array, seed = 0): number {
 }
 
 export function getTempFileWithDocumentContents(
-  document: TextDocument
+  document: TextDocument,
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const fsPath = Uri.parse(document.uri).fsPath;
@@ -150,7 +149,7 @@ export function getTempFileWithDocumentContents(
 export function luacall(
   fname: string,
   args: VimValue | VimValue[] = [],
-  isNotify?: boolean
+  isNotify?: boolean,
 ): Promise<any | null> | null {
   const { nvim } = workspace;
   // @ts-ignore

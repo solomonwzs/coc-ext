@@ -19,7 +19,7 @@ export default class Manager {
   private fileType: string;
 
   constructor(private nvim: Neovim) {
-    this.floatwin = new FloatFactory(this.nvim);
+    this.floatwin = window.createFloatFactory(this.floatWinConfig);
     this.fileType = 'markdown';
   }
 
@@ -88,14 +88,14 @@ export default class Manager {
         filetype: this.fileType,
       },
     ];
-    await this.floatwin.show(docs, this.floatWinConfig);
+    await this.floatwin.show(docs);
   }
 
   private async echo(content: string): Promise<void> {
     workspace.nvim.call(
       'coc#util#echo_messages',
       ['MoreMsg', content.split('\n')],
-      true
+      true,
     );
   }
 
