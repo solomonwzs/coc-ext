@@ -176,3 +176,9 @@ export async function openFile(filepath: string, opts?: OpenOptions) {
   }
   await nvim.command(`${open} ${cmd} ${filepath}`);
 }
+
+export function sleepMs(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}

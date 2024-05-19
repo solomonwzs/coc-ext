@@ -32,7 +32,7 @@ export class Logger {
           const line = expl[4];
           // const char = expl[5];
           this.channel.appendLine(
-            `${now.toISOString()} ${level} [${file}:${line}] ${str}`
+            `${now.toISOString()} ${level} [${file}:${line}] ${str}`,
           );
           return;
         }
@@ -65,6 +65,11 @@ export class Logger {
 
   public error(message: any): void {
     this.logLevel('E', message);
+  }
+
+  public append(message: any): void {
+    const str = stringify(message);
+    this.channel.append(str);
   }
 }
 

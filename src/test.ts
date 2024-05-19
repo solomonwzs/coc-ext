@@ -6,6 +6,7 @@ import {
   simpleHttpRequest,
   simpleHttpsProxy,
   sendHttpRequest,
+  sendHttpRequestWithCallback,
   HttpRequest,
 } from './utils/http';
 import fs from 'fs';
@@ -22,7 +23,7 @@ import { getRandomId, getEnvHttpProxy } from './utils/common';
 import { URI } from 'vscode-uri';
 import { URL } from 'url';
 import os from 'os';
-import KimiChat from './translators/kimi';
+import KimiChat from './kimi/kimi';
 
 console.log('========');
 
@@ -407,6 +408,45 @@ function read_test() {
 }
 // read_test();
 
+function foo_HttpRequest(req: HttpRequest, cpy: boolean) {
+  return cpy ? Object.assign({}, req) : req;
+}
+
+function obj_copy_test() {
+  const obj: HttpRequest = { args: { host: '1' }, data: 1 };
+  console.log(obj);
+
+  const obj_cpy = foo_HttpRequest(obj, false);
+  obj_cpy.data = 100;
+  console.log(obj);
+  console.log(obj_cpy);
+}
+// obj_copy_test();
+
+async function ciba_test() {
+  const text = 'world';
+  const req: HttpRequest = {
+    args: {
+      host: 'dict-mobile.iciba.com',
+      path: `/interface/index.php?c=word&m=getsuggest&nums=1&is_need_mean=10&word=${encodeURIComponent(text)}`,
+      method: 'GET',
+      timeout: 1000,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (X11; Linux x86_64) ' +
+          'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+          'Chrome/75.0.3770.100 ' +
+          'Safari/537.36',
+      },
+      protocol: 'https:',
+    },
+  };
+  var resp = await sendHttpRequest(req);
+  console.log(resp.statusCode);
+  console.log(resp.body?.toString());
+}
+// ciba_test();
+
 async function kimi_test() {
   const trafficID = Array.from({ length: 20 }, () =>
     Math.floor(Math.random() * 36).toString(36),
@@ -453,14 +493,25 @@ async function kimi_test() {
     },
     data: JSON.stringify({ name: 'Kimi', is_example: false }),
   };
-  var resp = await sendHttpRequest(test_req);
-  console.log(resp.statusCode);
-  console.log(resp.body?.toString());
+  await sendHttpRequestWithCallback(test_req, {
+    onData: (chunk: Buffer) => {
+      console.log(chunk.toString());
+    },
+    onEnd: (msg: http.IncomingMessage) => {
+      console.log(msg.statusCode);
+      console.log(msg.headers);
+    },
+  });
+  // var resp = await sendHttpRequest(test_req);
+  // console.log(resp.statusCode);
+  // console.log(resp.body?.toString());
 }
 // kimi_test();
 
 async function kimi_test2() {
-  var kimi = new KimiChat();
-  kimi.debug();
+  var kimi = new KimiChat(
+    process.env.MY_KIMI_REFRESH_TOKEN ? process.env.MY_KIMI_REFRESH_TOKEN : '',
+  );
+  kimi.chat('你是翻译员，请翻译成中文：I has a pen');
 }
 kimi_test2();

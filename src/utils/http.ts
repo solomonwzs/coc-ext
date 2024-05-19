@@ -2,17 +2,26 @@ import https from 'https';
 import http from 'http';
 // import { logger } from './logger';
 
+export interface HttpRequestCallback {
+  onData?: (chunk: any) => void;
+  onEnd?: (msg: http.IncomingMessage) => void;
+  onError?: (err: Error) => void;
+  onTimeout?: () => void;
+}
+
+interface HttpRequestArgs {
+  host: string;
+  protocol?: 'http:' | 'https:';
+  port?: number;
+  headers?: http.OutgoingHttpHeaders;
+  method?: string;
+  agent?: http.Agent;
+  path?: string;
+  timeout?: number;
+}
+
 export interface HttpRequest {
-  args: {
-    host: string;
-    protocol?: 'http:' | 'https:';
-    port?: number;
-    headers?: http.OutgoingHttpHeaders;
-    method?: string;
-    agent?: http.Agent;
-    path?: string;
-    timeout?: number;
-  };
+  args: HttpRequestArgs;
   data?: any;
   proxy?: {
     host: string;
@@ -35,7 +44,7 @@ export interface HttpAgent {
 export async function simpleHttpsProxy(
   host: string,
   port: number,
-  target_host: string
+  target_host: string,
 ): Promise<HttpAgent> {
   return new Promise((resolve) => {
     http
@@ -57,9 +66,8 @@ export async function simpleHttpsProxy(
 export async function simpleHttpRequest(
   opts: http.RequestOptions | https.RequestOptions,
   is_https?: boolean,
-  data?: any
+  data?: any,
 ): Promise<HttpResponse> {
-  const host = opts.hostname ? opts.hostname : opts.host;
   const request = is_https ? https.request : http.request;
   return new Promise((resolve) => {
     const req = request(opts, (resp) => {
@@ -83,7 +91,10 @@ export async function simpleHttpRequest(
       })
       .on('timeout', () => {
         resolve({
-          error: { name: 'ERR_TIMEOUT', message: `query ${host} timeout` },
+          error: {
+            name: 'ERR_TIMEOUT',
+            message: `query ${opts.hostname ? opts.hostname : opts.host} timeout`,
+          },
         });
       });
     if (data) {
@@ -93,28 +104,29 @@ export async function simpleHttpRequest(
   });
 }
 
-export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
-  const is_https = req.args.protocol == 'https:';
+async function genHttpRequestArgs(
+  req: HttpRequest,
+): Promise<HttpRequestArgs | Error> {
   if (!req.proxy) {
-    return await simpleHttpRequest(req.args, is_https, req.data);
-  } else if (is_https) {
+    return req.args;
+  } else if (req.args.protocol == 'https:') {
     const agent = await simpleHttpsProxy(
       req.proxy.host,
       req.proxy.port,
-      `${req.args.host}:${req.args.port ? req.args.port : 443}`
+      `${req.args.host}:${req.args.port ? req.args.port : 443}`,
     );
     if (agent.error) {
-      return { error: agent.error };
+      return agent.error;
     }
 
     const opts = Object.assign({}, req.args);
     opts.agent = agent.agent;
-    return await simpleHttpRequest(opts, is_https, req.data);
+    return opts;
   } else {
     const opts = Object.assign({}, req.args);
     opts.headers = Object.assign({}, req.args.headers);
 
-    var path = `${is_https ? 'https' : 'http'}://${req.args.host}`;
+    var path = `http://${req.args.host}`;
     if (opts.port) {
       path += `:${opts.port}`;
     }
@@ -126,6 +138,51 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
     opts.port = req.proxy.port;
     opts.path = path;
     opts.headers.Host = req.args.host;
-    return await simpleHttpRequest(opts, is_https, req.data);
+    return opts;
+  }
+}
+
+export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
+  const res = await genHttpRequestArgs(req);
+  if (res instanceof Error) {
+    return { error: res };
+  } else {
+    return simpleHttpRequest(res, req.args.protocol == 'https:', req.data);
+  }
+}
+
+export async function sendHttpRequestWithCallback(
+  req: HttpRequest,
+  cb: HttpRequestCallback,
+) {
+  const res = await genHttpRequestArgs(req);
+  if (res instanceof Error) {
+    return res;
+  } else {
+    const request =
+      req.args.protocol == 'https:' ? https.request : http.request;
+    const r = request(res, (resp) => {
+      if (cb.onData) {
+        resp.on('data', cb.onData);
+      }
+      resp.on('end', () => {
+        if (cb.onEnd) {
+          cb.onEnd(resp);
+        }
+      });
+    });
+
+    if (cb.onError) {
+      r.on('error', cb.onError);
+    }
+
+    if (cb.onTimeout) {
+      r.on('timeout', cb.onTimeout);
+    }
+
+    if (req.data) {
+      r.write(req.data);
+    }
+    r.end();
   }
 }
