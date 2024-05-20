@@ -177,11 +177,12 @@ function addFormatter(
   }
 }
 
-async function open_kimi() {
-  if (kimiChat.getChatID().length == 0) {
+async function kimi_open() {
+  if (kimiChat.getChatId().length == 0) {
     let chat_list = await kimiChat.chatList();
     if (chat_list instanceof Error) {
-      return;
+      logger.error(chat_list);
+      return -1;
     }
     let items = chat_list.map((i) => {
       return { label: i.name, chat_id: i.id, description: i.updated_at };
@@ -192,9 +193,34 @@ async function open_kimi() {
       let new_name = await window.requestInput('Name', '', {
         position: 'center',
       });
-      logger.info(new_name);
+      if (new_name.length == 0) {
+        return -1;
+      }
+
+      const statusCode = await kimiChat.createChatId(new_name);
+      if (statusCode != 200) {
+        logger.error(`createChatId fail, statusCode: ${statusCode}`);
+        return -1;
+      }
+    } else {
+      kimiChat.setChatIdAndName(choose.chat_id, choose.label);
     }
   }
+
+  kimiChat.show();
+  return 0;
+}
+
+function kimi_chat(mode: MapMode): () => ProviderResult<any> {
+  return async () => {
+    const text = await getText(mode);
+    let ret = await kimi_open();
+    if (ret != 0) {
+      return;
+    }
+    logger.debug(text);
+    kimiChat.chat(text);
+  };
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
@@ -230,7 +256,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
-    commands.registerCommand('ext-kimi', open_kimi, { sync: true }),
+    commands.registerCommand('ext-kimi', kimi_open, { sync: true }),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
@@ -242,6 +268,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }),
 
     workspace.registerKeymap(['v'], 'ext-translate-v', translateFn('v'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-kimi', kimi_chat('v'), {
       sync: false,
     }),
 

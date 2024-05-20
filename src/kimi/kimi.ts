@@ -5,6 +5,8 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import http from 'http';
+import { OutputChannel, window, workspace } from 'coc.nvim';
+import { logger } from '../utils/logger';
 
 export interface KimiChatItem {
   id: string;
@@ -19,6 +21,8 @@ class KimiChat {
   private rtoken: string;
   private chat_id: string;
   private headers: http.OutgoingHttpHeaders;
+  private channel: OutputChannel | null;
+  private name: string;
 
   constructor(public readonly refresh_token: string) {
     this.rtoken = refresh_token;
@@ -38,6 +42,25 @@ class KimiChat {
       Referer: 'https://kimi.moonshot.cn/',
       'X-Traffic-Id': trafficID,
     };
+    this.channel = null;
+    this.name = '';
+  }
+
+  public async show() {
+    if (this.channel) {
+    } else if (this.chat_id && this.name) {
+      this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
+    } else {
+      return;
+    }
+
+    let { nvim } = workspace;
+    let winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
+    if (winid == -1) {
+      this.channel.show();
+    } else {
+      nvim.call('win_gotoid', [winid], true);
+    }
   }
 
   public async getAccessToken(): Promise<number> {
@@ -60,15 +83,16 @@ class KimiChat {
     return resp.statusCode ? resp.statusCode : -1;
   }
 
-  public getChatID(): string {
+  public getChatId(): string {
     return this.chat_id;
   }
 
-  public setChatID(chat_id: string) {
+  public setChatIdAndName(chat_id: string, name: string) {
     this.chat_id = chat_id;
+    this.name = name;
   }
 
-  public async createChatID() {
+  public async createChatId(name: string) {
     const test_req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -78,12 +102,13 @@ class KimiChat {
         headers: this.headers,
         timeout: 1000,
       },
-      data: JSON.stringify({ name: 'Kimi', is_example: false }),
+      data: JSON.stringify({ name, is_example: false }),
     };
     const resp = await sendHttpRequest(test_req);
     if (resp.statusCode == 200 && resp.body) {
       const obj = JSON.parse(resp.body.toString());
       this.chat_id = obj['id'];
+      this.name = name;
     }
     return resp.statusCode ? resp.statusCode : -1;
   }
@@ -123,21 +148,15 @@ class KimiChat {
   }
 
   public async chat(text: string) {
-    if (
-      !this.headers['Authorization'] ||
-      (!this.chat_id && (await this.createChatID()) == 401)
-    ) {
-      if ((await this.getAccessToken()) != 200) {
-        return -1;
-      }
-    }
-    if (!this.chat_id && (await this.createChatID()) != 200) {
+    logger.debug(text);
+    if (this.chat_id.length == 0) {
       return -1;
     }
 
     let statusCode = -1;
     const cb: HttpRequestCallback = {
       onData: (chunk: Buffer) => {
+        logger.debug(chunk.toString());
         chunk
           .toString()
           .split('\n')
@@ -147,7 +166,7 @@ class KimiChat {
             }
             const data = JSON.parse(line.slice(5));
             if (data['event'] == 'cmpl') {
-              process.stdout.write(data['text']);
+              this.channel?.append(data['text']);
             }
           });
       },
@@ -192,7 +211,7 @@ class KimiChat {
 
   public async debug() {
     console.log(await this.getAccessToken());
-    console.log(await this.createChatID());
+    console.log(await this.createChatId('Kimi'));
     console.log(this.chat_id);
 
     const req: HttpRequest = {
