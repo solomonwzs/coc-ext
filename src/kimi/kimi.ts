@@ -6,7 +6,16 @@ import {
 } from '../utils/http';
 import http from 'http';
 
-export default class KimiChat {
+export interface KimiChatItem {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  type: string;
+}
+
+class KimiChat {
   private rtoken: string;
   private chat_id: string;
   private headers: http.OutgoingHttpHeaders;
@@ -32,7 +41,7 @@ export default class KimiChat {
   }
 
   public async getAccessToken(): Promise<number> {
-    this.headers['Authorization'] = `Bearer ${this.refresh_token}`;
+    this.headers['Authorization'] = `Bearer ${this.rtoken}`;
     const refresh_req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -40,6 +49,7 @@ export default class KimiChat {
         method: 'GET',
         protocol: 'https:',
         headers: this.headers,
+        timeout: 1000,
       },
     };
     const resp = await sendHttpRequest(refresh_req);
@@ -50,7 +60,15 @@ export default class KimiChat {
     return resp.statusCode ? resp.statusCode : -1;
   }
 
-  public async getChatID() {
+  public getChatID(): string {
+    return this.chat_id;
+  }
+
+  public setChatID(chat_id: string) {
+    this.chat_id = chat_id;
+  }
+
+  public async createChatID() {
     const test_req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -58,6 +76,7 @@ export default class KimiChat {
         method: 'POST',
         protocol: 'https:',
         headers: this.headers,
+        timeout: 1000,
       },
       data: JSON.stringify({ name: 'Kimi', is_example: false }),
     };
@@ -69,16 +88,50 @@ export default class KimiChat {
     return resp.statusCode ? resp.statusCode : -1;
   }
 
+  public async chatList(): Promise<KimiChatItem[] | Error> {
+    if (
+      !this.headers['Authorization'] &&
+      (await this.getAccessToken()) != 200
+    ) {
+      return { name: 'ERR_AUTH_FAIL', message: 'auth fail' };
+    }
+    const req: HttpRequest = {
+      args: {
+        host: 'kimi.moonshot.cn',
+        path: '/api/chat/list',
+        method: 'POST',
+        protocol: 'https:',
+        headers: this.headers,
+        timeout: 1000,
+      },
+      data: JSON.stringify({ kimiplus_id: '', offset: 0, size: 50 }),
+    };
+    const resp = await sendHttpRequest(req);
+    if (resp.statusCode == 200 && resp.body) {
+      let obj = JSON.parse(resp.body.toString());
+      if (obj['items']) {
+        return obj['items'];
+      } else {
+        return [];
+      }
+    } else {
+      return {
+        name: 'ERR_GET_CHAT_LIST',
+        message: `statusCode: ${resp.statusCode}, error: ${resp.error}`,
+      };
+    }
+  }
+
   public async chat(text: string) {
     if (
-      this.headers['Authorization'] ||
-      (!this.chat_id && (await this.getChatID()) == 401)
+      !this.headers['Authorization'] ||
+      (!this.chat_id && (await this.createChatID()) == 401)
     ) {
       if ((await this.getAccessToken()) != 200) {
         return -1;
       }
     }
-    if (!this.chat_id && (await this.getChatID()) != 200) {
+    if (!this.chat_id && (await this.createChatID()) != 200) {
       return -1;
     }
 
@@ -101,7 +154,7 @@ export default class KimiChat {
       onEnd: (rsp: http.IncomingMessage) => {
         statusCode = rsp.statusCode ? rsp.statusCode : -1;
       },
-      onError: (err: Error) => {
+      onError: (_err: Error) => {
         statusCode = -1;
       },
       onTimeout: () => {
@@ -115,6 +168,7 @@ export default class KimiChat {
         method: 'POST',
         protocol: 'https:',
         headers: this.headers,
+        timeout: 1000,
       },
       data: JSON.stringify({
         messages: [
@@ -138,7 +192,7 @@ export default class KimiChat {
 
   public async debug() {
     console.log(await this.getAccessToken());
-    console.log(await this.getChatID());
+    console.log(await this.createChatID());
     console.log(this.chat_id);
 
     const req: HttpRequest = {
@@ -167,3 +221,7 @@ export default class KimiChat {
     });
   }
 }
+
+export const kimiChat = new KimiChat(
+  process.env.MY_KIMI_REFRESH_TOKEN ? process.env.MY_KIMI_REFRESH_TOKEN : '',
+);

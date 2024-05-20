@@ -23,9 +23,7 @@ import { getRandomId, getEnvHttpProxy } from './utils/common';
 import { URI } from 'vscode-uri';
 import { URL } from 'url';
 import os from 'os';
-import KimiChat from './kimi/kimi';
-
-console.log('========');
+import { kimiChat } from './kimi/kimi';
 
 async function http_test(): Promise<void> {
   console.log(getEnvHttpProxy());
@@ -41,7 +39,6 @@ async function http_test(): Promise<void> {
   const resp = await simpleHttpRequest(opts);
   console.log(resp);
 }
-// http_test();
 
 function proxy_test() {
   http
@@ -98,7 +95,6 @@ function proxy_test() {
     })
     .end();
 }
-// proxy_test();
 
 async function proxy_test2() {
   const agent = await simpleHttpsProxy('127.0.0.1', 7890, 'www.google.com:443');
@@ -133,7 +129,6 @@ async function proxy_test2() {
     })
     .end();
 }
-// proxy_test2();
 
 function foo(opts: http.RequestOptions) {
   const opts2 = Object.assign({}, opts);
@@ -172,7 +167,6 @@ function proxy_test3() {
     })
     .end();
 }
-// proxy_test3();
 
 async function proxy_test4() {
   const req: HttpRequest = {
@@ -182,7 +176,6 @@ async function proxy_test4() {
   const resp = await sendHttpRequest(req);
   console.log(resp);
 }
-// proxy_test4();
 
 function fnvHash(data: string | Uint8Array, seed = 0): number {
   const fnvPrime = BigInt(0x811c9dc5);
@@ -275,7 +268,6 @@ function writefile_test() {
   //   console.log(err);
   // });
 }
-// writefile_test();
 
 async function call_test() {
   // const style = {
@@ -309,7 +301,6 @@ async function call_test() {
     console.log(res.error.toString());
   }
 }
-// call_test();
 
 async function re_test() {
   const str =
@@ -328,7 +319,6 @@ async function re_test() {
   console.log(s);
   console.log(Buffer.from(s.replace(/\\(?!")/g, '\\\\')));
 }
-// re_test();
 
 async function path_test() {
   console.log(path.join('/home', '1.txt'));
@@ -372,7 +362,6 @@ async function path_test() {
   console.log(ss);
   console.log(JSON.stringify(ss));
 }
-// path_test();
 
 async function aes256_test() {
   const opts: AES256Options = {
@@ -386,7 +375,6 @@ async function aes256_test() {
     console.log(s1);
   }
 }
-// aes256_test();
 
 function utils_test() {
   console.log(getRandomId('x'));
@@ -398,7 +386,6 @@ function utils_test() {
 
   console.log(process.env);
 }
-// utils_test();
 
 function read_test() {
   fs.readFile('/tmp/3.txt', (err, data) => {
@@ -406,7 +393,6 @@ function read_test() {
     console.log(data.toString());
   });
 }
-// read_test();
 
 function foo_HttpRequest(req: HttpRequest, cpy: boolean) {
   return cpy ? Object.assign({}, req) : req;
@@ -421,14 +407,13 @@ function obj_copy_test() {
   console.log(obj);
   console.log(obj_cpy);
 }
-// obj_copy_test();
 
 async function ciba_test() {
-  const text = 'world';
+  const text = 'Apple';
   const req: HttpRequest = {
     args: {
       host: 'dict-mobile.iciba.com',
-      path: `/interface/index.php?c=word&m=getsuggest&nums=1&is_need_mean=10&word=${encodeURIComponent(text)}`,
+      path: `/interface/index.php?c=word&m=getsuggest&nums=10&is_need_mean=1&word=${encodeURIComponent(text)}`,
       method: 'GET',
       timeout: 1000,
       headers: {
@@ -445,7 +430,6 @@ async function ciba_test() {
   console.log(resp.statusCode);
   console.log(resp.body?.toString());
 }
-// ciba_test();
 
 async function kimi_test() {
   const trafficID = Array.from({ length: 20 }, () =>
@@ -506,12 +490,28 @@ async function kimi_test() {
   // console.log(resp.statusCode);
   // console.log(resp.body?.toString());
 }
-// kimi_test();
 
 async function kimi_test2() {
-  var kimi = new KimiChat(
-    process.env.MY_KIMI_REFRESH_TOKEN ? process.env.MY_KIMI_REFRESH_TOKEN : '',
-  );
-  kimi.chat('你是翻译员，请翻译成中文：I has a pen');
+  let items = await kimiChat.chatList();
+  console.log(items);
+  // await kimiChat.chat('你是翻译员，请翻译成中文：I has a pen');
 }
+
+console.log('========');
+
+// http_test();
+// proxy_test();
+// proxy_test2();
+// proxy_test3();
+// proxy_test4();
+// writefile_test();
+// call_test();
+// re_test();
+// path_test();
+// aes256_test();
+// utils_test();
+// read_test();
+// obj_copy_test();
+// ciba_test();
+// kimi_test();
 kimi_test2();

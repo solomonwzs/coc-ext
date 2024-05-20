@@ -93,4 +93,5 @@ export async function debug(cmd: string, ...args: any[]): Promise<any> {
   // await new Promise((resolve) => setTimeout(resolve, 2000));
   logger.debug(cmd);
   logger.debug(args);
+
 }

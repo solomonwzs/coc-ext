@@ -35,6 +35,7 @@ import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
+import { kimiChat } from './kimi/kimi';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -176,6 +177,26 @@ function addFormatter(
   }
 }
 
+async function open_kimi() {
+  if (kimiChat.getChatID().length == 0) {
+    let chat_list = await kimiChat.chatList();
+    if (chat_list instanceof Error) {
+      return;
+    }
+    let items = chat_list.map((i) => {
+      return { label: i.name, chat_id: i.id, description: i.updated_at };
+    });
+    items.push({ label: 'Create', chat_id: '', description: '' });
+    let choose = await window.showQuickPick(items, { title: '' });
+    if (!choose || choose.chat_id.length == 0) {
+      let new_name = await window.requestInput('Name', '', {
+        position: 'center',
+      });
+      logger.info(new_name);
+    }
+  }
+}
+
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
   logger.info(`coc-ext-common works`);
@@ -209,6 +230,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
+    commands.registerCommand('ext-kimi', open_kimi, { sync: true }),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
