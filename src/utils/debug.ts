@@ -1,5 +1,6 @@
 import { window, workspace, TextEdit } from 'coc.nvim';
 import { logger } from './logger';
+import { sleepMs } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 import { showNotification } from '../utils/notify';
@@ -93,5 +94,15 @@ export async function debug(cmd: string, ...args: any[]): Promise<any> {
   // await new Promise((resolve) => setTimeout(resolve, 2000));
   logger.debug(cmd);
   logger.debug(args);
+  let channel = window.createOutputChannel('debug');
+  channel.show();
 
+  // let { nvim } = workspace;
+  // let winid = await nvim.call('bufwinid', `debug`);
+  // nvim.call('coc#compat#execute', [winid, 'setl scrolloff=3'], true);
+
+  for (let i = 0; i < 100; ++i) {
+    channel.appendLine(`=> ${i}`);
+    await sleepMs(50);
+  }
 }

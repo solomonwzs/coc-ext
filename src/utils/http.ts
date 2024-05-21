@@ -162,23 +162,28 @@ export async function sendHttpRequestWithCallback(
     const request =
       req.args.protocol == 'https:' ? https.request : http.request;
     const r = request(res, (resp) => {
-      if (cb.onData) {
-        resp.on('data', cb.onData);
-      }
-      resp.on('end', () => {
-        if (cb.onEnd) {
-          cb.onEnd(resp);
+      resp
+        .on('data', (chunk: Buffer) => {
+          if (cb.onData) {
+            cb.onData(chunk);
+          }
+        })
+        .on('end', () => {
+          if (cb.onEnd) {
+            cb.onEnd(resp);
+          }
+        });
+    })
+      .on('error', (error) => {
+        if (cb.onError) {
+          cb.onError(error);
+        }
+      })
+      .on('timeout', () => {
+        if (cb.onTimeout) {
+          cb.onTimeout();
         }
       });
-    });
-
-    if (cb.onError) {
-      r.on('error', cb.onError);
-    }
-
-    if (cb.onTimeout) {
-      r.on('timeout', cb.onTimeout);
-    }
 
     if (req.data) {
       r.write(req.data);

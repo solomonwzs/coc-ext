@@ -188,7 +188,7 @@ async function kimi_open() {
       return { label: i.name, chat_id: i.id, description: i.updated_at };
     });
     items.push({ label: 'Create', chat_id: '', description: '' });
-    let choose = await window.showQuickPick(items, { title: '' });
+    let choose = await window.showQuickPick(items, { title: 'Choose Chat' });
     if (!choose || choose.chat_id.length == 0) {
       let new_name = await window.requestInput('Name', '', {
         position: 'center',

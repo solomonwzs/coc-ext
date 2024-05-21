@@ -27,9 +27,6 @@ class KimiChat {
   constructor(public readonly refresh_token: string) {
     this.rtoken = refresh_token;
     this.chat_id = '';
-    const trafficID = Array.from({ length: 20 }, () =>
-      Math.floor(Math.random() * 36).toString(36),
-    ).join('');
     this.headers = {
       'Content-Type': 'application/json',
       'User-Agent':
@@ -40,10 +37,16 @@ class KimiChat {
         'Edg/91.0.864.41',
       Origin: 'https://kimi.moonshot.cn',
       Referer: 'https://kimi.moonshot.cn/',
-      'X-Traffic-Id': trafficID,
     };
     this.channel = null;
     this.name = '';
+  }
+
+  private getHeaders() {
+    this.headers['X-Traffic-Id'] = Array.from({ length: 20 }, () =>
+      Math.floor(Math.random() * 36).toString(36),
+    ).join('');
+    return this.headers;
   }
 
   public async show() {
@@ -58,6 +61,8 @@ class KimiChat {
     let winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
     if (winid == -1) {
       this.channel.show();
+      winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
+      nvim.call('coc#compat#execute', [winid, 'setl wrap'], true);
     } else {
       nvim.call('win_gotoid', [winid], true);
     }
@@ -71,7 +76,7 @@ class KimiChat {
         path: '/api/auth/token/refresh',
         method: 'GET',
         protocol: 'https:',
-        headers: this.headers,
+        headers: this.getHeaders(),
         timeout: 1000,
       },
     };
@@ -99,7 +104,7 @@ class KimiChat {
         path: '/api/chat',
         method: 'POST',
         protocol: 'https:',
-        headers: this.headers,
+        headers: this.getHeaders(),
         timeout: 1000,
       },
       data: JSON.stringify({ name, is_example: false }),
@@ -126,7 +131,7 @@ class KimiChat {
         path: '/api/chat/list',
         method: 'POST',
         protocol: 'https:',
-        headers: this.headers,
+        headers: this.getHeaders(),
         timeout: 1000,
       },
       data: JSON.stringify({ kimiplus_id: '', offset: 0, size: 50 }),
@@ -152,6 +157,9 @@ class KimiChat {
     if (this.chat_id.length == 0) {
       return -1;
     }
+    this.channel?.appendLine(`\n<<<< ${new Date().toISOString()}`);
+    this.channel?.appendLine(text);
+    this.channel?.appendLine('\n>>>>');
 
     let statusCode = -1;
     const cb: HttpRequestCallback = {
@@ -167,13 +175,17 @@ class KimiChat {
             const data = JSON.parse(line.slice(5));
             if (data['event'] == 'cmpl') {
               this.channel?.append(data['text']);
+            } else if (data['event'] == 'all_done') {
+              this.channel?.appendLine(' (END)');
             }
           });
       },
       onEnd: (rsp: http.IncomingMessage) => {
         statusCode = rsp.statusCode ? rsp.statusCode : -1;
       },
-      onError: (_err: Error) => {
+      onError: (err: Error) => {
+        this.channel?.appendLine(' (ERROR) ');
+        this.channel?.appendLine(JSON.stringify(err));
         statusCode = -1;
       },
       onTimeout: () => {
@@ -186,7 +198,7 @@ class KimiChat {
         path: `/api/chat/${this.chat_id}/completion/stream`,
         method: 'POST',
         protocol: 'https:',
-        headers: this.headers,
+        headers: this.getHeaders(),
         timeout: 1000,
       },
       data: JSON.stringify({
@@ -220,7 +232,7 @@ class KimiChat {
         path: `/api/chat/${this.chat_id}/completion/stream`,
         method: 'POST',
         protocol: 'https:',
-        headers: this.headers,
+        headers: this.getHeaders(),
       },
       data: JSON.stringify({
         messages: [
