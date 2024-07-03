@@ -204,6 +204,21 @@ async function kimi_open() {
       }
     } else {
       kimiChat.setChatIdAndName(choose.chat_id, choose.label);
+
+      const items = await kimiChat.chatScroll(choose.chat_id);
+      if (items instanceof Error) {
+        logger.error(items);
+      } else {
+        for (const item of items) {
+          if (item.role == 'user') {
+            kimiChat.append(`\n<<<< ${item.created_at}`);
+            kimiChat.append(item.content);
+            kimiChat.append('\n>>>>');
+          } else {
+            kimiChat.append(item.content);
+          }
+        }
+      }
     }
   }
 

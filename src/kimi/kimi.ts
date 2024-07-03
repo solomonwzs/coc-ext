@@ -17,6 +17,14 @@ export interface KimiChatItem {
   type: string;
 }
 
+export interface KimiChatScrollItem {
+  id: string;
+  context_type: string;
+  role: string;
+  created_at: string;
+  content: string;
+}
+
 class KimiChat {
   private rtoken: string;
   private chat_id: string;
@@ -49,6 +57,20 @@ class KimiChat {
     return this.headers;
   }
 
+  public append(text: string, newline: boolean = true) {
+    if (this.channel) {
+    } else if (this.chat_id && this.name) {
+      this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
+    } else {
+      return;
+    }
+    if (newline) {
+      this.channel.appendLine(text);
+    } else {
+      this.channel.append(text);
+    }
+  }
+
   public async show() {
     if (this.channel) {
     } else if (this.chat_id && this.name) {
@@ -66,6 +88,7 @@ class KimiChat {
     } else {
       nvim.call('win_gotoid', [winid], true);
     }
+    nvim.call('win_execute', [winid, `set ft=kimichat`]);
   }
 
   public async getAccessToken(): Promise<number> {
@@ -152,14 +175,51 @@ class KimiChat {
     }
   }
 
+  public async chatScroll(
+    chat_id: string,
+  ): Promise<KimiChatScrollItem[] | Error> {
+    if (
+      !this.headers['Authorization'] &&
+      (await this.getAccessToken()) != 200
+    ) {
+      return { name: 'ERR_AUTH_FAIL', message: 'auth fail' };
+    }
+
+    const req: HttpRequest = {
+      args: {
+        host: 'kimi.moonshot.cn',
+        path: `/api/chat/${chat_id}/segment/scroll`,
+        method: 'POST',
+        protocol: 'https:',
+        headers: this.getHeaders(),
+        timeout: 1000,
+      },
+      data: JSON.stringify({ last: 50 }),
+    };
+    const resp = await sendHttpRequest(req);
+    if (resp.statusCode == 200 && resp.body) {
+      let obj = JSON.parse(resp.body.toString());
+      if (obj['items']) {
+        return obj['items'];
+      } else {
+        return [];
+      }
+    } else {
+      return {
+        name: 'ERR_GET_CHAT_LIST',
+        message: `statusCode: ${resp.statusCode}, error: ${resp.error}`,
+      };
+    }
+  }
+
   public async chat(text: string) {
     logger.debug(text);
     if (this.chat_id.length == 0) {
       return -1;
     }
-    this.channel?.appendLine(`\n<<<< ${new Date().toISOString()}`);
-    this.channel?.appendLine(text);
-    this.channel?.appendLine('\n>>>>');
+    this.append(`\n<<<< ${new Date().toISOString()}`);
+    this.append(text);
+    this.append('\n>>>>');
 
     let statusCode = -1;
     const cb: HttpRequestCallback = {
@@ -174,9 +234,9 @@ class KimiChat {
             }
             const data = JSON.parse(line.slice(5));
             if (data['event'] == 'cmpl') {
-              this.channel?.append(data['text']);
+              this.append(data['text'], false);
             } else if (data['event'] == 'all_done') {
-              this.channel?.appendLine(' (END)');
+              this.append(' (END)');
             }
           });
       },
@@ -184,8 +244,8 @@ class KimiChat {
         statusCode = rsp.statusCode ? rsp.statusCode : -1;
       },
       onError: (err: Error) => {
-        this.channel?.appendLine(' (ERROR) ');
-        this.channel?.appendLine(JSON.stringify(err));
+        this.append(' (ERROR) ');
+        this.append(JSON.stringify(err));
         statusCode = -1;
       },
       onTimeout: () => {
