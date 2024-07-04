@@ -6,7 +6,7 @@ import {
 } from '../utils/http';
 import http from 'http';
 import { OutputChannel, window, workspace } from 'coc.nvim';
-// import { logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 export interface KimiChatItem {
   id: string;
@@ -68,7 +68,7 @@ class KimiChat {
     return this.headers;
   }
 
-  public async append(text: string, newline: boolean = true) {
+  public append(text: string, newline: boolean = true) {
     if (this.channel) {
     } else if (this.chat_id && this.name) {
       this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
@@ -83,15 +83,15 @@ class KimiChat {
 
     if (this.winid != -1) {
       let { nvim } = workspace;
-      await nvim.call('win_execute', [this.winid, 'norm G']);
+      nvim.call('win_execute', [this.winid, 'norm G']);
     }
   }
 
-  public async appendUserInput(datetime: string, text: string) {
-    await this.append(`\n>> ${datetime}`);
+  public appendUserInput(datetime: string, text: string) {
+    this.append(`\n>> ${datetime}`);
     let lines = text.split('\n');
     for (const i of lines) {
-      await this.append(`>> ${i}`);
+      this.append(`>> ${i}`);
     }
   }
 
@@ -241,39 +241,35 @@ class KimiChat {
     if (this.chat_id.length == 0) {
       return;
     }
-    await this.appendUserInput(new Date().toISOString(), text);
-
-    // for (let i = 0; i < 10; i++) {
-    //   await new Promise((resolve) => {
-    //     setTimeout(resolve, 500);
-    //   });
-    //   await this.append(text);
-    // }
+    this.appendUserInput(new Date().toISOString(), text);
 
     let statusCode = -1;
     const cb: HttpRequestCallback = {
-      onData: async (chunk: Buffer) => {
+      onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
+        if (rsp.statusCode != 200) {
+          return;
+        }
         chunk
           .toString()
           .split('\n')
-          .forEach(async (line: string) => {
+          .forEach((line: string) => {
             if (line.length == 0) {
               return;
             }
             const data = JSON.parse(line.slice(5));
             if (data['event'] == 'cmpl') {
-              await this.append(data['text'], false);
+              this.append(data['text'], false);
             } else if (data['event'] == 'all_done') {
-              await this.append(' (END)');
+              this.append(' (END)');
             }
           });
       },
       onEnd: (rsp: http.IncomingMessage) => {
         statusCode = rsp.statusCode ? rsp.statusCode : -1;
       },
-      onError: async (err: Error) => {
-        await this.append(' (ERROR) ');
-        await this.append(JSON.stringify(err));
+      onError: (err: Error) => {
+        this.append(' (ERROR) ');
+        this.append(JSON.stringify(err));
         statusCode = -1;
       },
       onTimeout: () => {
@@ -287,7 +283,6 @@ class KimiChat {
         method: 'POST',
         protocol: 'https:',
         headers: this.getHeaders(),
-        timeout: 1000,
       },
       data: JSON.stringify({
         messages: [
@@ -303,10 +298,12 @@ class KimiChat {
     await sendHttpRequestWithCallback(req, cb);
     if (statusCode == 401) {
       if ((await this.getAccessToken()) != 200) {
+        logger.error('Authorization Expired');
         return;
       }
       await sendHttpRequestWithCallback(req, cb);
     }
+    logger.info(statusCode);
   }
 
   public async debug() {

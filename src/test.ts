@@ -505,5 +505,5 @@ console.log('========');
 // utils_test();
 // read_test();
 // obj_copy_test();
-// ciba_test();
+ciba_test();
 // kimi_test();

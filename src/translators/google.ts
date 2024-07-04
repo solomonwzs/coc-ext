@@ -64,7 +64,7 @@ export async function googleTranslate(
     return null;
   }
   if (resp.statusCode != 200 || !resp.body || resp.body.length == 0) {
-    logger.error(`status: ${resp.statusCode}`);
+    logger.error(`google, status: ${resp.statusCode}`);
     return null;
   }
   const obj = JSON.parse(resp.body.toString());

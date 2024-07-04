@@ -1,9 +1,8 @@
 import https from 'https';
 import http from 'http';
-// import { logger } from './logger';
 
 export interface HttpRequestCallback {
-  onData?: (chunk: any) => void;
+  onData?: (chunk: any, msg: http.IncomingMessage) => void;
   onEnd?: (msg: http.IncomingMessage) => void;
   onError?: (err: Error) => void;
   onTimeout?: () => void;
@@ -154,7 +153,7 @@ export async function sendHttpRequest(req: HttpRequest): Promise<HttpResponse> {
 export async function sendHttpRequestWithCallback(
   req: HttpRequest,
   cb: HttpRequestCallback,
-) {
+): Promise<null | Error> {
   const res = await genHttpRequestArgs(req);
   if (res instanceof Error) {
     return res;
@@ -166,24 +165,30 @@ export async function sendHttpRequestWithCallback(
         resp
           .on('data', (chunk: Buffer) => {
             if (cb.onData) {
-              cb.onData(chunk);
+              cb.onData(chunk, resp);
             }
           })
           .on('end', () => {
             if (cb.onEnd) {
               cb.onEnd(resp);
             }
+            resolve(null);
           });
       })
         .on('error', (error) => {
           if (cb.onError) {
             cb.onError(error);
           }
+          resolve(error);
         })
         .on('timeout', () => {
           if (cb.onTimeout) {
             cb.onTimeout();
           }
+          resolve({
+            name: 'ERR_TIMEOUT',
+            message: `query ${req.args.host} timeout`,
+          });
         });
 
       if (req.data) {
