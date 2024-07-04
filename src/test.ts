@@ -23,7 +23,6 @@ import { getRandomId, getEnvHttpProxy } from './utils/common';
 import { URI } from 'vscode-uri';
 import { URL } from 'url';
 import os from 'os';
-import { kimiChat } from './kimi/kimi';
 
 async function http_test(): Promise<void> {
   console.log(getEnvHttpProxy());
@@ -491,12 +490,6 @@ async function kimi_test() {
   // console.log(resp.body?.toString());
 }
 
-async function kimi_test2() {
-  let items = await kimiChat.chatList();
-  console.log(items);
-  // await kimiChat.chat('你是翻译员，请翻译成中文：I has a pen');
-}
-
 console.log('========');
 
 // http_test();
@@ -514,4 +507,3 @@ console.log('========');
 // obj_copy_test();
 // ciba_test();
 // kimi_test();
-kimi_test2();

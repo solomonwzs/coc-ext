@@ -159,35 +159,37 @@ export async function sendHttpRequestWithCallback(
   if (res instanceof Error) {
     return res;
   } else {
-    const request =
-      req.args.protocol == 'https:' ? https.request : http.request;
-    const r = request(res, (resp) => {
-      resp
-        .on('data', (chunk: Buffer) => {
-          if (cb.onData) {
-            cb.onData(chunk);
+    return new Promise((resolve) => {
+      const request =
+        req.args.protocol == 'https:' ? https.request : http.request;
+      const r = request(res, (resp) => {
+        resp
+          .on('data', (chunk: Buffer) => {
+            if (cb.onData) {
+              cb.onData(chunk);
+            }
+          })
+          .on('end', () => {
+            if (cb.onEnd) {
+              cb.onEnd(resp);
+            }
+          });
+      })
+        .on('error', (error) => {
+          if (cb.onError) {
+            cb.onError(error);
           }
         })
-        .on('end', () => {
-          if (cb.onEnd) {
-            cb.onEnd(resp);
+        .on('timeout', () => {
+          if (cb.onTimeout) {
+            cb.onTimeout();
           }
         });
-    })
-      .on('error', (error) => {
-        if (cb.onError) {
-          cb.onError(error);
-        }
-      })
-      .on('timeout', () => {
-        if (cb.onTimeout) {
-          cb.onTimeout();
-        }
-      });
 
-    if (req.data) {
-      r.write(req.data);
-    }
-    r.end();
+      if (req.data) {
+        r.write(req.data);
+      }
+      r.end();
+    });
   }
 }

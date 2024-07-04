@@ -10,6 +10,7 @@ common:
 	@cp "./lua/coc-ext.lua" "$(OUTPUT_DIR)/../lua"
 	@cp -r "./python/coc_ext.py" "$(OUTPUT_DIR)/../pythonx"
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
+	@cp -r "./syntax/kimichat.vim" "$(OUTPUT_DIR)/../syntax"
 
 erl:
 	@echo -e "\033[0;33m>>>\033[0m build $(@)"

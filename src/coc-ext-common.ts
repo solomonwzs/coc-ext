@@ -211,18 +211,16 @@ async function kimi_open() {
       } else {
         for (const item of items) {
           if (item.role == 'user') {
-            kimiChat.append(`\n<<<< ${item.created_at}`);
-            kimiChat.append(item.content);
-            kimiChat.append('\n>>>>');
+            await kimiChat.appendUserInput(item.created_at, item.content);
           } else {
-            kimiChat.append(item.content);
+            await kimiChat.append(item.content);
           }
         }
       }
     }
   }
 
-  kimiChat.show();
+  await kimiChat.show();
   return 0;
 }
 
@@ -233,8 +231,9 @@ function kimi_chat(mode: MapMode): () => ProviderResult<any> {
     if (ret != 0) {
       return;
     }
-    logger.debug(text);
-    kimiChat.chat(text);
+    await kimiChat.openAutoScroll();
+    await kimiChat.chat(text);
+    kimiChat.closeAutoScroll();
   };
 }
 

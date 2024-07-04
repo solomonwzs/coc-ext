@@ -6,7 +6,7 @@ import {
 } from '../utils/http';
 import http from 'http';
 import { OutputChannel, window, workspace } from 'coc.nvim';
-import { logger } from '../utils/logger';
+// import { logger } from '../utils/logger';
 
 export interface KimiChatItem {
   id: string;
@@ -31,6 +31,7 @@ class KimiChat {
   private headers: http.OutgoingHttpHeaders;
   private channel: OutputChannel | null;
   private name: string;
+  private winid: number;
 
   constructor(public readonly refresh_token: string) {
     this.rtoken = refresh_token;
@@ -48,6 +49,16 @@ class KimiChat {
     };
     this.channel = null;
     this.name = '';
+    this.winid = -1;
+  }
+
+  public async openAutoScroll() {
+    let { nvim } = workspace;
+    this.winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
+  }
+
+  public closeAutoScroll() {
+    this.winid = -1;
   }
 
   private getHeaders() {
@@ -57,7 +68,7 @@ class KimiChat {
     return this.headers;
   }
 
-  public append(text: string, newline: boolean = true) {
+  public async append(text: string, newline: boolean = true) {
     if (this.channel) {
     } else if (this.chat_id && this.name) {
       this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
@@ -68,6 +79,19 @@ class KimiChat {
       this.channel.appendLine(text);
     } else {
       this.channel.append(text);
+    }
+
+    if (this.winid != -1) {
+      let { nvim } = workspace;
+      await nvim.call('win_execute', [this.winid, 'norm G']);
+    }
+  }
+
+  public async appendUserInput(datetime: string, text: string) {
+    await this.append(`\n>> ${datetime}`);
+    let lines = text.split('\n');
+    for (const i of lines) {
+      await this.append(`>> ${i}`);
     }
   }
 
@@ -84,11 +108,12 @@ class KimiChat {
     if (winid == -1) {
       this.channel.show();
       winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
-      nvim.call('coc#compat#execute', [winid, 'setl wrap'], true);
+      await nvim.call('coc#compat#execute', [winid, 'setl wrap']);
+      await nvim.call('win_execute', [winid, 'set ft=kimichat']);
     } else {
-      nvim.call('win_gotoid', [winid], true);
+      await nvim.call('win_gotoid', [winid]);
     }
-    nvim.call('win_execute', [winid, `set ft=kimichat`]);
+    await nvim.call('win_execute', [winid, 'norm G']);
   }
 
   public async getAccessToken(): Promise<number> {
@@ -213,39 +238,42 @@ class KimiChat {
   }
 
   public async chat(text: string) {
-    logger.debug(text);
     if (this.chat_id.length == 0) {
-      return -1;
+      return;
     }
-    this.append(`\n<<<< ${new Date().toISOString()}`);
-    this.append(text);
-    this.append('\n>>>>');
+    await this.appendUserInput(new Date().toISOString(), text);
+
+    // for (let i = 0; i < 10; i++) {
+    //   await new Promise((resolve) => {
+    //     setTimeout(resolve, 500);
+    //   });
+    //   await this.append(text);
+    // }
 
     let statusCode = -1;
     const cb: HttpRequestCallback = {
-      onData: (chunk: Buffer) => {
-        logger.debug(chunk.toString());
+      onData: async (chunk: Buffer) => {
         chunk
           .toString()
           .split('\n')
-          .forEach((line: string) => {
+          .forEach(async (line: string) => {
             if (line.length == 0) {
               return;
             }
             const data = JSON.parse(line.slice(5));
             if (data['event'] == 'cmpl') {
-              this.append(data['text'], false);
+              await this.append(data['text'], false);
             } else if (data['event'] == 'all_done') {
-              this.append(' (END)');
+              await this.append(' (END)');
             }
           });
       },
       onEnd: (rsp: http.IncomingMessage) => {
         statusCode = rsp.statusCode ? rsp.statusCode : -1;
       },
-      onError: (err: Error) => {
-        this.append(' (ERROR) ');
-        this.append(JSON.stringify(err));
+      onError: async (err: Error) => {
+        await this.append(' (ERROR) ');
+        await this.append(JSON.stringify(err));
         statusCode = -1;
       },
       onTimeout: () => {
@@ -275,7 +303,7 @@ class KimiChat {
     await sendHttpRequestWithCallback(req, cb);
     if (statusCode == 401) {
       if ((await this.getAccessToken()) != 200) {
-        return -1;
+        return;
       }
       await sendHttpRequestWithCallback(req, cb);
     }
