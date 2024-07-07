@@ -205,21 +205,33 @@ async function kimi_open() {
     } else {
       kimiChat.setChatIdAndName(choose.chat_id, choose.label);
 
-      const items = await kimiChat.chatScroll(choose.chat_id);
+      const items = await kimiChat.chatScroll();
       if (items instanceof Error) {
         logger.error(items);
       } else {
         for (const item of items) {
           if (item.role == 'user') {
-            await kimiChat.appendUserInput(item.created_at, item.content);
+            kimiChat.appendUserInput(item.created_at, item.content);
           } else {
-            await kimiChat.append(item.content);
+            kimiChat.append(`>> id:${item.id}`);
+            if (item.search_plus) {
+              for (const search of item.search_plus) {
+                if (search.msg.type == 'get_res') {
+                  let idx = -1;
+                  if (search.msg.url) {
+                    idx = kimiChat.addUrl(search.msg.url);
+                  }
+                  kimiChat.append(`[${idx}] ${search.msg.title}`);
+                }
+              }
+              kimiChat.append('');
+            }
+            kimiChat.append(item.content);
           }
         }
       }
     }
   }
-
   await kimiChat.show();
   return 0;
 }
@@ -234,6 +246,15 @@ function kimi_chat(mode: MapMode): () => ProviderResult<any> {
     await kimiChat.openAutoScroll();
     await kimiChat.chat(text);
     kimiChat.closeAutoScroll();
+  };
+}
+
+function kimi_ref(): () => ProviderResult<any> {
+  return async () => {
+    const text = await kimiChat.getRef();
+    if (text) {
+      popup(text);
+    }
   };
 }
 
@@ -288,6 +309,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
     workspace.registerKeymap(['v'], 'ext-kimi', kimi_chat('v'), {
       sync: false,
     }),
+    workspace.registerKeymap(['n'], 'ext-kimi-ref', kimi_ref(), {
+      sync: false,
+    }),
 
     workspace.registerKeymap(['v'], 'ext-encode-utf8', encodeStrFn('utf8'), {
       sync: false,
@@ -309,7 +333,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ['v'],
       'ext-copy-xclip',
       async () => {
-        const text = await getText('v', 0);
+        const text = await getText('v', false);
         await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
       },
       { sync: false },

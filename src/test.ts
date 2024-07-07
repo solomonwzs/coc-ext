@@ -490,6 +490,23 @@ async function kimi_test() {
   // console.log(resp.body?.toString());
 }
 
+function text_test() {
+  let regex = new RegExp(/^\^([0-9]*)\^\]$/);
+  console.log(regex.exec('^123^]'));
+
+  let text = 'abc<label> Server hello (2):</label>';
+  console.log(text.replace(/<\/?label>/gi, ''));
+  console.log(text.indexOf("[^1^]"));
+
+  try {
+    JSON.parse(text);
+  } catch (e) {
+    console.log(JSON.stringify(e));
+  }
+  text = "则判定\u003clabel\u003e为\u003c/label\u003e垃圾"
+  console.log(text);
+}
+
 console.log('========');
 
 // http_test();
@@ -505,5 +522,6 @@ console.log('========');
 // utils_test();
 // read_test();
 // obj_copy_test();
-ciba_test();
+// ciba_test();
 // kimi_test();
+text_test();

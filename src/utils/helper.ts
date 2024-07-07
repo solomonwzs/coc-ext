@@ -14,6 +14,7 @@ import getcfg from './config';
 import path from 'path';
 import { Nullable, OpenOptions, CocExtFloatConfig } from './types';
 import { TextEncoder } from 'util';
+import { logger } from './logger';
 
 // import fs from 'fs-extra';
 // import md5 from 'md5';
@@ -41,13 +42,16 @@ export function positionInRange(pos: Position, range: Range): boolean {
   );
 }
 
-export async function getText(mode: MapMode, e: number = 1): Promise<string> {
+export async function getText(
+  mode: MapMode,
+  escape: boolean = true,
+): Promise<string> {
   const doc = await workspace.document;
   let range: Nullable<Range> = null;
   if (mode === 'v') {
     // range = await window.getSelectedRange('v');
     const text: string = (
-      await workspace.nvim.call('lib#common#visual_selection', [e])
+      await workspace.nvim.call('lib#common#visual_selection', [escape ? 1 : 0])
     ).toString();
     return text.trim();
   } else {

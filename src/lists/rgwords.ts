@@ -80,7 +80,7 @@ export default class RgwordsList extends BasicList {
       return null;
     }
 
-    logger.debug(context.args)
+    // logger.debug(context.args)
     const pattern = `"${context.args[0].replace(/"/g, '\\"')}"`;
     const args = ['--color', 'never', '--json', pattern];
     const resp = await callShell('rg', args, undefined, { shell: true });
