@@ -496,15 +496,21 @@ function text_test() {
 
   let text = 'abc<label> Server hello (2):</label>';
   console.log(text.replace(/<\/?label>/gi, ''));
-  console.log(text.indexOf("[^1^]"));
+  console.log(text.indexOf('[^1^]'));
 
   try {
     JSON.parse(text);
   } catch (e) {
     console.log(JSON.stringify(e));
   }
-  text = "则判定\u003clabel\u003e为\u003c/label\u003e垃圾"
+  text = '则判定\u003clabel\u003e为\u003c/label\u003e垃圾';
   console.log(text);
+}
+
+function color_test() {
+  let regex = new RegExp(/(([c]?term|gui)([fb]g)?=[#\w0-9]*)/gi);
+  let s = 'hi CocListHeader ctermfg=16 ctermbg=108 cterm=bold GUIFG=#000000 guibg=#87af87 gui=bold';
+  console.log(Array.from(s.matchAll(regex), m => m[0]))
 }
 
 console.log('========');
@@ -524,4 +530,5 @@ console.log('========');
 // obj_copy_test();
 // ciba_test();
 // kimi_test();
-text_test();
+// text_test();
+color_test();

@@ -115,6 +115,33 @@ async function getCursorSymbolInfo(): Promise<any> {
   await popup(msg);
 }
 
+function hlPreview(): () => ProviderResult<any> {
+  return async () => {
+    const s = await getText('v');
+    const regex = new RegExp(/(([c]?term|gui)([fb]g)?=[#\w0-9]*)/gi);
+    const arr = Array.from(s.matchAll(regex), (m) => m[0]);
+    if (arr.length == 0) {
+      return;
+    }
+
+    const { nvim } = workspace;
+    await nvim.exec(
+      'hi HlPreview cterm=None ctermfg=None ctermbg=None gui=None guifg=None guibg=None',
+    );
+    let hl = 'hi HlPreview';
+    for (const i of arr) {
+      hl += ' ';
+      hl += i;
+    }
+    await nvim.exec(hl);
+    popup(
+      '< TEXT text Text \n> TEXT text Text \n< TEXT text Text ',
+      undefined,
+      'hlpreview',
+    );
+  };
+}
+
 function translateFn(mode: MapMode): () => ProviderResult<any> {
   const proxy = getEnvHttpProxy(true);
   return async () => {
@@ -326,6 +353,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }),
 
     workspace.registerKeymap(['v'], 'ext-decode-gbk', decodeStrFn('gbk'), {
+      sync: false,
+    }),
+
+    workspace.registerKeymap(['v'], 'ext-hl-preview', hlPreview(), {
       sync: false,
     }),
 

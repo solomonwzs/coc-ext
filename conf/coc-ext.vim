@@ -9,6 +9,8 @@ vmap <silent> <leader>eg <Plug>(coc-ext-encode-gbk)
 vmap <silent> <leader>dm <Plug>(coc-ext-decode-mime)
 vmap <silent> <leader>cn <Plug>(coc-ext-change-name-rule)
 nmap <silent> <leader>cs <Plug>(coc-ext-cursor-symbol)
+vmap <silent> <leader>hl <Plug>(coc-ext-hl-preview)
+
 vmap <C-c> <Plug>(coc-ext-copy-xclip)
 
 " for kimi
