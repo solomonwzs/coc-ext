@@ -356,6 +356,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sync: false,
     }),
 
+    workspace.registerKeymap(
+      ['v'],
+      'ext-decode-base64',
+      decodeStrFn('base64'),
+      {
+        sync: false,
+      },
+    ),
+
     workspace.registerKeymap(['v'], 'ext-hl-preview', hlPreview(), {
       sync: false,
     }),

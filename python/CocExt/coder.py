@@ -6,6 +6,7 @@
 # @version  1.0
 # @license  GPL-2.0+
 
+import base64
 import re
 import sys
 
@@ -22,13 +23,21 @@ def encode_str(text: str, enc: str):
 
 
 def decode_str(text: str, enc: str):
-    def _hex(matchobj):
-        str_hex = matchobj.group(1)
-        i = int(str_hex, base=16)
-        return bytes([i])
+    if enc == "base64":
+        b = base64.decodebytes(text.encode("utf8"))
+        try:
+            sys.stdout.write(b.decode("utf8"))
+        except:
+            sys.stdout.write(b.decode("gbk"))
+    else:
 
-    bs = re.sub(br"\\x([a-fA-F0-9]{2})", _hex, text.encode("utf8"))
-    sys.stdout.write(bs.decode(enc))
+        def _hex(matchobj):
+            str_hex = matchobj.group(1)
+            i = int(str_hex, base=16)
+            return bytes([i])
+
+        bs = re.sub(rb"\\x([a-fA-F0-9]{2})", _hex, text.encode("utf8"))
+        sys.stdout.write(bs.decode(enc))
 
 
 def encode_quotation_str(text: str, enc: str):
