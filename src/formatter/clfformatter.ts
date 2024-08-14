@@ -25,14 +25,14 @@ export class ClfFormatter extends BaseFormatter {
     document: TextDocument,
     options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range
+    range?: Range,
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
     }
 
     const filepath = Uri.parse(document.uri).fsPath;
-    const setting: Record<string, string> = {};
+    const setting: Record<string, string | number | boolean> = {};
     if (this.setting.args) {
       for (const k in this.setting.args) {
         setting[k] = this.setting.args[k];
@@ -42,7 +42,7 @@ export class ClfFormatter extends BaseFormatter {
       setting['IndentWidth'] = options.tabSize.toString();
     }
     if (options.insertSpaces !== undefined && !setting['UseTab']) {
-      setting['UseTab'] = options.insertSpaces ? 'false' : 'true';
+      setting['UseTab'] = options.insertSpaces ? false : true;
     }
     if (!setting['BasedOnStyle']) {
       setting['BasedOnStyle'] = 'Google';
@@ -73,7 +73,7 @@ export class ClfFormatter extends BaseFormatter {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString()
+          resp.data.toString(),
         ),
       ];
     }

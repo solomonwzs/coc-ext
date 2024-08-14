@@ -24,7 +24,7 @@ export class BazelFormatter extends BaseFormatter {
     document: TextDocument,
     _options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range
+    range?: Range,
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
@@ -45,7 +45,7 @@ export class BazelFormatter extends BaseFormatter {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString()
+          resp.data.toString(),
         ),
       ];
     }

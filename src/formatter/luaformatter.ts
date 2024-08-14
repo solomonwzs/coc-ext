@@ -43,7 +43,7 @@ export class LuaFormatter extends BaseFormatter {
     document: TextDocument,
     options: FormattingOptions,
     _token: CancellationToken,
-    range?: Range
+    range?: Range,
   ): Promise<TextEdit[]> {
     if (range) {
       return [];
@@ -65,7 +65,7 @@ export class LuaFormatter extends BaseFormatter {
     const resp = await callShell(
       exec,
       this.opts.concat(opts),
-      document.getText()
+      document.getText(),
     );
     if (resp.exitCode != 0) {
       showNotification(`lua-format fail, ret ${resp.exitCode}`, 'formatter');
@@ -80,7 +80,7 @@ export class LuaFormatter extends BaseFormatter {
             start: { line: 0, character: 0 },
             end: { line: document.lineCount, character: 0 },
           },
-          resp.data.toString()
+          resp.data.toString(),
         ),
       ];
     }

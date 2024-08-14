@@ -46,7 +46,7 @@ export class FormattingEditProvider
     document: TextDocument,
     options: FormattingOptions,
     token: CancellationToken,
-    range?: Range
+    range?: Range,
   ): Promise<TextEdit[]> {
     if (!this.formatter) {
       logger.error('formatter was null');
@@ -66,7 +66,7 @@ export class FormattingEditProvider
   provideDocumentFormattingEdits(
     document: TextDocument,
     options: FormattingOptions,
-    token: CancellationToken
+    token: CancellationToken,
   ): ProviderResult<TextEdit[]> {
     return this._provideEdits(document, options, token);
   }
@@ -75,7 +75,7 @@ export class FormattingEditProvider
     document: TextDocument,
     range: Range,
     options: FormattingOptions,
-    token: CancellationToken
+    token: CancellationToken,
   ): ProviderResult<TextEdit[]> {
     return this._provideEdits(document, options, token, range);
   }
