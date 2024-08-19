@@ -8,6 +8,7 @@ import {
 import http from 'http';
 import { OutputChannel, window, workspace, Position } from 'coc.nvim';
 import { logger } from '../utils/logger';
+import { CocExtError } from '../utils/common';
 
 interface KimiChatItem {
   id: string;
@@ -360,12 +361,12 @@ class KimiChat {
       !this.headers['Authorization'] &&
       (await this.getAccessToken()) != 200
     ) {
-      return { name: 'ERR_AUTH_FAIL', message: 'auth fail' };
+      return new CocExtError(CocExtError.ERR_AUTH, '[Kimi] Auth fail');
     }
     let resp = await sendHttpRequest(req);
     if (resp.statusCode == 401) {
       if ((await this.getAccessToken()) != 200) {
-        return { name: 'ERR_AUTH_FAIL', message: 'auth fail' };
+        return new CocExtError(CocExtError.ERR_AUTH, '[Kimi] Auth fail');
       }
       resp = await sendHttpRequest(req);
     }
@@ -421,10 +422,10 @@ class KimiChat {
         return [];
       }
     } else {
-      return {
-        name: 'ERR_GET_CHAT_LIST',
-        message: `statusCode: ${resp.statusCode}, error: ${resp.error}`,
-      };
+      return new CocExtError(
+        CocExtError.ERR_KIMI,
+        `[Kimi] statusCode: ${resp.statusCode}, error: ${resp.error}, path: ${req.args.path}`,
+      );
     }
   }
 
@@ -450,7 +451,10 @@ class KimiChat {
       const obj = JSON.parse(resp.body.toString());
       return obj['items'][0];
     }
-    return { name: 'ERR_REF_CARD', message: 'query ref fail' };
+    return new CocExtError(
+      CocExtError.ERR_KIMI,
+      `query ref fail, path: ${req.args.path}`,
+    );
   }
 
   public async chatScroll(): Promise<KimiChatScrollItem[] | Error> {
@@ -477,10 +481,10 @@ class KimiChat {
         return [];
       }
     } else {
-      return {
-        name: 'ERR_GET_CHAT_LIST',
-        message: `statusCode: ${resp.statusCode}, error: ${resp.error}`,
-      };
+      return new CocExtError(
+        CocExtError.ERR_KIMI,
+        `statusCode: ${resp.statusCode}, error: ${resp.error}, path: ${req.args.path}`,
+      );
     }
   }
 
@@ -535,7 +539,7 @@ class KimiChat {
       },
       onError: (err: Error) => {
         this.append(' (ERROR) ');
-        this.append(JSON.stringify(err));
+        this.append(err.message);
         statusCode = -1;
       },
       onTimeout: () => {

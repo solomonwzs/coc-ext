@@ -1,5 +1,6 @@
 import https from 'https';
 import http from 'http';
+import { CocExtError } from './common';
 
 export interface HttpRequestCallback {
   onData?: (chunk: any, msg: http.IncomingMessage) => void;
@@ -52,7 +53,9 @@ export async function simpleHttpsProxy(
         if (resp.statusCode == 200) {
           resolve({ agent: new https.Agent({ socket }) });
         } else {
-          resolve({ error: { name: 'ERR_CONN', message: 'connect fail' } });
+          resolve({
+            error: new CocExtError(CocExtError.ERR_HTTP, 'connect fail'),
+          });
         }
       })
       .on('error', (error) => {
@@ -90,10 +93,10 @@ export async function simpleHttpRequest(
       })
       .on('timeout', () => {
         resolve({
-          error: {
-            name: 'ERR_TIMEOUT',
-            message: `query ${opts.hostname ? opts.hostname : opts.host} timeout`,
-          },
+          error: new CocExtError(
+            CocExtError.ERR_HTTP,
+            `query ${opts.hostname ? opts.hostname : opts.host} timeout`,
+          ),
         });
       });
     if (data) {
@@ -185,10 +188,12 @@ export async function sendHttpRequestWithCallback(
           if (cb.onTimeout) {
             cb.onTimeout();
           }
-          resolve({
-            name: 'ERR_TIMEOUT',
-            message: `query ${req.args.host} timeout`,
-          });
+          resolve(
+            new CocExtError(
+              CocExtError.ERR_HTTP,
+              `query ${req.args.host} timeout`,
+            ),
+          );
         });
 
       if (req.data) {

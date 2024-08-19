@@ -33,7 +33,7 @@ import { decodeMimeEncodeStr } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
 import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
-import { popup, getText } from './utils/helper';
+import { popup, getText, echoMessage } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
 import { kimiChat } from './kimi/kimi';
 
@@ -209,6 +209,7 @@ async function kimi_open() {
     let chat_list = await kimiChat.chatList();
     if (chat_list instanceof Error) {
       logger.error(chat_list);
+      echoMessage('ErrorMsg', chat_list.message);
       return -1;
     }
     let items = chat_list.map((i) => {

@@ -68,6 +68,13 @@ export async function getText(
   return text.trim();
 }
 
+export async function echoMessage(hl: string, msg: string) {
+  const { nvim } = workspace;
+  await nvim.exec(`echohl ${hl}`);
+  await nvim.exec(`echo "${msg}"`);
+  await nvim.exec(`echohl None`);
+}
+
 export async function popup(
   content: string,
   title?: string,

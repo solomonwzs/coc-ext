@@ -86,3 +86,17 @@ export function strFindFirstNotOf(str: string, ch: Set<string>): number {
   }
   return -1;
 }
+
+export class CocExtError extends Error {
+  public errorCode: number;
+
+  constructor(errorCode: number, message: string) {
+    super(message);
+    this.name = 'CocExtError';
+    this.errorCode = errorCode;
+  }
+
+  static ERR_HTTP = -1;
+  static ERR_AUTH = -2;
+  static ERR_KIMI = -3;
+}
