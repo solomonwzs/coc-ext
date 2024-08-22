@@ -515,7 +515,7 @@ class KimiChat {
                   this.append(data.text, false);
                 }
               } else if (data.event == 'resp') {
-                this.append(`>> id:${data.id}`);
+                this.append(`>> id:${data.id}\n`);
               } else if (data.event == 'search_plus') {
                 if (
                   data.msg &&

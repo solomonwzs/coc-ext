@@ -241,7 +241,7 @@ async function kimi_open() {
           if (item.role == 'user') {
             kimiChat.appendUserInput(item.created_at, item.content);
           } else {
-            kimiChat.append(`>> id:${item.id}`);
+            kimiChat.append(`>> id:${item.id}\n`);
             if (item.search_plus) {
               for (const search of item.search_plus) {
                 if (search.msg.type == 'get_res') {
