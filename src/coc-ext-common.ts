@@ -35,7 +35,8 @@ import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
 import { popup, getText, echoMessage } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
-import { kimiChat } from './kimi/kimi';
+import { kimiChat } from './ai/kimi';
+import { groqChat } from './ai/groq';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -204,6 +205,12 @@ function addFormatter(
   }
 }
 
+async function groq_open() {
+  await groqChat.show();
+  await groqChat.debug();
+  return 0;
+}
+
 async function kimi_open() {
   if (kimiChat.getChatId().length == 0) {
     let chat_list = await kimiChat.chatList();
@@ -281,7 +288,7 @@ function kimi_ref(): () => ProviderResult<any> {
   return async () => {
     const text = await kimiChat.getRef();
     if (text) {
-      popup(text);
+      popup(text, '', 'markdown');
     }
   };
 }
@@ -319,6 +326,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
+    commands.registerCommand('ext-groq', groq_open, { sync: true }),
     commands.registerCommand('ext-kimi', kimi_open, { sync: true }),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 

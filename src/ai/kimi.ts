@@ -6,9 +6,10 @@ import {
   HttpResponse,
 } from '../utils/http';
 import http from 'http';
-import { OutputChannel, window, workspace, Position } from 'coc.nvim';
+import { window, workspace, Position } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
+import { BaseAiChannel } from './base';
 
 interface KimiChatItem {
   id: string;
@@ -86,17 +87,16 @@ interface KimiChatRefCardQuery {
   segment_id: string;
 }
 
-class KimiChat {
+class KimiChat extends BaseAiChannel {
   private rtoken: string;
   private chat_id: string;
   private headers: http.OutgoingHttpHeaders;
-  private channel: OutputChannel | null;
   private name: string;
   private winid: number;
-  private bufnr: number;
   private urls: string[];
 
   constructor(public readonly refresh_token: string) {
+    super();
     this.rtoken = refresh_token;
     this.chat_id = '';
     this.headers = {
@@ -304,25 +304,9 @@ class KimiChat {
   }
 
   public async show() {
-    if (this.channel) {
-    } else if (this.chat_id && this.name) {
-      this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
-    } else {
-      return;
+    if (this.channel || (this.chat_id && this.name)) {
+      await this.showChannel(`Kimi-${this.chat_id}`, 'kimichat');
     }
-
-    let { nvim } = workspace;
-    let winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
-    if (winid == -1) {
-      this.channel.show();
-      winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
-      this.bufnr = await nvim.call('bufnr', `Kimi-${this.chat_id}`);
-      await nvim.call('coc#compat#execute', [winid, 'setl wrap']);
-      await nvim.call('win_execute', [winid, 'set ft=kimichat']);
-    } else {
-      await nvim.call('win_gotoid', [winid]);
-    }
-    await nvim.call('win_execute', [winid, 'norm G']);
   }
 
   public async getAccessToken(): Promise<number> {

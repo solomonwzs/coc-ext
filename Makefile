@@ -10,7 +10,6 @@ common:
 	@cp "./lua/coc-ext.lua" "$(OUTPUT_DIR)/../lua"
 	@cp -r "./python/coc_ext.py" "$(OUTPUT_DIR)/../pythonx"
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
-	@cp "./syntax/kimichat.vim" "$(OUTPUT_DIR)/../syntax"
 	@cp "./syntax/hlpreview.vim" "$(OUTPUT_DIR)/../syntax"
 	@cp "./conf/coc-ext.vim" "$(OUTPUT_DIR)/../conf"
 
