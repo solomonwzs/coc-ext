@@ -8,6 +8,7 @@ import {
 import http from 'http';
 import { BaseAiChannel } from './base';
 import { logger } from '../utils/logger';
+import { getEnvHttpProxy } from '../utils/common';
 
 interface GroqResponse {
   id: string;
@@ -39,6 +40,7 @@ interface GroqResponse {
 
 class GroqChat extends BaseAiChannel {
   private headers: http.OutgoingHttpHeaders;
+  private proxy: any;
 
   constructor(private readonly api_key: string) {
     super();
@@ -46,6 +48,10 @@ class GroqChat extends BaseAiChannel {
       Authorization: `Bearer ${this.api_key}`,
       'Content-Type': 'application/json',
     };
+    const proxy_url = getEnvHttpProxy(true);
+    this.proxy = proxy_url
+      ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
+      : undefined;
   }
 
   public async show() {
@@ -70,17 +76,18 @@ class GroqChat extends BaseAiChannel {
         ],
         model: 'llama-3.1-70b-versatile',
       }),
+      proxy: this.proxy,
     };
     const resp = await sendHttpRequest(req);
     if (resp.error) {
-      logger.error(resp.error.message);
+      logger.error(`query fail, ${resp.error.message}`);
       return null;
     }
     if (resp.statusCode != 200 || !resp.body || resp.body.length == 0) {
       logger.error(`groq, status: ${resp.statusCode}`);
       return null;
     }
-    const obj = JSON.parse(resp.body.toString());
+    const obj = JSON.parse(resp.body.toString()) as GroqResponse;
     logger.debug(obj);
   }
 }
