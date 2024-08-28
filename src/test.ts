@@ -8,6 +8,7 @@ import {
   sendHttpRequest,
   sendHttpRequestWithCallback,
   HttpRequest,
+  simpleHttpDownloadFiles,
 } from './utils/http';
 import fs from 'fs';
 import { callShell, callMultiCmdShell } from './utils/externalexec';
@@ -518,6 +519,15 @@ function color_test() {
 function tiktoken_test() {
   const enc = get_encoding('gpt2');
   console.log(enc.encode('hello world'));
+
+  const addr =
+    'https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken';
+  const url = new URL(addr);
+  console.log(url.protocol);
+  console.log(url.hostname);
+  console.log(url.pathname);
+
+  simpleHttpDownloadFiles(addr, "");
 }
 
 console.log('========');

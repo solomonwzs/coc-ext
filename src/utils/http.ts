@@ -1,6 +1,8 @@
 import https from 'https';
 import http from 'http';
-import { CocExtError } from './common';
+import { CocExtError, getEnvHttpProxy } from './common';
+import { URL } from 'url';
+import { fsWriteFile } from './file';
 
 export interface HttpRequestCallback {
   onData?: (chunk: any, msg: http.IncomingMessage) => void;
@@ -11,7 +13,7 @@ export interface HttpRequestCallback {
 
 interface HttpRequestArgs {
   host: string;
-  protocol?: 'http:' | 'https:';
+  protocol?: 'http:' | 'https:' | string;
   port?: number;
   headers?: http.OutgoingHttpHeaders;
   method?: string;
@@ -202,4 +204,40 @@ export async function sendHttpRequestWithCallback(
       r.end();
     });
   }
+}
+
+export async function simpleHttpDownloadFiles(addr: string, pathname: string) {
+  const url = new URL(addr);
+  const proxy_url = getEnvHttpProxy(url.protocol == 'https:');
+  const req: HttpRequest = {
+    args: {
+      host: url.hostname,
+      path: url.pathname,
+      method: 'GET',
+      protocol: url.protocol,
+    },
+    proxy: proxy_url
+      ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
+      : undefined,
+  };
+  let statusCode = -1;
+  const cb: HttpRequestCallback = {
+    onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
+      if (rsp.statusCode != 200) {
+        return;
+      }
+      fsWriteFile(pathname, chunk);
+    },
+    onEnd: (rsp: http.IncomingMessage) => {
+      statusCode = rsp.statusCode ? rsp.statusCode : -1;
+    },
+    onError: (_err: Error) => {
+      statusCode = -1;
+    },
+    onTimeout: () => {
+      statusCode = -1;
+    },
+  };
+  await sendHttpRequestWithCallback(req, cb);
+  return statusCode;
 }

@@ -12,6 +12,36 @@ export interface FileData {
   error: NodeJS.ErrnoException | undefined;
 }
 
+export async function fsWriteFile(
+  filename: string,
+  data: string | NodeJS.ArrayBufferView,
+): Promise<Error | null> {
+  return new Promise((resolve) => {
+    fs.writeFile(filename, data, (err: NodeJS.ErrnoException | null) => {
+      if (err == null) {
+        resolve(null);
+      } else {
+        resolve(err);
+      }
+    });
+  });
+}
+
+export async function fsAppendFile(
+  filename: string,
+  data: string | Uint8Array,
+): Promise<Error | null> {
+  return new Promise((resolve) => {
+    fs.appendFile(filename, data, (err: NodeJS.ErrnoException | null) => {
+      if (err == null) {
+        resolve(null);
+      } else {
+        resolve(err);
+      }
+    });
+  });
+}
+
 export async function fsStat(filename: string): Promise<Stats> {
   return new Promise((resolve) => {
     fs.stat(filename, (error, stats) => {
@@ -30,7 +60,7 @@ export async function fsStat(filename: string): Promise<Stats> {
   });
 }
 
-export async function fsRead(filename: string): Promise<FileData> {
+export async function fsReadFile(filename: string): Promise<FileData> {
   return new Promise((resolve) => {
     fs.readFile(filename, (error, data) => {
       if (error == null) {
@@ -50,7 +80,7 @@ export async function fsRead(filename: string): Promise<FileData> {
 
 export async function getFilesList(
   dir_path: string,
-  cmd?: string
+  cmd?: string,
 ): Promise<string[] | null> {
   let args: string[];
   let exec: string;

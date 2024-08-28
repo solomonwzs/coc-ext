@@ -1,11 +1,11 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
 import { Tiktoken, get_encoding } from 'tiktoken';
 
-class TiktokenCore {
-  protected enc: Tiktoken;
+export class TiktokenCore {
+  protected enc: Tiktoken | null;
 
-  constructor() {
-    this.enc = get_encoding('gpt2');
+  constructor(protected model: string) {
+    this.enc = null;
   }
 }
 
