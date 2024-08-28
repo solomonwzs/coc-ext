@@ -71,7 +71,7 @@ class GroqChat extends BaseAiChannel {
         messages: [
           {
             role: 'user',
-            content: 'How to close vim',
+            content: 'what is tiktoken?',
           },
         ],
         model: 'llama-3.1-70b-versatile',

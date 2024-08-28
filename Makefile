@@ -1,4 +1,4 @@
-OUTPUT_DIR = "$${HOME}/dotfiles/vim/coc-extensions/"
+OUTPUT_DIR = "$${HOME}/dotfiles/vim/coc-extensions"
 
 all: common erl crypto
 
@@ -12,6 +12,9 @@ common:
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
 	@cp "./syntax/hlpreview.vim" "$(OUTPUT_DIR)/../syntax"
 	@cp "./conf/coc-ext.vim" "$(OUTPUT_DIR)/../conf"
+	
+	@mkdir -p "$(OUTPUT_DIR)/node_modules"
+	@cp -r "./node_modules/tiktoken" "$(OUTPUT_DIR)/node_modules/tiktoken"
 
 erl:
 	@echo -e "\033[0;33m>>>\033[0m build $(@)"

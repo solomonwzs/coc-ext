@@ -8,7 +8,7 @@ async function start() {
     // minify: true,
     sourcemap: process.env.NODE_ENV === 'development',
     mainFields: ['module', 'main'],
-    external: ['coc.nvim'],
+    external: ['coc.nvim', 'tiktoken'],
     platform: 'node',
     target: 'node10.12',
     outfile: 'lib/coc-ext-common.js',

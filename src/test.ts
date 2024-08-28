@@ -23,6 +23,7 @@ import { getRandomId, getEnvHttpProxy } from './utils/common';
 import { URI } from 'vscode-uri';
 import { URL } from 'url';
 import os from 'os';
+import { get_encoding, encoding_for_model } from 'tiktoken';
 
 async function http_test(): Promise<void> {
   console.log(getEnvHttpProxy());
@@ -509,8 +510,14 @@ function text_test() {
 
 function color_test() {
   let regex = new RegExp(/(([c]?term|gui)([fb]g)?=[#\w0-9]*)/gi);
-  let s = 'hi CocListHeader ctermfg=16 ctermbg=108 cterm=bold GUIFG=#000000 guibg=#87af87 gui=bold';
-  console.log(Array.from(s.matchAll(regex), m => m[0]))
+  let s =
+    'hi CocListHeader ctermfg=16 ctermbg=108 cterm=bold GUIFG=#000000 guibg=#87af87 gui=bold';
+  console.log(Array.from(s.matchAll(regex), (m) => m[0]));
+}
+
+function tiktoken_test() {
+  const enc = get_encoding('gpt2');
+  console.log(enc.encode('hello world'));
 }
 
 console.log('========');
@@ -531,4 +538,5 @@ console.log('========');
 // ciba_test();
 // kimi_test();
 // text_test();
-color_test();
+// color_test();
+tiktoken_test();

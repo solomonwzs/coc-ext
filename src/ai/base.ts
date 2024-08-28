@@ -1,4 +1,13 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
+import { Tiktoken, get_encoding } from 'tiktoken';
+
+class TiktokenCore {
+  protected enc: Tiktoken;
+
+  constructor() {
+    this.enc = get_encoding('gpt2');
+  }
+}
 
 export class BaseAiChannel {
   protected channel: OutputChannel | null;
