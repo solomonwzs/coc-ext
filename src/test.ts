@@ -8,12 +8,12 @@ import {
   sendHttpRequest,
   sendHttpRequestWithCallback,
   HttpRequest,
-  simpleHttpDownloadFiles,
+  simpleHttpDownloadFile,
 } from './utils/http';
 import fs from 'fs';
 import { callShell, callMultiCmdShell } from './utils/externalexec';
 import path from 'path';
-import { fsStat, getFilesList } from './utils/file';
+import { fsStat, getFilesList, fsOpen, fsWrite, fsClose } from './utils/file';
 import minimatch from 'minimatch';
 import {
   encodeAes256Str,
@@ -516,7 +516,7 @@ function color_test() {
   console.log(Array.from(s.matchAll(regex), (m) => m[0]));
 }
 
-function tiktoken_test() {
+async function tiktoken_test() {
   const enc = get_encoding('gpt2');
   console.log(enc.encode('hello world'));
 
@@ -527,7 +527,15 @@ function tiktoken_test() {
   console.log(url.hostname);
   console.log(url.pathname);
 
-  simpleHttpDownloadFiles(addr, "");
+  simpleHttpDownloadFile(addr, '/tmp/1.tiktoken');
+  // const fd = await fsOpen('/tmp/1.txt', 'w');
+  // if (fd instanceof Error) {
+  //   return;
+  // }
+  // console.log(fd);
+  // console.log(await fsWrite(fd, Buffer.from('hello', 'utf8')));
+  // console.log((await fsClose(fd)) instanceof Error);
+  // console.log((await fsClose(fd)) instanceof Error);
 }
 
 console.log('========');

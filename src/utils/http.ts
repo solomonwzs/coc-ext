@@ -2,7 +2,8 @@ import https from 'https';
 import http from 'http';
 import { CocExtError, getEnvHttpProxy } from './common';
 import { URL } from 'url';
-import { fsWriteFile } from './file';
+import { fsOpen, fsWrite, fsClose } from './file';
+import fs from 'fs';
 
 export interface HttpRequestCallback {
   onData?: (chunk: any, msg: http.IncomingMessage) => void;
@@ -206,7 +207,7 @@ export async function sendHttpRequestWithCallback(
   }
 }
 
-export async function simpleHttpDownloadFiles(addr: string, pathname: string) {
+export async function simpleHttpDownloadFile(addr: string, pathname: string) {
   const url = new URL(addr);
   const proxy_url = getEnvHttpProxy(url.protocol == 'https:');
   const req: HttpRequest = {
@@ -220,13 +221,18 @@ export async function simpleHttpDownloadFiles(addr: string, pathname: string) {
       ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
       : undefined,
   };
+  const fd = await fsOpen(pathname, 'w');
+  if (fd instanceof Error) {
+    return -1;
+  }
+
   let statusCode = -1;
   const cb: HttpRequestCallback = {
     onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
       if (rsp.statusCode != 200) {
         return;
       }
-      fsWriteFile(pathname, chunk);
+      fsWrite(fd, chunk);
     },
     onEnd: (rsp: http.IncomingMessage) => {
       statusCode = rsp.statusCode ? rsp.statusCode : -1;
@@ -239,5 +245,6 @@ export async function simpleHttpDownloadFiles(addr: string, pathname: string) {
     },
   };
   await sendHttpRequestWithCallback(req, cb);
+  await fsClose(fd);
   return statusCode;
 }

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import { callShell } from './externalexec';
-// import { logger } from './logger';
 
 export interface Stats {
   stats: fs.Stats | undefined;
@@ -10,6 +9,52 @@ export interface Stats {
 export interface FileData {
   data: Buffer | undefined;
   error: NodeJS.ErrnoException | undefined;
+}
+
+export async function fsOpen(
+  path: fs.PathLike,
+  flags?: fs.OpenMode,
+  mode?: fs.Mode,
+): Promise<number | NodeJS.ErrnoException> {
+  return new Promise((resolve) => {
+    fs.open(
+      path,
+      flags,
+      mode,
+      (err: NodeJS.ErrnoException | null, fd: number) => {
+        err ? resolve(err) : resolve(fd);
+      },
+    );
+  });
+}
+
+export async function fsWrite(
+  fd: number,
+  buf: NodeJS.ArrayBufferView,
+): Promise<number | NodeJS.ErrnoException> {
+  return new Promise((resolve) => {
+    fs.write(
+      fd,
+      buf,
+      (
+        err: NodeJS.ErrnoException | null,
+        written: number,
+        _buffer: NodeJS.ArrayBufferView,
+      ) => {
+        err ? resolve(err) : resolve(written);
+      },
+    );
+  });
+}
+
+export async function fsClose(
+  fd: number,
+): Promise<number | NodeJS.ErrnoException> {
+  return new Promise((resolve) => {
+    fs.close(fd, (err: NodeJS.ErrnoException | null) => {
+      err ? resolve(err) : resolve(0);
+    });
+  });
 }
 
 export async function fsWriteFile(
