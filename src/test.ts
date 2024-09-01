@@ -523,6 +523,10 @@ function color_test() {
   console.log(Array.from(s.matchAll(regex), (m) => m[0]));
 }
 
+function isError(error: any): error is NodeJS.ErrnoException {
+  return error instanceof Error;
+}
+
 async function tiktoken_test() {
   const enc = get_encoding('gpt2');
   console.log(enc.encode('hello world'));
@@ -538,8 +542,12 @@ async function tiktoken_test() {
   console.log(path.join(os.homedir(), '.cache'));
 
   console.log(process.version);
-  console.log(await fsAccess('/tmp/xxx', fs.constants.R_OK));
-  console.log((await fsAccess('/tmp/xxx', fs.constants.R_OK)) instanceof Error);
+  const err = await fsAccess('/tmp/xxx', fs.constants.R_OK);
+  console.log(err?.message);
+  console.log(err instanceof Error);
+  console.log(Error.prototype.constructor);
+  console.log(err.__proto__.constructor);
+  console.log(err.__proto__ == Error.prototype);
 
   // simpleHttpDownloadFile(addr, '/tmp/1.tiktoken');
 

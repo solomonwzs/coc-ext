@@ -100,3 +100,19 @@ export class CocExtError extends Error {
   static ERR_AUTH = -2;
   static ERR_KIMI = -3;
 }
+
+export class CocExtErrnoError extends Error {
+  public errno: number | undefined;
+  public code: string | undefined;
+  public path: string | undefined;
+  public syscall: string | undefined;
+
+  constructor(err: NodeJS.ErrnoException) {
+    super(err.message);
+    this.name = 'CocExtErrnoError';
+    this.errno = err.errno;
+    this.code = err.code;
+    this.path = err.path;
+    this.syscall = err.syscall;
+  }
+}

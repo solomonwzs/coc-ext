@@ -25,7 +25,7 @@ export class TiktokenCore {
     this.encoder = null;
   }
 
-  async build() {
+  public async build() {
     var download_url = '';
     var tiktoken_file = '';
     if (this.model.startsWith('gpt-4o')) {
@@ -38,10 +38,6 @@ export class TiktokenCore {
       tiktoken_file = await cache_file_path('o200k.tiktkoen');
     }
 
-    const err = await fsAccess('/tmp/xxx', fs.constants.R_OK);
-    logger.debug(err);
-    logger.debug(err instanceof Error);
-    logger.debug(err == null);
     if ((await fsAccess(tiktoken_file, fs.constants.R_OK)) != null) {
       if ((await simpleHttpDownloadFile(download_url, tiktoken_file)) == -1) {
         logger.error(`download fail, ${download_url}`);
@@ -50,7 +46,7 @@ export class TiktokenCore {
     }
 
     const buf = await fsReadFile(tiktoken_file);
-    if (!(buf instanceof Buffer)) {
+    if (buf instanceof Error) {
       logger.error(`read tiktoken fail, ${buf.message}`);
       return;
     }
