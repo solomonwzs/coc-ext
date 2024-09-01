@@ -1,14 +1,26 @@
 import fs from 'fs';
 import { callShell } from './externalexec';
 
-export interface Stats {
-  stats: fs.Stats | undefined;
-  error: NodeJS.ErrnoException | undefined;
+export async function fsAccess(
+  path: fs.PathLike,
+  mode: number | undefined,
+): Promise<null | NodeJS.ErrnoException> {
+  return new Promise((resolve) => {
+    fs.access(path, mode, (err: NodeJS.ErrnoException | null) => {
+      err ? resolve(err) : resolve(null);
+    });
+  });
 }
 
-export interface FileData {
-  data: Buffer | undefined;
-  error: NodeJS.ErrnoException | undefined;
+export async function fsMkdir(
+  path: fs.PathLike,
+  opts?: fs.MakeDirectoryOptions,
+): Promise<null | NodeJS.ErrnoException> {
+  return new Promise((resolve) => {
+    fs.mkdir(path, opts, (err: NodeJS.ErrnoException | null) => {
+      err ? resolve(err) : resolve(null);
+    });
+  });
 }
 
 export async function fsOpen(
@@ -49,10 +61,10 @@ export async function fsWrite(
 
 export async function fsClose(
   fd: number,
-): Promise<number | NodeJS.ErrnoException> {
+): Promise<null | NodeJS.ErrnoException> {
   return new Promise((resolve) => {
     fs.close(fd, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(err) : resolve(0);
+      err ? resolve(err) : resolve(null);
     });
   });
 }
@@ -60,14 +72,10 @@ export async function fsClose(
 export async function fsWriteFile(
   filename: string,
   data: string | NodeJS.ArrayBufferView,
-): Promise<Error | null> {
+): Promise<null | NodeJS.ErrnoException> {
   return new Promise((resolve) => {
     fs.writeFile(filename, data, (err: NodeJS.ErrnoException | null) => {
-      if (err == null) {
-        resolve(null);
-      } else {
-        resolve(err);
-      }
+      err ? resolve(err) : resolve(null);
     });
   });
 }
@@ -75,7 +83,7 @@ export async function fsWriteFile(
 export async function fsAppendFile(
   filename: string,
   data: string | Uint8Array,
-): Promise<Error | null> {
+): Promise<null | NodeJS.ErrnoException> {
   return new Promise((resolve) => {
     fs.appendFile(filename, data, (err: NodeJS.ErrnoException | null) => {
       if (err == null) {
@@ -87,38 +95,20 @@ export async function fsAppendFile(
   });
 }
 
-export async function fsStat(filename: string): Promise<Stats> {
+export async function fsStat(filename: string): Promise<fs.Stats | Error> {
   return new Promise((resolve) => {
-    fs.stat(filename, (error, stats) => {
-      if (error == null) {
-        resolve({
-          stats,
-          error: undefined,
-        });
-      } else {
-        resolve({
-          stats: undefined,
-          error,
-        });
-      }
+    fs.stat(filename, (err: NodeJS.ErrnoException | null, stats: fs.Stats) => {
+      err ? resolve(err) : resolve(stats);
     });
   });
 }
 
-export async function fsReadFile(filename: string): Promise<FileData> {
+export async function fsReadFile(
+  filename: string,
+): Promise<Buffer | NodeJS.ErrnoException> {
   return new Promise((resolve) => {
-    fs.readFile(filename, (error, data) => {
-      if (error == null) {
-        resolve({
-          data,
-          error: undefined,
-        });
-      } else {
-        resolve({
-          data: undefined,
-          error,
-        });
-      }
+    fs.readFile(filename, (err: NodeJS.ErrnoException | null, data: Buffer) => {
+      err ? resolve(err) : resolve(data);
     });
   });
 }

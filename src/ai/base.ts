@@ -1,11 +1,73 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
-import { Tiktoken, get_encoding } from 'tiktoken';
+import { Tiktoken } from 'tiktoken';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { fsAccess, fsMkdir, fsReadFile } from '../utils/file';
+import { simpleHttpDownloadFile } from '../utils/http';
+import { logger } from '../utils/logger';
+
+async function cache_file_path(name: string) {
+  const cache_dir = path.join(os.homedir(), '.cache');
+  if (
+    (await fsAccess(cache_dir, fs.constants.F_OK)) != null &&
+    (await fsMkdir(cache_dir)) != null
+  ) {
+    return path.join('/tmp', name);
+  }
+  return path.join(cache_dir, name);
+}
 
 export class TiktokenCore {
-  protected enc: Tiktoken | null;
+  protected encoder: Tiktoken | null;
 
   constructor(protected model: string) {
-    this.enc = null;
+    this.encoder = null;
+  }
+
+  async build() {
+    var download_url = '';
+    var tiktoken_file = '';
+    if (this.model.startsWith('gpt-4o')) {
+      download_url =
+        'https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken';
+      tiktoken_file = await cache_file_path('cl100k.tiktkoen');
+    } else {
+      download_url =
+        'https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken';
+      tiktoken_file = await cache_file_path('o200k.tiktkoen');
+    }
+
+    const err = await fsAccess('/tmp/xxx', fs.constants.R_OK);
+    logger.debug(err);
+    logger.debug(err instanceof Error);
+    logger.debug(err == null);
+    if ((await fsAccess(tiktoken_file, fs.constants.R_OK)) != null) {
+      if ((await simpleHttpDownloadFile(download_url, tiktoken_file)) == -1) {
+        logger.error(`download fail, ${download_url}`);
+        return;
+      }
+    }
+
+    const buf = await fsReadFile(tiktoken_file);
+    if (!(buf instanceof Buffer)) {
+      logger.error(`read tiktoken fail, ${buf.message}`);
+      return;
+    }
+
+    this.encoder = new Tiktoken(
+      buf.toString('utf-8'),
+      {
+        '<|endoftext|>': 100257,
+        '<|fim_prefix|>': 100258,
+        '<|fim_middle|>': 100259,
+        '<|fim_suffix|>': 100260,
+        '<|endofprompt|>': 100276,
+      },
+      "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
+    );
+
+    logger.debug(this.encoder.encode('hello world'));
   }
 }
 

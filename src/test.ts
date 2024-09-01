@@ -13,7 +13,14 @@ import {
 import fs from 'fs';
 import { callShell, callMultiCmdShell } from './utils/externalexec';
 import path from 'path';
-import { fsStat, getFilesList, fsOpen, fsWrite, fsClose } from './utils/file';
+import {
+  fsStat,
+  getFilesList,
+  fsOpen,
+  fsWrite,
+  fsClose,
+  fsAccess,
+} from './utils/file';
 import minimatch from 'minimatch';
 import {
   encodeAes256Str,
@@ -327,8 +334,8 @@ async function path_test() {
 
   const res = await fsStat('/tmp/1.c');
   console.log(res);
-  if (res.stats) {
-    console.log(res.stats.isFile());
+  if (res instanceof fs.Stats) {
+    console.log(res.isFile());
   }
 
   const s = '123=456=76\\';
@@ -527,7 +534,15 @@ async function tiktoken_test() {
   console.log(url.hostname);
   console.log(url.pathname);
 
-  simpleHttpDownloadFile(addr, '/tmp/1.tiktoken');
+  console.log(addr.match('.+/(.+)'));
+  console.log(path.join(os.homedir(), '.cache'));
+
+  console.log(process.version);
+  console.log(await fsAccess('/tmp/xxx', fs.constants.R_OK));
+  console.log((await fsAccess('/tmp/xxx', fs.constants.R_OK)) instanceof Error);
+
+  // simpleHttpDownloadFile(addr, '/tmp/1.tiktoken');
+
   // const fd = await fsOpen('/tmp/1.txt', 'w');
   // if (fd instanceof Error) {
   //   return;

@@ -6,7 +6,7 @@ import {
   HttpResponse,
 } from '../utils/http';
 import http from 'http';
-import { BaseAiChannel } from './base';
+import { BaseAiChannel, TiktokenCore } from './base';
 import { logger } from '../utils/logger';
 import { getEnvHttpProxy } from '../utils/common';
 
@@ -41,6 +41,7 @@ interface GroqResponse {
 class GroqChat extends BaseAiChannel {
   private headers: http.OutgoingHttpHeaders;
   private proxy: any;
+  private tiktoken: TiktokenCore;
 
   constructor(private readonly api_key: string) {
     super();
@@ -52,9 +53,11 @@ class GroqChat extends BaseAiChannel {
     this.proxy = proxy_url
       ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
       : undefined;
+    this.tiktoken = new TiktokenCore('llama-3.1-70b-versatile');
   }
 
   public async show() {
+    await this.tiktoken.build();
     await this.showChannel('GroqChat', 'groqchat');
   }
 

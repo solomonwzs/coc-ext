@@ -38,6 +38,9 @@ import { leader_recv } from './leaderf/leaderf';
 import { kimiChat } from './ai/kimi';
 import { groqChat } from './ai/groq';
 
+import { fsAccess } from './utils/file';
+import fs from 'fs';
+
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
   args: {
@@ -207,7 +210,7 @@ function addFormatter(
 
 async function groq_open() {
   await groqChat.show();
-  await groqChat.debug();
+  // await groqChat.debug();
   return 0;
 }
 
@@ -298,6 +301,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(`coc-ext-common works`);
   logger.info(workspace.getConfiguration('coc-ext.common'));
   logger.info(process.env.COC_VIMCONFIG);
+
+  const err = await fsAccess('/tmp/not_exist', fs.constants.F_OK);
+  logger.debug(err instanceof Error);
 
   // const { nvim } = workspace;
   const langFmtSet = new Set<string>();
