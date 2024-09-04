@@ -210,7 +210,7 @@ function addFormatter(
 
 async function groq_open() {
   await groqChat.show();
-  // await groqChat.debug();
+  await groqChat.debug();
   return 0;
 }
 

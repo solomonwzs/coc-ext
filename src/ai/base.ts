@@ -19,13 +19,17 @@ async function cache_file_path(name: string) {
 }
 
 export class TiktokenCore {
-  protected encoder: Tiktoken | null;
+  protected core: Tiktoken | null;
 
   constructor(protected model: string) {
-    this.encoder = null;
+    this.core = null;
   }
 
-  public async build() {
+  public async setup() {
+    if (this.core != null) {
+      return;
+    }
+
     var download_url = '';
     var tiktoken_file = '';
     if (this.model.startsWith('gpt-4o')) {
@@ -51,7 +55,7 @@ export class TiktokenCore {
       return;
     }
 
-    this.encoder = new Tiktoken(
+    this.core = new Tiktoken(
       buf.toString('utf-8'),
       {
         '<|endoftext|>': 100257,
@@ -62,8 +66,19 @@ export class TiktokenCore {
       },
       "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
     );
+  }
 
-    logger.debug(this.encoder.encode('hello world'));
+  public encode(prompt: string): null | Uint32Array {
+    if (this.core == null) {
+      return null;
+    }
+    return this.core.encode(prompt);
+  }
+
+  public count(prompt: string): null | number {
+    return this.core == null
+      ? Math.ceil(prompt.length * 0.5)
+      : this.core.encode(prompt).length;
   }
 }
 

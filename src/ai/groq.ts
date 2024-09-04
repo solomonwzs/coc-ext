@@ -57,7 +57,7 @@ class GroqChat extends BaseAiChannel {
   }
 
   public async show() {
-    await this.tiktoken.build();
+    await this.tiktoken.setup();
     await this.showChannel('GroqChat', 'groqchat');
   }
 
