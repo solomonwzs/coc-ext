@@ -12,9 +12,6 @@ common:
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
 	@cp "./syntax/hlpreview.vim" "$(OUTPUT_DIR)/../syntax"
 	@cp "./conf/coc-ext.vim" "$(OUTPUT_DIR)/../conf"
-	
-	@mkdir -p "$(OUTPUT_DIR)/node_modules"
-	@cp -r "./node_modules/tiktoken" "$(OUTPUT_DIR)/node_modules/tiktoken"
 
 erl:
 	@echo -e "\033[0;33m>>>\033[0m build $(@)"
@@ -32,3 +29,7 @@ test:
 	@echo -e "\033[0;33m>>>\033[0m build $(@)"
 	@npm run build_test
 	@node ./lib/test.js
+
+cpy_modules:
+	@mkdir -p "$(OUTPUT_DIR)/node_modules"
+	@cp -r "./node_modules/tiktoken" "$(OUTPUT_DIR)/node_modules/tiktoken"
