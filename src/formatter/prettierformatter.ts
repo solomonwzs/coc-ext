@@ -49,6 +49,9 @@ export class PrettierFormatter extends BaseFormatter {
     } else {
       args.push(`--parser=${filetype}`);
     }
+    if (parser == 'html') {
+      args.push('--html-whitespace-sensitivity=ignore');
+    }
 
     const exec = this.setting.exec ? this.setting.exec : 'prettier';
     const resp = await callShell(exec, args, document.getText());
