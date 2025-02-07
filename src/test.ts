@@ -3,12 +3,13 @@ import https from 'https';
 import http from 'http';
 import { TextDecoder, TextEncoder } from 'util';
 import {
-  simpleHttpRequest,
-  simpleHttpsProxy,
+  HttpRequest,
+  HttpRequestCallback,
   sendHttpRequest,
   sendHttpRequestWithCallback,
-  HttpRequest,
   simpleHttpDownloadFile,
+  simpleHttpRequest,
+  simpleHttpsProxy,
 } from './utils/http';
 import fs from 'fs';
 import { callShell, callMultiCmdShell } from './utils/externalexec';

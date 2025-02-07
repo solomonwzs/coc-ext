@@ -99,6 +99,7 @@ export class CocExtError extends Error {
   static ERR_HTTP = -1;
   static ERR_AUTH = -2;
   static ERR_KIMI = -3;
+  static ERR_DEEPSEEK = -4;
 }
 
 export class CocExtErrnoError extends Error {
