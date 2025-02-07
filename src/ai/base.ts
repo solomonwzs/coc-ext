@@ -1,6 +1,12 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
 
-export class BaseAiChannel {
+interface ChatItem {
+  label: string;
+  chat_id: string;
+  description: string;
+}
+
+export abstract class BaseAiChannel {
   protected channel: OutputChannel | null;
   protected bufnr: number;
 
@@ -27,4 +33,7 @@ export class BaseAiChannel {
     }
     await nvim.call('win_execute', [winid, 'norm G']);
   }
+
+  public abstract hasChat(): boolean;
+  public abstract getChatList(): Promise<ChatItem[] | Error>;
 }

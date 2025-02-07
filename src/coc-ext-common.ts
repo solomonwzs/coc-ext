@@ -36,7 +36,7 @@ import { logger } from './utils/logger';
 import { popup, getText, echoMessage } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
 import { kimiChat } from './ai/kimi';
-import { groqChat } from './ai/groq';
+import { deepseekChat } from './ai/deepseek';
 
 import { fsAccess } from './utils/file';
 import fs from 'fs';
@@ -208,12 +208,6 @@ function addFormatter(
   }
 }
 
-async function groq_open() {
-  await groqChat.show();
-  await groqChat.debug();
-  return 0;
-}
-
 async function kimi_open() {
   if (kimiChat.getChatId().length == 0) {
     let chat_list = await kimiChat.chatList();
@@ -296,6 +290,12 @@ function kimi_ref(): () => ProviderResult<any> {
   };
 }
 
+async function deepseek_open() {
+  if (deepseekChat.getChatId().length == 0) {
+    
+  }
+}
+
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
   logger.info(`coc-ext-common works`);
@@ -332,7 +332,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
-    commands.registerCommand('ext-groq', groq_open, { sync: true }),
     commands.registerCommand('ext-kimi', kimi_open, { sync: true }),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 

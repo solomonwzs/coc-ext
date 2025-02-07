@@ -7,6 +7,7 @@ import {
   HttpRequestCallback,
   HttpResponse,
 } from '../utils/http';
+import { BaseAiChannel } from './base';
 
 interface DeepseekChatSession {
   id: string;
@@ -81,11 +82,18 @@ interface DeepseekChatCompletion {
   thinking_enabled: boolean;
 }
 
-class DeepseekChat {
+class DeepseekChat extends BaseAiChannel {
   private auth_key: string;
+  private chat_id: string;
 
   constructor(public readonly key: string) {
+    super();
     this.auth_key = key;
+    this.chat_id = '';
+  }
+
+  public getChatId(): string {
+    return this.chat_id;
   }
 
   private getHeader(): http.OutgoingHttpHeaders {
@@ -129,7 +137,7 @@ class DeepseekChat {
     return this.httpQuery(req);
   }
 
-  public async sessions(): Promise<DeepseekChatSession[] | CocExtError> {
+  private async sessions(): Promise<DeepseekChatSession[] | CocExtError> {
     const resp = await this.httpGet(
       '/api/v0/chat_session/fetch_page?count=100',
     );
@@ -140,6 +148,16 @@ class DeepseekChat {
     return chat_sessions == undefined
       ? new CocExtError(CocExtError.ERR_DEEPSEEK, 'get sessions fail')
       : chat_sessions;
+  }
+
+  public async chatList() {
+    const sess_list = await this.sessions();
+    if (sess_list instanceof Error) {
+      return sess_list;
+    }
+    var res: DeepseekChatSession[] = [];
+    for ()
+    return res;
   }
 
   public async historyMessages(sess_id: string) {

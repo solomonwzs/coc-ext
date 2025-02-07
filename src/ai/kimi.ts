@@ -333,6 +333,10 @@ class KimiChat extends BaseAiChannel {
     return this.chat_id;
   }
 
+  public hasChat(): boolean {
+    return false;
+  }
+
   public setChatIdAndName(chat_id: string, name: string) {
     this.chat_id = chat_id;
     this.name = name;
