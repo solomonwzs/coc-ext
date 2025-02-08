@@ -7,7 +7,8 @@ import {
   HttpRequestCallback,
   HttpResponse,
 } from '../utils/http';
-import { BaseAiChannel } from './base';
+import { BaseChatChannel, ChatItem } from './base';
+import { logger } from '../utils/logger';
 
 interface DeepseekChatSession {
   id: string;
@@ -82,18 +83,16 @@ interface DeepseekChatCompletion {
   thinking_enabled: boolean;
 }
 
-class DeepseekChat extends BaseAiChannel {
+class DeepseekChat extends BaseChatChannel {
   private auth_key: string;
-  private chat_id: string;
 
   constructor(public readonly key: string) {
     super();
     this.auth_key = key;
-    this.chat_id = '';
   }
 
-  public getChatId(): string {
-    return this.chat_id;
+  public getChatName(): string {
+    return 'Deepseek';
   }
 
   private getHeader(): http.OutgoingHttpHeaders {
@@ -137,7 +136,7 @@ class DeepseekChat extends BaseAiChannel {
     return this.httpQuery(req);
   }
 
-  private async sessions(): Promise<DeepseekChatSession[] | CocExtError> {
+  public async getChatList(): Promise<ChatItem[] | Error> {
     const resp = await this.httpGet(
       '/api/v0/chat_session/fetch_page?count=100',
     );
@@ -145,19 +144,32 @@ class DeepseekChat extends BaseAiChannel {
       return resp;
     }
     const chat_sessions = resp.data.biz_data?.chat_sessions;
-    return chat_sessions == undefined
-      ? new CocExtError(CocExtError.ERR_DEEPSEEK, 'get sessions fail')
-      : chat_sessions;
+    if (chat_sessions == undefined) {
+      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'get sessions fail');
+    }
+
+    const id_set: Set<string> = new Set();
+    const list: ChatItem[] = [];
+    for (const sess of chat_sessions) {
+      if (id_set.has(sess.id)) {
+        continue;
+      }
+      id_set.add(sess.id);
+      list.push({
+        label: sess.title,
+        chat_id: sess.id,
+        description: new Date(sess.updated_at * 1000).toLocaleString(),
+      });
+    }
+    return list;
   }
 
-  public async chatList() {
-    const sess_list = await this.sessions();
-    if (sess_list instanceof Error) {
-      return sess_list;
-    }
-    var res: DeepseekChatSession[] = [];
-    for ()
-    return res;
+  public async createChatId(name: string): Promise<string | Error> {
+    return "";
+  }
+
+  public async showHistoryMessages(): Promise<null | Error> {
+    return null;
   }
 
   public async historyMessages(sess_id: string) {

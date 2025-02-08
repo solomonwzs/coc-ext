@@ -515,6 +515,8 @@ function text_test() {
   }
   text = '则判定\u003clabel\u003e为\u003c/label\u003e垃圾';
   console.log(text);
+
+  console.log((new Date(1738927991000)).toLocaleString())
 }
 
 function color_test() {
@@ -579,6 +581,6 @@ console.log('========');
 // obj_copy_test();
 // ciba_test();
 // kimi_test();
-// text_test();
+text_test();
 // color_test();
-tiktoken_test();
+// tiktoken_test();

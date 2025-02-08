@@ -35,6 +35,7 @@ import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
 import { popup, getText, echoMessage } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
+import { BaseChatChannel } from './ai/base';
 import { kimiChat } from './ai/kimi';
 import { deepseekChat } from './ai/deepseek';
 
@@ -208,17 +209,14 @@ function addFormatter(
   }
 }
 
-async function kimi_open() {
-  if (kimiChat.getChatId().length == 0) {
-    let chat_list = await kimiChat.chatList();
-    if (chat_list instanceof Error) {
-      logger.error(chat_list);
-      echoMessage('ErrorMsg', chat_list.message);
+async function ai_open(ai_chat: BaseChatChannel) {
+  if (!ai_chat.getCurrentChatId()) {
+    let items = await ai_chat.getChatList();
+    if (items instanceof Error) {
+      logger.error(items);
+      echoMessage('ErrorMsg', items.message);
       return -1;
     }
-    let items = chat_list.map((i) => {
-      return { label: i.name, chat_id: i.id, description: i.updated_at };
-    });
     items.push({ label: 'Create', chat_id: '', description: '' });
     let choose = await window.showQuickPick(items, { title: 'Choose Chat' });
     if (!choose || choose.chat_id.length == 0) {
@@ -229,49 +227,28 @@ async function kimi_open() {
         return -1;
       }
 
-      const statusCode = await kimiChat.createChatId(new_name);
-      if (statusCode != 200) {
-        logger.error(`createChatId fail, statusCode: ${statusCode}`);
+      const chat_id = await ai_chat.createChatId(new_name);
+      if (chat_id instanceof Error) {
+        logger.error(chat_id);
         return -1;
       }
+      ai_chat.setCurrentChatId(chat_id);
     } else {
-      kimiChat.setChatIdAndName(choose.chat_id, choose.label);
-
-      const items = await kimiChat.chatScroll();
-      if (items instanceof Error) {
-        logger.error(items);
-      } else {
-        for (const item of items) {
-          if (item.role == 'user') {
-            kimiChat.appendUserInput(item.created_at, item.content);
-          } else {
-            kimiChat.append(`>> id:${item.id}\n`);
-            if (item.search_plus) {
-              for (const search of item.search_plus) {
-                if (search.msg.type == 'get_res') {
-                  let idx = -1;
-                  if (search.msg.url) {
-                    idx = kimiChat.addUrl(search.msg.url);
-                  }
-                  kimiChat.append(`[${idx}] ${search.msg.title}`);
-                }
-              }
-              kimiChat.append('');
-            }
-            kimiChat.append(item.content);
-          }
-        }
+      ai_chat.setCurrentChatId(choose.chat_id);
+      const err = await ai_chat.showHistoryMessages();
+      if (err instanceof Error) {
+        logger.error(err);
       }
     }
   }
-  await kimiChat.show();
+  await ai_chat.show();
   return 0;
 }
 
 function kimi_chat(mode: MapMode): () => ProviderResult<any> {
   return async () => {
     const text = await getText(mode);
-    let ret = await kimi_open();
+    let ret = await ai_open(kimiChat);
     if (ret != 0) {
       return;
     }
@@ -281,20 +258,25 @@ function kimi_chat(mode: MapMode): () => ProviderResult<any> {
   };
 }
 
-function kimi_ref(): () => ProviderResult<any> {
+function ai_ref(): () => ProviderResult<any> {
   return async () => {
-    const text = await kimiChat.getRef();
-    if (text) {
-      popup(text, '', 'markdown');
+    let { nvim } = workspace;
+    let bufnr = await nvim.call('bufnr');
+    let ai_name = await nvim.call('getbufvar', [bufnr, 'ai_name']);
+
+    if (ai_name == kimiChat.getChatName()) {
+      const text = await kimiChat.getRef();
+      if (text) {
+        popup(text, '', 'markdown');
+      }
     }
   };
 }
 
-async function deepseek_open() {
-  if (deepseekChat.getChatId().length == 0) {
-    
-  }
-}
+// async function deepseek_open() {
+//   if (deepseekChat.getChatId().length == 0) {
+//   }
+// }
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
@@ -332,7 +314,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
-    commands.registerCommand('ext-kimi', kimi_open, { sync: true }),
+    commands.registerCommand(
+      'ext-ai-kimi',
+      async () => {
+        await ai_open(kimiChat);
+      },
+      { sync: true },
+    ),
+    commands.registerCommand(
+      'ext-ai-deepseek',
+      async () => {
+        await ai_open(deepseekChat);
+      },
+      { sync: true },
+    ),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
@@ -350,7 +345,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     workspace.registerKeymap(['v'], 'ext-kimi', kimi_chat('v'), {
       sync: false,
     }),
-    workspace.registerKeymap(['n'], 'ext-kimi-ref', kimi_ref(), {
+
+    workspace.registerKeymap(['n'], 'ext-ai-ref', ai_ref(), {
       sync: false,
     }),
 

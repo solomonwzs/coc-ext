@@ -12,5 +12,7 @@
 -- return M
 local has, render = pcall(require, "render-markdown")
 if has then
-  render.setup({file_types = {"markdown", "kimichat", "deepseekchat"}})
+  render.setup({file_types = {"markdown", "aichat"}})
 end
+
+vim.treesitter.language.register("markdown", "aichat")

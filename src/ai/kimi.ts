@@ -9,7 +9,7 @@ import http from 'http';
 import { window, workspace, Position } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
-import { BaseAiChannel } from './base';
+import { BaseChatChannel, ChatItem } from './base';
 
 interface KimiChatItem {
   id: string;
@@ -87,18 +87,14 @@ interface KimiChatRefCardQuery {
   segment_id: string;
 }
 
-class KimiChat extends BaseAiChannel {
+class KimiChat extends BaseChatChannel {
   private rtoken: string;
-  private chat_id: string;
   private headers: http.OutgoingHttpHeaders;
-  private name: string;
-  private winid: number;
   private urls: string[];
 
   constructor(public readonly refresh_token: string) {
     super();
     this.rtoken = refresh_token;
-    this.chat_id = '';
     this.headers = {
       'Content-Type': 'application/json',
       'User-Agent':
@@ -110,19 +106,11 @@ class KimiChat extends BaseAiChannel {
       Origin: 'https://kimi.moonshot.cn',
       Referer: 'https://kimi.moonshot.cn/',
     };
-    this.channel = null;
-    this.name = '';
-    this.winid = -1;
-    this.bufnr = -1;
     this.urls = [];
   }
 
-  public async bufferLines() {
-    const doc = workspace.getDocument(this.bufnr);
-    if (doc == null) {
-      return -1;
-    }
-    return (await doc.buffer.lines).length;
+  public getChatName() {
+    return 'Kimi';
   }
 
   public addUrl(url: string) {
@@ -260,53 +248,11 @@ class KimiChat extends BaseAiChannel {
     return null;
   }
 
-  public async openAutoScroll() {
-    let { nvim } = workspace;
-    this.winid = await nvim.call('bufwinid', `Kimi-${this.chat_id}`);
-  }
-
-  public closeAutoScroll() {
-    this.winid = -1;
-  }
-
   private getHeaders(): http.OutgoingHttpHeaders {
     this.headers['X-Traffic-Id'] = Array.from({ length: 20 }, () =>
       Math.floor(Math.random() * 36).toString(36),
     ).join('');
     return this.headers;
-  }
-
-  public append(text: string, newline: boolean = true) {
-    if (this.channel) {
-    } else if (this.chat_id && this.name) {
-      this.channel = window.createOutputChannel(`Kimi-${this.chat_id}`);
-    } else {
-      return;
-    }
-    if (newline) {
-      this.channel.appendLine(text);
-    } else {
-      this.channel.append(text);
-    }
-
-    if (this.winid != -1) {
-      let { nvim } = workspace;
-      nvim.call('win_execute', [this.winid, 'norm G']);
-    }
-  }
-
-  public appendUserInput(datetime: string, text: string) {
-    this.append(`\n>> ${datetime}`);
-    let lines = text.split('\n');
-    for (const i of lines) {
-      this.append(`>> ${i}`);
-    }
-  }
-
-  public async show() {
-    if (this.channel || (this.chat_id && this.name)) {
-      await this.showChannel(`Kimi-${this.chat_id}`, 'kimichat');
-    }
   }
 
   public async getAccessToken(): Promise<number> {
@@ -329,19 +275,6 @@ class KimiChat extends BaseAiChannel {
     return resp.statusCode ? resp.statusCode : -1;
   }
 
-  public getChatId(): string {
-    return this.chat_id;
-  }
-
-  public hasChat(): boolean {
-    return false;
-  }
-
-  public setChatIdAndName(chat_id: string, name: string) {
-    this.chat_id = chat_id;
-    this.name = name;
-  }
-
   private async sendHttpRequest(
     req: HttpRequest,
   ): Promise<HttpResponse | Error> {
@@ -361,7 +294,7 @@ class KimiChat extends BaseAiChannel {
     return resp;
   }
 
-  public async createChatId(name: string): Promise<number> {
+  public async createChatId(name: string): Promise<string | Error> {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -375,18 +308,20 @@ class KimiChat extends BaseAiChannel {
     };
     const resp = await this.sendHttpRequest(req);
     if (resp instanceof Error) {
-      logger.error(resp);
-      return -1;
+      return new CocExtError(CocExtError.ERR_KIMI, resp.message);
     }
     if (resp.statusCode == 200 && resp.body) {
       const obj = JSON.parse(resp.body.toString());
-      this.chat_id = obj['id'];
-      this.name = name;
+      return obj['id'];
+    } else {
+      return new CocExtError(
+        CocExtError.ERR_KIMI,
+        `statusCode: ${resp.statusCode}`,
+      );
     }
-    return resp.statusCode ? resp.statusCode : -1;
   }
 
-  public async chatList(): Promise<KimiChatItem[] | Error> {
+  public async getChatList(): Promise<ChatItem[] | Error> {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -405,7 +340,10 @@ class KimiChat extends BaseAiChannel {
     if (resp.statusCode == 200 && resp.body) {
       let obj = JSON.parse(resp.body.toString());
       if (obj['items']) {
-        return obj['items'];
+        const chat_list = obj['items'] as KimiChatItem[];
+        return chat_list.map((i) => {
+          return { label: i.name, chat_id: i.id, description: i.updated_at };
+        });
       } else {
         return [];
       }
@@ -445,7 +383,7 @@ class KimiChat extends BaseAiChannel {
     );
   }
 
-  public async chatScroll(): Promise<KimiChatScrollItem[] | Error> {
+  private async chatScroll(): Promise<KimiChatScrollItem[] | Error> {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -476,8 +414,37 @@ class KimiChat extends BaseAiChannel {
     }
   }
 
+  public async showHistoryMessages(): Promise<null | Error> {
+    const items = await this.chatScroll();
+    if (items instanceof Error) {
+      return items;
+    }
+
+    for (const item of items) {
+      if (item.role == 'user') {
+        this.appendUserInput(item.created_at, item.content);
+      } else {
+        this.append(`>> id:${item.id}\n`);
+        if (item.search_plus) {
+          for (const search of item.search_plus) {
+            if (search.msg.type == 'get_res') {
+              let idx = -1;
+              if (search.msg.url) {
+                idx = this.addUrl(search.msg.url);
+              }
+              this.append(`[${idx}] ${search.msg.title}`);
+            }
+          }
+          this.append('');
+        }
+        this.append(item.content);
+      }
+    }
+    return null;
+  }
+
   public async chat(text: string) {
-    if (this.chat_id.length == 0) {
+    if (!this.chat_id) {
       return;
     }
     this.appendUserInput(new Date().toISOString(), text);

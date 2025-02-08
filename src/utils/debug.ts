@@ -92,8 +92,8 @@ export async function debug(cmd: string, ...args: any[]): Promise<any> {
   // const x = await getCursorSymbolList();
   // logger.debug(x);
   // await new Promise((resolve) => setTimeout(resolve, 2000));
-  logger.debug(cmd);
-  logger.debug(args);
+  logger.debug(['cmd', cmd]);
+  logger.debug(['args', args]);
   let channel = window.createOutputChannel('debug');
   channel.show();
 
