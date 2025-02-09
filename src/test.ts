@@ -517,6 +517,11 @@ function text_test() {
   console.log(text);
 
   console.log((new Date(1738927991000)).toLocaleString())
+  console.log((new Date()).toLocaleString())
+  console.log(Date.now())
+
+  let s = "data: [DONE]--"
+  console.log(s.slice(6, 12))
 }
 
 function color_test() {

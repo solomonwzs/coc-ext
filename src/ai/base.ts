@@ -109,4 +109,5 @@ export abstract class BaseChatChannel {
   public abstract getChatList(): Promise<ChatItem[] | Error>;
   public abstract createChatId(name: string): Promise<string | Error>;
   public abstract showHistoryMessages(): Promise<null | Error>;
+  public abstract chat(text: string): Promise<void>;
 }

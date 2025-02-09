@@ -75,20 +75,32 @@ interface DeepseekChatResponse {
 }
 
 interface DeepseekChatCompletion {
-  chat_session_id: string;
-  parent_message_id: number | undefined;
-  prompt: string;
-  ref_file_ids: string[];
-  search_enabled: boolean;
-  thinking_enabled: boolean;
+  choices: {
+    finish_reason: string | undefined;
+    index: number;
+    delta: {
+      content: string | undefined;
+      type: string;
+      role: string | undefined;
+    };
+  }[];
+  model: string;
+  chunk_token_usage: number;
+  created: number;
+  message_id: number;
+  parent_id: number;
 }
 
 class DeepseekChat extends BaseChatChannel {
   private auth_key: string;
+  private parent_id: number | null;
+  private challenge: Record<string, DeepseekChatChallenge>;
 
   constructor(public readonly key: string) {
     super();
     this.auth_key = key;
+    this.parent_id = null;
+    this.challenge = {};
   }
 
   public getChatName(): string {
@@ -145,7 +157,10 @@ class DeepseekChat extends BaseChatChannel {
     }
     const chat_sessions = resp.data.biz_data?.chat_sessions;
     if (chat_sessions == undefined) {
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'get sessions fail');
+      return new CocExtError(
+        CocExtError.ERR_DEEPSEEK,
+        '[Deepseek] get sessions fail',
+      );
     }
 
     const id_set: Set<string> = new Set();
@@ -158,36 +173,61 @@ class DeepseekChat extends BaseChatChannel {
       list.push({
         label: sess.title,
         chat_id: sess.id,
-        description: new Date(sess.updated_at * 1000).toLocaleString(),
+        description: new Date(sess.updated_at * 1000).toISOString(),
       });
     }
     return list;
   }
 
-  public async createChatId(name: string): Promise<string | Error> {
-    return "";
+  public async createChatId(_name: string): Promise<string | Error> {
+    return new CocExtError(CocExtError.ERR_DEEPSEEK, '[Deepseek] not impl');
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
-    return null;
-  }
-
-  public async historyMessages(sess_id: string) {
     const resp = await this.httpGet(
-      `/api/v0/chat/history_messages?chat_session_id=${sess_id}`,
+      `/api/v0/chat/history_messages?chat_session_id=${this.chat_id}`,
     );
     if (resp instanceof Error) {
       return resp;
     }
     const messages = resp.data.biz_data?.chat_messages;
-    return messages == undefined
-      ? new CocExtError(CocExtError.ERR_DEEPSEEK, 'get messages fail')
-      : messages;
+    if (messages == undefined) {
+      return new CocExtError(
+        CocExtError.ERR_DEEPSEEK,
+        '[Deepseek] get messages fail',
+      );
+    }
+
+    this.parent_id = null;
+    for (const msg of messages) {
+      this.parent_id = msg.message_id;
+      if (msg.role == 'USER') {
+        this.appendUserInput(
+          new Date(msg.inserted_at * 1000).toISOString(),
+          msg.content,
+        );
+      } else {
+        this.append('');
+        if (msg.thinking_enabled && msg.thinking_content) {
+          this.append('```');
+          this.append(msg.thinking_content);
+          this.append('```');
+        }
+        this.append(msg.content);
+      }
+    }
+
+    return null;
   }
 
-  public async createPowChallenge(
+  private async getPowChallenge(
     target_path: string,
   ): Promise<DeepseekChatChallenge | CocExtError> {
+    const ch = this.challenge[target_path];
+    if (ch && ch.expire_at + ch.expire_after < Date.now()) {
+      return ch;
+    }
+
     const req: HttpRequest = {
       args: {
         host: 'chat.deepseek.com',
@@ -205,19 +245,27 @@ class DeepseekChat extends BaseChatChannel {
       return resp;
     }
     const challenge = resp.data.biz_data?.challenge;
-    return challenge == undefined
-      ? new CocExtError(CocExtError.ERR_DEEPSEEK, 'get challenge fail')
-      : challenge;
+    if (!challenge) {
+      return new CocExtError(
+        CocExtError.ERR_DEEPSEEK,
+        '[Deepseek] get challenge fail',
+      );
+    } else {
+      this.challenge[target_path] = challenge;
+      return challenge;
+    }
   }
 
-  public async chat(
-    chat_session_id: string,
-    parent_message_id: number | undefined,
-    prompt: string,
-    challenge: DeepseekChatChallenge,
-    search_enabled: boolean = false,
-    thinking_enabled: boolean = false,
-  ) {
+  public async chat(prompt: string) {
+    const challenge = await this.getPowChallenge('/api/v0/chat/completion');
+    if (challenge instanceof Error) {
+      logger.error(challenge);
+      return;
+    }
+
+    this.appendUserInput(new Date().toISOString(), prompt);
+    this.append('');
+
     const req_challenge: DeepseekChatRequestChallenge = {
       algorithm: challenge.algorithm,
       challenge: challenge.challenge,
@@ -241,24 +289,52 @@ class DeepseekChat extends BaseChatChannel {
         headers,
       },
       data: JSON.stringify({
-        chat_session_id,
-        parent_message_id,
+        chat_session_id: this.chat_id,
+        parent_message_id: this.parent_id,
         prompt,
         ref_file_ids: [],
-        search_enabled,
-        thinking_enabled,
+        search_enabled: false,
+        thinking_enabled: false,
       }),
     };
     const cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
-        console.log('>', rsp.statusCode);
-        console.log('>', chunk.toString());
+        if (rsp.statusCode != 200) {
+          return;
+        }
+        try {
+          chunk
+            .toString()
+            .split('\n')
+            .forEach((line: string) => {
+              if (line.length == 0) {
+                return;
+              }
+              if (line.slice(6, 12) == '[DONE]') {
+                this.append(' (END)');
+                return;
+              }
+
+              const data = JSON.parse(line.slice(5)) as DeepseekChatCompletion;
+              if (data.choices.length > 0) {
+                for (const choice of data.choices) {
+                  if (choice.delta.content) {
+                    this.append(choice.delta.content, false);
+                  }
+                }
+              }
+              this.parent_id = data.message_id;
+            });
+        } catch (e) {
+          logger.debug(chunk.toString());
+          logger.error(e);
+        }
       },
       onError: (err: Error) => {
-        console.log(err);
+        this.append(' (ERROR) ');
+        this.append(err.message);
       },
     };
-    console.log(req);
     await sendHttpRequestWithCallback(req, cb);
   }
 }
