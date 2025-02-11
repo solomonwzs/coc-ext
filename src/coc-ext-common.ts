@@ -35,9 +35,11 @@ import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
 import { popup, getText, echoMessage } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
+
 import { BaseChatChannel } from './ai/base';
 import { kimiChat } from './ai/kimi';
 import { deepseekChat } from './ai/deepseek';
+import { bailianChat } from './ai/bailian';
 
 import { fsAccess } from './utils/file';
 import fs from 'fs';
@@ -317,6 +319,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // },
 
     commands.registerCommand('ext-debug', debug, { sync: true }),
+    commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
+
     commands.registerCommand(
       'ext-ai-kimi',
       async () => {
@@ -331,7 +335,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
       },
       { sync: true },
     ),
-    commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
+    commands.registerCommand(
+      'ext-ai-bailian',
+      async () => {
+        await ai_open(bailianChat);
+      },
+      { sync: true },
+    ),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
       sync: false,
@@ -356,6 +366,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
         sync: false,
       },
     ),
+    workspace.registerKeymap(['v'], 'ext-bailian', ai_chat('v', bailianChat), {
+      sync: false,
+    }),
 
     workspace.registerKeymap(['n'], 'ext-ai-ref', ai_ref(), {
       sync: false,

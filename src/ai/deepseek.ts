@@ -5,7 +5,6 @@ import {
   sendHttpRequestWithCallback,
   HttpRequest,
   HttpRequestCallback,
-  HttpResponse,
 } from '../utils/http';
 import { BaseChatChannel, ChatItem } from './base';
 import { logger } from '../utils/logger';

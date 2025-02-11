@@ -21,6 +21,7 @@ vmap <C-c> <Plug>(coc-ext-copy-xclip)
 " for kimi
 vmap <silent> <leader>ki <Plug>(coc-ext-kimi)
 vmap <silent> <leader>se <Plug>(coc-ext-deepseek)
+vmap <silent> <leader>bl <Plug>(coc-ext-bailian)
 augroup my_coc_nvim
   autocmd!
   autocmd FileType aichat nnoremap <silent> K <Plug>(coc-ext-ai-ref)
