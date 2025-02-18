@@ -564,5 +564,5 @@ class KimiChat extends BaseChatChannel {
 }
 
 export const kimiChat = new KimiChat(
-  process.env.MY_KIMI_REFRESH_TOKEN ? process.env.MY_KIMI_REFRESH_TOKEN : '',
+  process.env.MY_AI_KIMI_CHAT_KEY ? process.env.MY_AI_KIMI_CHAT_KEY : '',
 );

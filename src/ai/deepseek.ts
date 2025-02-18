@@ -339,5 +339,7 @@ class DeepseekChat extends BaseChatChannel {
 }
 
 export const deepseekChat = new DeepseekChat(
-  process.env.MY_DEEPSEEK_CHAT_KEY ? process.env.MY_DEEPSEEK_CHAT_KEY : '',
+  process.env.MY_AI_DEEPSEEK_CHAT_KEY
+    ? process.env.MY_AI_DEEPSEEK_CHAT_KEY
+    : '',
 );

@@ -119,5 +119,5 @@ class BailianChat extends BaseChatChannel {
 }
 
 export const bailianChat = new BailianChat(
-  process.env.MY_BAILIAN_KEY ? process.env.MY_BAILIAN_KEY : '',
+  process.env.MY_AI_BAILIAN_KEY ? process.env.MY_AI_BAILIAN_KEY : '',
 );
