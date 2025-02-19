@@ -45,6 +45,7 @@
     "@types/minimatch": "^3.0.5",
     "tiktoken": "^1.0.16",
     "vscode-languageserver-protocol": "^3.16.0",
-    "vscode-uri": "^3.0.2"
+    "vscode-uri": "^3.0.2",
+    "wasmtime": "^0.0.2"
   }
 }

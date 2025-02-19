@@ -380,9 +380,9 @@ concat-map@0.0.1:
   integrity sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==
 
 cross-spawn@^6.0.5:
-  version "6.0.5"
-  resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-6.0.5.tgz"
-  integrity sha512-eTVLrBSt7fjbDygz805pMnstIs2VTBNkRm0qxZd+M7A5XDdxVRWO5MxGBXZhjY4cqLYLdtrGqRf8mBPmzwSpWQ==
+  version "6.0.6"
+  resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-6.0.6.tgz"
+  integrity sha512-VqCUuhcd1iB+dsv8gxPttb5iZh/D0iubSP21g36KXdEuf6I5JiioesUVjpCdHV9MZRUfVFlvwtIUyPfxo5trtw==
   dependencies:
     nice-try "^1.0.4"
     path-key "^2.0.1"
@@ -391,9 +391,9 @@ cross-spawn@^6.0.5:
     which "^1.2.9"
 
 cross-spawn@^7.0.2:
-  version "7.0.3"
-  resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.3.tgz"
-  integrity sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==
+  version "7.0.6"
+  resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz"
+  integrity sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==
   dependencies:
     path-key "^3.1.0"
     shebang-command "^2.0.0"
@@ -1902,6 +1902,21 @@ vscode-uri@^3.0.2:
   version "3.0.8"
   resolved "https://registry.npmjs.org/vscode-uri/-/vscode-uri-3.0.8.tgz"
   integrity sha512-AyFQ0EVmsOZOlAnxoFOGOq1SQDWAB7C6aqMGS23svWAllfOaxbuFvcT8D1i8z3Gyn8fraVeZNNmN6e9bxxXkKw==
+
+wasmtime-linux-x64-gnu@0.0.2:
+  version "0.0.2"
+  resolved "https://registry.npmjs.org/wasmtime-linux-x64-gnu/-/wasmtime-linux-x64-gnu-0.0.2.tgz"
+  integrity sha512-IHkpISMHwsIQobkSpiW7A9+zsddIaE1IdfJDNvlhPRVUA2T7pqLOidYVNeQpmrmviv2VGR1F4EfS6zbE8ZxGHQ==
+
+wasmtime@^0.0.2:
+  version "0.0.2"
+  resolved "https://registry.npmjs.org/wasmtime/-/wasmtime-0.0.2.tgz"
+  integrity sha512-M5lc3JhJA3GFw6B2GLk/dwDJl3+zifAiYTsSvLWqlDwPIqkkkOs4csG9+qusFMGPKoUsQTL4cHtLc8WMwRF4Gg==
+  optionalDependencies:
+    wasmtime-darwin-x64 "0.0.2"
+    wasmtime-linux-arm64-gnu "0.0.2"
+    wasmtime-linux-x64-gnu "0.0.2"
+    wasmtime-win32-x64-msvc "0.0.2"
 
 which-boxed-primitive@^1.0.2:
   version "1.0.2"

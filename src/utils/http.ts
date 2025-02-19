@@ -212,6 +212,14 @@ export async function simpleHttpDownloadFile(addr: string, pathname: string) {
   const proxy_url = getEnvHttpProxy(url.protocol == 'https:');
   const req: HttpRequest = {
     args: {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+          'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+          'Chrome/91.0.4472.77 ' +
+          'Safari/537.36 ' +
+          'Edg/91.0.864.41',
+      },
       host: url.hostname,
       path: url.pathname,
       method: 'GET',

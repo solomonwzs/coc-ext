@@ -4,6 +4,7 @@ import { sleepMs } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 import { showNotification } from '../utils/notify';
+import { fsReadFile } from '../utils/file';
 
 export async function debugWindow(): Promise<any> {
   const id: number = await workspace.nvim.call('ui#window#new', {
@@ -92,17 +93,29 @@ export async function debug(cmd: string, ...args: any[]): Promise<any> {
   // const x = await getCursorSymbolList();
   // logger.debug(x);
   // await new Promise((resolve) => setTimeout(resolve, 2000));
-  logger.debug(['cmd', cmd]);
-  logger.debug(['args', args]);
-  let channel = window.createOutputChannel('debug');
-  channel.show();
 
-  // let { nvim } = workspace;
-  // let winid = await nvim.call('bufwinid', `debug`);
-  // nvim.call('coc#compat#execute', [winid, 'setl scrolloff=3'], true);
+  // let inbox = await window.createInputBox('XXX', 'None');
 
-  for (let i = 0; i < 100; ++i) {
-    channel.appendLine(`=> ${i}`);
-    await sleepMs(50);
+  let buf = await fsReadFile('/home/solomon/tmp/sha3_wasm_bg.7b9ca65ddd.wasm');
+  if (buf instanceof Error) {
+    return;
   }
+
+  const m = await WebAssembly.compile(buf);
+  const ins = await WebAssembly.instantiate(m);
+  logger.debug(ins);
+
+  // logger.debug(['cmd', cmd]);
+  // logger.debug(['args', args]);
+  // let channel = window.createOutputChannel('debug');
+  // channel.show();
+
+  // // let { nvim } = workspace;
+  // // let winid = await nvim.call('bufwinid', `debug`);
+  // // nvim.call('coc#compat#execute', [winid, 'setl scrolloff=3'], true);
+
+  // for (let i = 0; i < 100; ++i) {
+  //   channel.appendLine(`=> ${i}`);
+  //   await sleepMs(50);
+  // }
 }

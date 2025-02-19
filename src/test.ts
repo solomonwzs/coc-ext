@@ -16,6 +16,7 @@ import { callShell, callMultiCmdShell } from './utils/externalexec';
 import path from 'path';
 import {
   fsStat,
+  fsReadFile,
   getFilesList,
   fsOpen,
   fsWrite,
@@ -516,12 +517,12 @@ function text_test() {
   text = '则判定\u003clabel\u003e为\u003c/label\u003e垃圾';
   console.log(text);
 
-  console.log((new Date(1738927991000)).toLocaleString())
-  console.log((new Date()).toLocaleString())
-  console.log(Date.now())
+  console.log(new Date(1738927991000).toLocaleString());
+  console.log(new Date().toLocaleString());
+  console.log(Date.now());
 
-  let s = "data: [DONE]--"
-  console.log(s.slice(6, 12))
+  let s = 'data: [DONE]--';
+  console.log(s.slice(6, 12));
 }
 
 function color_test() {
@@ -536,29 +537,27 @@ function isError(error: any): error is NodeJS.ErrnoException {
 }
 
 async function tiktoken_test() {
-  const enc = get_encoding('gpt2');
-  console.log(enc.encode('hello world'));
-
-  const addr =
-    'https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken';
-  const url = new URL(addr);
-  console.log(url.protocol);
-  console.log(url.hostname);
-  console.log(url.pathname);
-
-  console.log(addr.match('.+/(.+)'));
-  console.log(path.join(os.homedir(), '.cache'));
-
-  console.log(process.version);
-  const err = await fsAccess('/tmp/xxx', fs.constants.R_OK);
-  console.log(err?.message);
-  console.log(err instanceof Error);
-  console.log(Error.prototype.constructor);
-  console.log(err.__proto__.constructor);
-  console.log(err.__proto__ == Error.prototype);
-
-  // simpleHttpDownloadFile(addr, '/tmp/1.tiktoken');
-
+  // const enc = get_encoding('gpt2');
+  // console.log(enc.encode('hello world'));
+  // const addr =
+  //   'https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken';
+  // const url = new URL(addr);
+  // console.log(url.protocol);
+  // console.log(url.hostname);
+  // console.log(url.pathname);
+  // console.log(addr.match('.+/(.+)'));
+  // console.log(path.join(os.homedir(), '.cache'));
+  // console.log(process.version);
+  // const err = await fsAccess('/tmp/xxx', fs.constants.R_OK);
+  // console.log(err?.message);
+  // console.log(err instanceof Error);
+  // console.log(Error.prototype.constructor);
+  // console.log(err.__proto__.constructor);
+  // console.log(err.__proto__ == Error.prototype);
+  // const ds_addr =
+  //   'https://chat.deepseek.com/static/sha3_wasm_bg.7b9ca65ddd.wasm';
+  // let ret = await simpleHttpDownloadFile(ds_addr, '/tmp/1.wasm');
+  // console.log(ret);
   // const fd = await fsOpen('/tmp/1.txt', 'w');
   // if (fd instanceof Error) {
   //   return;
@@ -567,6 +566,109 @@ async function tiktoken_test() {
   // console.log(await fsWrite(fd, Buffer.from('hello', 'utf8')));
   // console.log((await fsClose(fd)) instanceof Error);
   // console.log((await fsClose(fd)) instanceof Error);
+}
+
+function encode_string_to_mem(
+  s: string,
+  mem: WebAssembly.Memory,
+  alloc: (nmemb: number, size: number) => number,
+) {
+  let data = Buffer.from(s, 'utf8');
+  let ptr_val = alloc(data.length, 1);
+  return ptr_val;
+}
+
+async function compute_pow_answer_test() {
+  let challenge =
+    'a77607969d00de0f337ecc6a72dc6536d9715ccd08bc6301cbbd53d5baa8e021';
+  let salt = '0767fabce5c03f98718b';
+  let difficulty = 144000.0;
+  let expire_at = 1739956551682;
+  // wasm_path: string,
+
+  let buf = await fsReadFile('/home/solomon/tmp/sha3_wasm_bg.7b9ca65ddd.wasm');
+  if (buf instanceof Error) {
+    return;
+  }
+
+  const m = await WebAssembly.compile(buf);
+  const ins = await WebAssembly.instantiate(m);
+  console.log(ins.exports);
+
+  let memory = ins.exports['memory'] as WebAssembly.Memory;
+  let add_to_stack = ins.exports['__wbindgen_add_to_stack_pointer'] as (
+    pos: number,
+  ) => number;
+  let alloc = ins.exports['__wbindgen_export_0'] as (
+    nmemb: number,
+    size: number,
+  ) => any;
+  let wasm_solve = ins.exports['wasm_solve'] as (
+    ret: number,
+    pc: number,
+    lc: number,
+    pp: number,
+    lp: number,
+    diff: number,
+  ) => any;
+
+  const writeMemory = (offset: number, data: Buffer): void => {
+    const view = new Uint8Array(memory.buffer);
+    view.set(data, offset);
+  };
+
+  const readMemory = (offset: number, size: number): Buffer => {
+    const view = new Uint8Array(memory.buffer);
+    return Buffer.from(view.slice(offset, offset + size));
+  };
+
+  const encodeString = (text: string): [number, number] => {
+    const data = Buffer.from(text, 'utf-8');
+    const length = data.length;
+    const ptrVal = alloc(length, 1);
+    const ptr = ptrVal instanceof Number ? ptrVal.valueOf() : ptrVal;
+    writeMemory(ptr, data);
+    return [ptr, length];
+  };
+
+  // 1. 申请 16 字节栈空间
+  const retptr = add_to_stack(-16);
+
+  // 2. 编码 challenge 与 prefix 到 wasm 内存中
+  const [ptrChallenge, lenChallenge] = encodeString(challenge);
+  const [ptrPrefix, lenPrefix] = encodeString(`${salt}_${expire_at}_`);
+  console.log(readMemory(ptrChallenge, lenChallenge).toString(), ptrChallenge);
+  console.log(readMemory(ptrPrefix, lenPrefix).toString(), ptrPrefix);
+
+  // 3. 调用 wasm_solve（注意：difficulty 以 float 形式传入）
+  wasm_solve(
+    retptr,
+    ptrChallenge,
+    lenChallenge,
+    ptrPrefix,
+    lenPrefix,
+    difficulty,
+  );
+
+  // 4. 从 retptr 处读取 4 字节状态和 8 字节求解结果
+  const statusBytes = readMemory(retptr, 4);
+  if (statusBytes.length !== 4) {
+    add_to_stack(16);
+    throw new Error('读取状态字节失败');
+  }
+  const status = new DataView(statusBytes.buffer).getInt32(0, true);
+
+  const valueBytes = readMemory(retptr + 8, 8);
+  if (valueBytes.length !== 8) {
+    add_to_stack(16);
+    throw new Error('读取结果字节失败');
+  }
+  const value = new DataView(valueBytes.buffer).getFloat64(0, true);
+
+  // 5. 恢复栈指针
+  add_to_stack(16);
+
+  console.log(status, Math.floor(value));
 }
 
 console.log('========');
@@ -586,6 +688,7 @@ console.log('========');
 // obj_copy_test();
 // ciba_test();
 // kimi_test();
-text_test();
+// text_test();
 // color_test();
 // tiktoken_test();
+compute_pow_answer_test();

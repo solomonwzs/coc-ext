@@ -289,9 +289,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
   logger.info(workspace.getConfiguration('coc-ext.common'));
   logger.info(process.env.COC_VIMCONFIG);
 
-  const err = await fsAccess('/tmp/not_exist', fs.constants.F_OK);
-  logger.debug(err instanceof Error);
-
   // const { nvim } = workspace;
   const langFmtSet = new Set<string>();
   const formatterSettings = getcfg<LangFormatterSetting[]>('formatting', []);
