@@ -8,6 +8,12 @@ import {
 } from '../utils/http';
 import { BaseChatChannel, ChatItem } from './base';
 import { logger } from '../utils/logger';
+import { fsAccess, fsReadFile } from '../utils/file';
+import { simpleHttpDownloadFile } from '../utils/http';
+import fs from 'fs';
+import { getcfg } from '../utils/config';
+import { CocExtAIChatConfig } from '../utils/types';
+import os from 'os';
 
 interface DeepseekChatSession {
   id: string;
@@ -48,12 +54,8 @@ interface DeepseekChatChallenge {
 }
 
 interface DeepseekChatRequestChallenge {
-  algorithm: string;
-  challenge: string;
-  salt: string;
-  answer: number;
-  signature: string;
-  target_path: string;
+  expire: number;
+  x_ds_pow_response: string;
 }
 
 interface DeepseekChatResponse {
@@ -62,14 +64,13 @@ interface DeepseekChatResponse {
   data: {
     biz_code: number;
     biz_msg: string;
-    biz_data:
-      | {
-          chat_session: DeepseekChatSession | undefined;
-          chat_sessions: DeepseekChatSession[] | undefined;
-          chat_messages: DeepseekChatMessage[] | undefined;
-          challenge: DeepseekChatChallenge | undefined;
-        }
-      | undefined;
+    biz_data?: {
+      chat_session?: DeepseekChatSession;
+      chat_sessions?: DeepseekChatSession[];
+      chat_messages?: DeepseekChatMessage[];
+      challenge?: DeepseekChatChallenge;
+      id?: string;
+    };
   };
 }
 
@@ -90,16 +91,136 @@ interface DeepseekChatCompletion {
   parent_id: number;
 }
 
+class DeepseekSha3Wasm {
+  private memory: WebAssembly.Memory;
+  private addToStack: (delta: number) => number;
+  private alloc: (size: number, align: number) => number;
+  private wasmSolve: (
+    retptr: number,
+    ptrChallenge: number,
+    lenChallenge: number,
+    ptrPrefix: number,
+    lenPrefix: number,
+    difficulty: number,
+  ) => void;
+
+  constructor(public readonly src: WebAssembly.WebAssemblyInstantiatedSource) {
+    let { instance } = src;
+    let exports = instance.exports;
+
+    this.memory = exports.memory as WebAssembly.Memory;
+    this.addToStack = exports.__wbindgen_add_to_stack_pointer as (
+      delta: number,
+    ) => number;
+    this.alloc = exports.__wbindgen_export_0 as (
+      size: number,
+      align: number,
+    ) => number;
+    this.wasmSolve = exports.wasm_solve as (
+      retptr: number,
+      ptrChallenge: number,
+      lenChallenge: number,
+      ptrPrefix: number,
+      lenPrefix: number,
+      difficulty: number,
+    ) => void;
+  }
+
+  private writeMemory(offset: number, data: ArrayLike<number>): void {
+    let view = new Uint8Array(this.memory.buffer);
+    view.set(data, offset);
+  }
+
+  private readMemory(offset: number, size: number): Uint8Array {
+    let view = new Uint8Array(this.memory.buffer);
+    return view.slice(offset, offset + size);
+  }
+
+  private encodeString(text: string): [number, number] {
+    let data = Buffer.from(text);
+    let ptr = this.alloc(data.length, 1);
+    this.writeMemory(ptr, data);
+    return [ptr, data.length];
+  }
+
+  public computePowAnswer(
+    challenge: string,
+    salt: string,
+    difficulty: number,
+    expire_at: number,
+  ): number | Error {
+    let retptr = this.addToStack(-16);
+    let [ptrChallenge, lenChallenge] = this.encodeString(challenge);
+    let [ptrPrefix, lenPrefix] = this.encodeString(`${salt}_${expire_at}_`);
+    this.wasmSolve(
+      retptr,
+      ptrChallenge,
+      lenChallenge,
+      ptrPrefix,
+      lenPrefix,
+      difficulty,
+    );
+
+    const statusBytes = this.readMemory(retptr, 4);
+    if (statusBytes.length !== 4) {
+      this.addToStack(16);
+      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read status fail');
+    }
+    let status = new DataView(statusBytes.buffer).getInt32(0, true);
+
+    let valueBytes = this.readMemory(retptr + 8, 8);
+    if (valueBytes.length !== 8) {
+      this.addToStack(16);
+      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read value fail');
+    }
+    let value = new DataView(valueBytes.buffer).getFloat64(0, true);
+
+    this.addToStack(16);
+    if (status !== 1) {
+      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'computePowAnswer fail');
+    }
+    return Math.floor(value);
+  }
+}
+
+async function getWasm(): Promise<DeepseekSha3Wasm | Error> {
+  let conf = getcfg<CocExtAIChatConfig>('', {});
+  let wasmPath =
+    conf.deepseekWasmPath && conf.deepseekWasmPath.length > 0
+      ? conf.deepseekWasmPath
+      : `${os.homedir}/.cache/deepseek_sha3.wasm`;
+  let downloadUrl =
+    conf.deepseekWasmURL && conf.deepseekWasmURL.length > 0
+      ? conf.deepseekWasmURL
+      : 'https://chat.deepseek.com/static/sha3_wasm_bg.7b9ca65ddd.wasm';
+  if ((await fsAccess(wasmPath, fs.constants.R_OK)) != null) {
+    if ((await simpleHttpDownloadFile(downloadUrl, wasmPath)) == -1) {
+      return new CocExtError(
+        CocExtError.ERR_DEEPSEEK,
+        '[Deepseek] get wasm fail',
+      );
+    }
+  }
+
+  let wasmBuf = await fsReadFile(wasmPath);
+  if (wasmBuf instanceof Error) {
+    return wasmBuf;
+  }
+  return new DeepseekSha3Wasm(await WebAssembly.instantiate(wasmBuf, {}));
+}
+
 class DeepseekChat extends BaseChatChannel {
   private auth_key: string;
   private parent_id: number | null;
-  private challenge: Record<string, DeepseekChatChallenge>;
+  private challenge: Record<string, DeepseekChatRequestChallenge>;
+  private sha3_wasm: DeepseekSha3Wasm | null;
 
   constructor(public readonly key: string) {
     super();
     this.auth_key = key;
     this.parent_id = null;
     this.challenge = {};
+    this.sha3_wasm = null;
   }
 
   public getChatName(): string {
@@ -179,7 +300,31 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   public async createChatId(_name: string): Promise<string | Error> {
-    return new CocExtError(CocExtError.ERR_DEEPSEEK, '[Deepseek] not impl');
+    let req: HttpRequest = {
+      args: {
+        host: 'chat.deepseek.com',
+        path: '/api/v0/chat_session/create',
+        method: 'POST',
+        protocol: 'https:',
+        headers: this.getHeader(),
+      },
+      data: JSON.stringify({
+        character_id: null,
+      }),
+    };
+    let resp = await this.httpQuery(req);
+    if (resp instanceof Error) {
+      return resp;
+    }
+
+    let id = resp.data.biz_data?.id;
+    if (!id || id.length == 0) {
+      return new CocExtError(
+        CocExtError.ERR_DEEPSEEK,
+        '[Deepseek] create chat fail',
+      );
+    }
+    return id;
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
@@ -219,12 +364,10 @@ class DeepseekChat extends BaseChatChannel {
     return null;
   }
 
-  private async getPowChallenge(
-    target_path: string,
-  ): Promise<DeepseekChatChallenge | CocExtError> {
-    const ch = this.challenge[target_path];
-    if (ch && ch.expire_at + ch.expire_after < Date.now()) {
-      return ch;
+  private async getPowChallenge(target_path: string): Promise<string | Error> {
+    let ch = this.challenge[target_path];
+    if (ch && ch.expire < Date.now()) {
+      return ch.x_ds_pow_response;
     }
 
     const req: HttpRequest = {
@@ -250,8 +393,33 @@ class DeepseekChat extends BaseChatChannel {
         '[Deepseek] get challenge fail',
       );
     } else {
-      this.challenge[target_path] = challenge;
-      return challenge;
+      if (!this.sha3_wasm) {
+        let wasm = await getWasm();
+        if (wasm instanceof Error) {
+          return wasm;
+        }
+        this.sha3_wasm = wasm;
+      }
+
+      let obj = {
+        algorithm: challenge.algorithm,
+        challenge: challenge.challenge,
+        salt: challenge.salt,
+        signature: challenge.signature,
+        target_path: challenge.target_path,
+        answer: this.sha3_wasm.computePowAnswer(
+          challenge.challenge,
+          challenge.salt,
+          challenge.difficulty,
+          challenge.expire_at,
+        ),
+      };
+      ch = {
+        x_ds_pow_response: Buffer.from(JSON.stringify(obj)).toString('base64'),
+        expire: challenge.expire_at + challenge.expire_after,
+      };
+      this.challenge[target_path] = ch;
+      return ch.x_ds_pow_response;
     }
   }
 
@@ -265,20 +433,8 @@ class DeepseekChat extends BaseChatChannel {
     this.appendUserInput(new Date().toISOString(), prompt);
     this.append('');
 
-    const req_challenge: DeepseekChatRequestChallenge = {
-      algorithm: challenge.algorithm,
-      challenge: challenge.challenge,
-      salt: challenge.salt,
-      answer: Math.floor(Math.random() * 100000),
-      signature: challenge.signature,
-      target_path: challenge.target_path,
-    };
-    const x_ds_pow_response = Buffer.from(
-      JSON.stringify(req_challenge),
-    ).toString('base64');
-
     var headers = this.getHeader();
-    headers['x-ds-pow-response'] = x_ds_pow_response;
+    headers['x-ds-pow-response'] = challenge;
     const req: HttpRequest = {
       args: {
         host: 'chat.deepseek.com',

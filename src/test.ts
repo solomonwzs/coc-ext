@@ -1,4 +1,4 @@
-import { computePowAnswerTest } from './test/deepseek_test';
+import { computePowAnswerTest2 } from './test/deepseek_test';
 
 console.log('========');
-computePowAnswerTest();
+computePowAnswerTest2();

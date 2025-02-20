@@ -67,6 +67,22 @@
               "type": "number"
             }
           }
+        },
+
+        "coc-ext.aichat": {
+          "type": "object",
+          "default": {},
+          "description": "Configure AI chat",
+          "properties": {
+            "deepseekWasmURL": {
+              "type": "string",
+              "default": "https://chat.deepseek.com/static/sha3_wasm_bg.7b9ca65ddd.wasm"
+            },
+            "deepseekWasmPath": {
+              "type": "string",
+              "default": ""
+            }
+          }
         }
       }
     },

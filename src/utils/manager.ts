@@ -6,7 +6,7 @@ import {
   window,
   workspace,
 } from 'coc.nvim';
-import getcfg from './config';
+import { getcfg } from './config';
 import { ActionMode, KeymapMode, Nullable } from './types';
 import { showNotification } from '../utils/notify';
 

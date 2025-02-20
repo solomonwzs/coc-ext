@@ -18,7 +18,7 @@ import HighlightList from './lists/highlight';
 import MapkeyList from './lists/mapkey';
 import RgfilesList from './lists/rgfiles';
 import RgwordsList from './lists/rgwords';
-import getcfg from './utils/config';
+import { getcfg } from './utils/config';
 import { FormattingEditProvider } from './formatter/formatprovider';
 import { LangFormatterSetting, FormatterSetting } from './utils/types';
 import { bingTranslate } from './translators/bing';
@@ -40,9 +40,6 @@ import { BaseChatChannel } from './ai/base';
 import { kimiChat } from './ai/kimi';
 import { deepseekChat } from './ai/deepseek';
 import { bailianChat } from './ai/bailian';
-
-import { fsAccess } from './utils/file';
-import fs from 'fs';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',

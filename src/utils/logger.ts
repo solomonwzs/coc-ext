@@ -1,5 +1,5 @@
 import { OutputChannel, window } from 'coc.nvim';
-import getcfg from './config';
+import { getcfg } from './config';
 import { stringify, getCallStack } from './common';
 import path from 'path';
 

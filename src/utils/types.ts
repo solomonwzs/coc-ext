@@ -104,3 +104,8 @@ export interface CocExtFloatConfig {
   maxHeight?: number;
   maxWidth?: number;
 }
+
+export interface CocExtAIChatConfig {
+  deepseekWasmURL?: string;
+  deepseekWasmPath?: string;
+}

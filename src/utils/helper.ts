@@ -10,14 +10,10 @@ import {
   workspace,
 } from 'coc.nvim';
 import fs from 'fs';
-import getcfg from './config';
+import { getcfg } from './config';
 import path from 'path';
 import { Nullable, OpenOptions, CocExtFloatConfig } from './types';
 import { TextEncoder } from 'util';
-import { logger } from './logger';
-
-// import fs from 'fs-extra';
-// import md5 from 'md5';
 
 function defauleFloatWinConfig(): FloatWinConfig {
   let conf = getcfg<CocExtFloatConfig>('floatConfig', {});

@@ -7,7 +7,7 @@ import {
   ServerOptions,
 } from 'coc.nvim';
 import { logger } from './utils/logger';
-import getcfg from './utils/config';
+import { getcfg } from './utils/config';
 import { showNotification } from './utils/notify';
 
 let client: LanguageClient;
@@ -19,7 +19,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   const server_path: string = getcfg<string>(
     'erlang.erlangLsPath',
-    '/bin/erlang_ls'
+    '/bin/erlang_ls',
   );
 
   const clientOptions: LanguageClientOptions = {
