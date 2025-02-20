@@ -111,7 +111,7 @@ export async function debugPrompt() {
   let n = (await workspace.nvim.eval('&columns')) as number;
   let inputbox = await window.createInputBox('AI Chat', '', {
     position: 'center',
-    minWidth: n / 2,
+    minWidth: Math.floor(n / 2),
   });
 
   let input = await new Promise<string>((resolve) => {

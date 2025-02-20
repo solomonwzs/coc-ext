@@ -98,7 +98,7 @@ export function aiChatQuickChat(): () => ProviderResult<any> {
       '',
       {
         position: 'center',
-        minWidth: n / 2,
+        minWidth: Math.floor(n / 2),
       },
     );
 
