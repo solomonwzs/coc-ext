@@ -89,33 +89,38 @@ export async function debugSymbol(): Promise<any> {
   logger.debug(sym);
 }
 
-export async function debug(cmd: string, ...args: any[]): Promise<any> {
+export async function debugSleep(): Promise<any> {
   // const x = await getCursorSymbolList();
   // logger.debug(x);
   // await new Promise((resolve) => setTimeout(resolve, 2000));
-
   // let inbox = await window.createInputBox('XXX', 'None');
-
-  let buf = await fsReadFile('/home/solomon/tmp/sha3_wasm_bg.7b9ca65ddd.wasm');
-  if (buf instanceof Error) {
-    return;
-  }
-
-  const m = await WebAssembly.compile(buf);
-  const ins = await WebAssembly.instantiate(m);
-  logger.debug(ins);
-
   // logger.debug(['cmd', cmd]);
   // logger.debug(['args', args]);
-  // let channel = window.createOutputChannel('debug');
-  // channel.show();
-
+  let channel = window.createOutputChannel('debug');
+  channel.show();
   // // let { nvim } = workspace;
   // // let winid = await nvim.call('bufwinid', `debug`);
   // // nvim.call('coc#compat#execute', [winid, 'setl scrolloff=3'], true);
+  for (let i = 0; i < 20; ++i) {
+    channel.appendLine(`=> ${i}`);
+    await sleepMs(50);
+  }
+}
 
-  // for (let i = 0; i < 100; ++i) {
-  //   channel.appendLine(`=> ${i}`);
-  //   await sleepMs(50);
-  // }
+export async function debugPrompt() {
+  let n = (await workspace.nvim.eval('&columns')) as number;
+  let inputbox = await window.createInputBox('AI Chat', '', {
+    position: 'center',
+    minWidth: n / 2,
+  });
+
+  let input = await new Promise<string>((resolve) => {
+    inputbox.onDidFinish((text) => {
+      resolve(text ? text : '');
+    });
+  });
+}
+
+export async function debug(_cmd: string, ..._args: any[]): Promise<any> {
+  await debugPrompt();
 }

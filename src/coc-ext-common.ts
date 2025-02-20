@@ -33,13 +33,15 @@ import { decodeMimeEncodeStr } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
 import { googleTranslate } from './translators/google';
 import { logger } from './utils/logger';
-import { popup, getText, echoMessage } from './utils/helper';
+import { popup, getText } from './utils/helper';
 import { leader_recv } from './leaderf/leaderf';
-
-import { BaseChatChannel } from './ai/base';
-import { kimiChat } from './ai/kimi';
-import { deepseekChat } from './ai/deepseek';
-import { bailianChat } from './ai/bailian';
+import {
+  aiChatSelect,
+  aiChatChat,
+  aiChatRef,
+  aiChatQuickChat,
+  aiChatOpen,
+} from './ai/chat';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -208,77 +210,15 @@ function addFormatter(
   }
 }
 
-async function ai_open(aichat: BaseChatChannel) {
-  if (!aichat.getCurrentChatId()) {
-    let items = await aichat.getChatList();
-    if (items instanceof Error) {
-      logger.error(items);
-      echoMessage('ErrorMsg', items.message);
-      return -1;
-    }
-    items.push({ label: 'Create', chat_id: '', description: '' });
-    let choose = await window.showQuickPick(items, { title: 'Choose Chat' });
-    if (!choose || choose.chat_id.length == 0) {
-      let new_name = await window.requestInput('Name', '', {
-        position: 'center',
-      });
-      if (new_name.length == 0) {
-        return -1;
-      }
-
-      const chat_id = await aichat.createChatId(new_name);
-      if (chat_id instanceof Error) {
-        logger.error(chat_id);
-        return -1;
-      }
-      aichat.setCurrentChatId(chat_id);
-    } else {
-      aichat.setCurrentChatId(choose.chat_id);
-      const err = await aichat.showHistoryMessages();
-      if (err instanceof Error) {
-        logger.error(err);
-      }
-    }
-  }
-  await aichat.show();
-  return 0;
-}
-
-function ai_chat(
-  mode: MapMode,
-  aichat: BaseChatChannel,
-): () => ProviderResult<any> {
-  return async () => {
-    const text = await getText(mode);
-    let ret = await ai_open(aichat);
-    if (ret != 0) {
-      return;
-    }
-    await aichat.openAutoScroll();
-    await aichat.chat(text);
-    aichat.closeAutoScroll();
-  };
-}
-
-function ai_ref(): () => ProviderResult<any> {
-  return async () => {
-    let { nvim } = workspace;
-    let bufnr = await nvim.call('bufnr');
-    let ai_name = await nvim.call('getbufvar', [bufnr, 'ai_name']);
-
-    if (ai_name == kimiChat.getChatName()) {
-      const text = await kimiChat.getRef();
-      if (text) {
-        popup(text, '', 'markdown');
-      }
-    }
-  };
-}
-
 // async function deepseek_open() {
 //   if (deepseekChat.getChatId().length == 0) {
 //   }
 // }
+
+export async function aiChatSelectAndOpen() {
+  await aiChatSelect();
+  await aiChatOpen();
+}
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
@@ -315,27 +255,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     commands.registerCommand('ext-debug', debug, { sync: true }),
     commands.registerCommand('ext-leaderf', leader_recv, { sync: true }),
 
-    commands.registerCommand(
-      'ext-ai-kimi',
-      async () => {
-        await ai_open(kimiChat);
-      },
-      { sync: true },
-    ),
-    commands.registerCommand(
-      'ext-ai-deepseek',
-      async () => {
-        await ai_open(deepseekChat);
-      },
-      { sync: true },
-    ),
-    commands.registerCommand(
-      'ext-ai-bailian',
-      async () => {
-        await ai_open(bailianChat);
-      },
-      { sync: true },
-    ),
+    commands.registerCommand('ext-ai', aiChatSelectAndOpen, { sync: true }),
 
     workspace.registerKeymap(['n'], 'ext-cursor-symbol', getCursorSymbolInfo, {
       sync: false,
@@ -349,22 +269,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sync: false,
     }),
 
-    workspace.registerKeymap(['v'], 'ext-kimi', ai_chat('v', kimiChat), {
+    workspace.registerKeymap(['n'], 'ext-ai-chat-n', aiChatQuickChat(), {
       sync: false,
     }),
-    workspace.registerKeymap(
-      ['v'],
-      'ext-deepseek',
-      ai_chat('v', deepseekChat),
-      {
-        sync: false,
-      },
-    ),
-    workspace.registerKeymap(['v'], 'ext-bailian', ai_chat('v', bailianChat), {
+    workspace.registerKeymap(['v'], 'ext-ai-chat-v', aiChatChat(), {
       sync: false,
     }),
 
-    workspace.registerKeymap(['n'], 'ext-ai-ref', ai_ref(), {
+    workspace.registerKeymap(['n'], 'ext-ai-ref', aiChatRef(), {
       sync: false,
     }),
 

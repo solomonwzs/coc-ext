@@ -12,6 +12,7 @@ common:
 	@cp -r "./python/CocExt" "$(OUTPUT_DIR)/../pythonx"
 	@cp "./syntax/hlpreview.vim" "$(OUTPUT_DIR)/../syntax"
 	@cp "./conf/coc-ext.vim" "$(OUTPUT_DIR)/../conf"
+	@cp "./autoload/coc_ext.vim" "$(OUTPUT_DIR)/../autoload"
 
 erl:
 	@echo -e "\033[0;33m>>>\033[0m build $(@)"

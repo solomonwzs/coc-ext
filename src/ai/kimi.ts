@@ -517,7 +517,7 @@ class KimiChat extends BaseChatChannel {
           },
         ],
         refs: [],
-        user_search: true,
+        use_search: true,
       }),
     };
     await sendHttpRequestWithCallback(req, cb);

@@ -53,11 +53,6 @@ interface DeepseekChatChallenge {
   target_path: string;
 }
 
-interface DeepseekChatRequestChallenge {
-  expire: number;
-  x_ds_pow_response: string;
-}
-
 interface DeepseekChatResponse {
   code: number;
   msg: string;
@@ -212,14 +207,12 @@ async function getWasm(): Promise<DeepseekSha3Wasm | Error> {
 class DeepseekChat extends BaseChatChannel {
   private auth_key: string;
   private parent_id: number | null;
-  private challenge: Record<string, DeepseekChatRequestChallenge>;
   private sha3_wasm: DeepseekSha3Wasm | null;
 
   constructor(public readonly key: string) {
     super();
     this.auth_key = key;
     this.parent_id = null;
-    this.challenge = {};
     this.sha3_wasm = null;
   }
 
@@ -365,11 +358,6 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   private async getPowChallenge(target_path: string): Promise<string | Error> {
-    let ch = this.challenge[target_path];
-    if (ch && ch.expire < Date.now()) {
-      return ch.x_ds_pow_response;
-    }
-
     const req: HttpRequest = {
       args: {
         host: 'chat.deepseek.com',
@@ -414,12 +402,7 @@ class DeepseekChat extends BaseChatChannel {
           challenge.expire_at,
         ),
       };
-      ch = {
-        x_ds_pow_response: Buffer.from(JSON.stringify(obj)).toString('base64'),
-        expire: challenge.expire_at + challenge.expire_after,
-      };
-      this.challenge[target_path] = ch;
-      return ch.x_ds_pow_response;
+      return Buffer.from(JSON.stringify(obj)).toString('base64');
     }
   }
 
@@ -448,7 +431,7 @@ class DeepseekChat extends BaseChatChannel {
         parent_message_id: this.parent_id,
         prompt,
         ref_file_ids: [],
-        search_enabled: false,
+        search_enabled: true,
         thinking_enabled: false,
       }),
     };
