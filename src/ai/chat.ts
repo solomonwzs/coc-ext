@@ -119,6 +119,7 @@ export function aiChatQuickChat(): () => ProviderResult<any> {
 
 export function aiChatRef(): () => ProviderResult<any> {
   return async () => {
+    logger.debug("XXX")
     let { nvim } = workspace;
     let bufnr = await nvim.call('bufnr');
     let ai_name = await nvim.call('getbufvar', [bufnr, 'ai_name']);
