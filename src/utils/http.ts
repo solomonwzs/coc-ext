@@ -3,7 +3,6 @@ import http from 'http';
 import { CocExtError, getEnvHttpProxy } from './common';
 import { URL } from 'url';
 import { fsOpen, fsWrite, fsClose } from './file';
-import fs from 'fs';
 
 export interface HttpRequestCallback {
   onData?: (chunk: any, msg: http.IncomingMessage) => void;
@@ -191,12 +190,6 @@ export async function sendHttpRequestWithCallback(
           if (cb.onTimeout) {
             cb.onTimeout();
           }
-          resolve(
-            new CocExtError(
-              CocExtError.ERR_HTTP,
-              `query ${req.args.host} timeout`,
-            ),
-          );
         });
 
       if (req.data) {

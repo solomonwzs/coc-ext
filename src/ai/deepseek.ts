@@ -472,6 +472,12 @@ class DeepseekChat extends BaseChatChannel {
         this.append(' (ERROR) ');
         this.append(err.message);
       },
+      onEnd: (rsp: http.IncomingMessage) => {
+        logger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}`);
+      },
+      onTimeout: () => {
+        logger.error('[Deepseek] timeout');
+      },
     };
     await sendHttpRequestWithCallback(req, cb);
   }
