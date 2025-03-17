@@ -1,4 +1,5 @@
 import { CocExtError } from '../utils/common';
+import { window, workspace, Position } from 'coc.nvim';
 import http from 'http';
 import {
   sendHttpRequest,
@@ -8,12 +9,11 @@ import {
 } from '../utils/http';
 import { BaseChatChannel, ChatItem } from './base';
 import { logger } from '../utils/logger';
-import { fsAccess, fsReadFile } from '../utils/file';
+import { fsAccess, fsReadFile, fsWriteFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
 import fs from 'fs';
 import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';
-import os from 'os';
 
 interface DeepseekChatSession {
   id: string;
@@ -25,6 +25,16 @@ interface DeepseekChatSession {
   current_message_id: number;
   inserted_at: number;
   updated_at: number;
+}
+
+interface DeepseekChatSearchResult {
+  url: string;
+  title: string;
+  snippet: string;
+  cite_index?: number;
+  published_at: number;
+  site_name: string;
+  site_icon: string;
 }
 
 interface DeepseekChatMessage {
@@ -40,6 +50,7 @@ interface DeepseekChatMessage {
   accumulated_token_usage: number;
   inserted_at: number;
   search_enabled: boolean;
+  search_results?: DeepseekChatSearchResult[];
 }
 
 interface DeepseekChatChallenge {
@@ -178,12 +189,12 @@ class DeepseekSha3Wasm {
   }
 }
 
-async function getWasm(): Promise<DeepseekSha3Wasm | Error> {
+async function getWasm(dir: string): Promise<DeepseekSha3Wasm | Error> {
   let conf = getcfg<CocExtAIChatConfig>('', {});
   let wasmPath =
     conf.deepseekWasmPath && conf.deepseekWasmPath.length > 0
       ? conf.deepseekWasmPath
-      : `${os.homedir}/.cache/deepseek_sha3.wasm`;
+      : `${dir}/deepseek_sha3.wasm`;
   let downloadUrl =
     conf.deepseekWasmURL && conf.deepseekWasmURL.length > 0
       ? conf.deepseekWasmURL
@@ -202,6 +213,25 @@ async function getWasm(): Promise<DeepseekSha3Wasm | Error> {
     return wasmBuf;
   }
   return new DeepseekSha3Wasm(await WebAssembly.instantiate(wasmBuf, {}));
+}
+
+async function searchResult2Markdown(json_filename: string) {
+  let json_cont = await fsReadFile(json_filename);
+  if (json_cont instanceof Error) {
+    return json_cont;
+  }
+
+  let search_results = JSON.parse(
+    json_cont.toString(),
+  ) as DeepseekChatSearchResult[];
+  let text = '';
+  for (const result of search_results) {
+    if (text.length > 0) {
+      text += '---';
+    }
+    text += `[${result.title}](${result.url})\n${result.site_name} ${new Date(result.published_at * 1000).toISOString()}\n${result.snippet}\n`;
+  }
+  return text;
 }
 
 class DeepseekChat extends BaseChatChannel {
@@ -335,6 +365,11 @@ class DeepseekChat extends BaseChatChannel {
       );
     }
 
+    let err = await this.checkCacheDir();
+    if (err) {
+      return err;
+    }
+
     this.parent_id = null;
     for (const msg of messages) {
       this.parent_id = msg.message_id;
@@ -344,7 +379,14 @@ class DeepseekChat extends BaseChatChannel {
           msg.content,
         );
       } else {
-        this.append('');
+        this.append(`>> id:${msg.message_id}\n`);
+
+        if (msg.search_results) {
+          let cacheFile = `${this.cache_dir}/${this.chat_id}-${msg.message_id}.json`;
+          await fsWriteFile(cacheFile, JSON.stringify(msg.search_results));
+          this.append(`[search_results(${msg.search_results.length})]\n`);
+        }
+
         if (msg.thinking_enabled && msg.thinking_content) {
           this.append('```');
           this.append(msg.thinking_content);
@@ -355,6 +397,36 @@ class DeepseekChat extends BaseChatChannel {
     }
 
     return null;
+  }
+
+  public async getSearchResults() {
+    const doc = await workspace.document;
+    const pos = await window.getCursorPosition();
+    const lines = await doc.buffer.lines;
+    const line = lines[pos.line];
+    if (!line) {
+      return null;
+    }
+    let start = pos.character;
+    while (start >= 0) {
+      let ch = line[start];
+      if (!ch || ch == '[') break;
+      start -= 1;
+    }
+    if (start < 0) {
+      return null;
+    }
+    let end = pos.character;
+    while (end < line.length) {
+      let ch = line[end];
+      if (!ch || ch == ']') break;
+      end += 1;
+    }
+    if (end >= line.length) {
+      return null;
+    }
+    const text = line.substring(start, end + 1);
+    logger.debug(text);
   }
 
   private async getPowChallenge(target_path: string): Promise<string | Error> {
@@ -382,7 +454,11 @@ class DeepseekChat extends BaseChatChannel {
       );
     } else {
       if (!this.sha3_wasm) {
-        let wasm = await getWasm();
+        let err = await this.checkCacheDir();
+        if (err) {
+          return err;
+        }
+        let wasm = await getWasm(this.cache_dir);
         if (wasm instanceof Error) {
           return wasm;
         }
@@ -460,6 +536,10 @@ class DeepseekChat extends BaseChatChannel {
                     this.append(choice.delta.content, false);
                   }
                 }
+              }
+
+              if (this.parent_id != data.message_id) {
+                this.append(`>> id:${data.message_id}\n`);
               }
               this.parent_id = data.message_id;
             });

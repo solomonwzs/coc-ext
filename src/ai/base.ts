@@ -1,4 +1,6 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
+import os from 'os';
+import { fsReadFile, fsWriteFile, fsMkdir } from '../utils/file';
 
 export interface ChatItem {
   label: string;
@@ -12,6 +14,7 @@ export abstract class BaseChatChannel {
   private chat_name: string;
   private winid: number;
 
+  protected cache_dir: string;
   protected chat_id: string | undefined;
 
   constructor() {
@@ -20,6 +23,41 @@ export abstract class BaseChatChannel {
     this.chat_id = undefined;
     this.chat_name = this.getChatName();
     this.winid = -1;
+    this.cache_dir = '';
+  }
+
+  protected async checkCacheDir() {
+    if (this.cache_dir.length != 0) {
+      return null;
+    }
+    let dir = `${os.homedir}/.cache/chat_${this.getChatName()}`;
+    let err = await fsMkdir(dir, { recursive: true, mode: 0o755 });
+    if (err) {
+      return err;
+    }
+    this.cache_dir = dir;
+    return null;
+  }
+
+  protected async setFileCache(
+    key: string,
+    data: string | NodeJS.ArrayBufferView,
+  ) {
+    let err = await this.checkCacheDir();
+    if (err) {
+      return err;
+    }
+    let cache_file = `${this.cache_dir}/${key}`;
+    return await fsWriteFile(cache_file, data);
+  }
+
+  protected async getFileCache(key: string) {
+    let err = await this.checkCacheDir();
+    if (err) {
+      return err;
+    }
+    let cache_file = `${this.cache_dir}/${key}`;
+    return await fsReadFile(cache_file);
   }
 
   public getCurrentChatId() {
@@ -110,4 +148,54 @@ export abstract class BaseChatChannel {
   public abstract createChatId(name: string): Promise<string | Error>;
   public abstract showHistoryMessages(): Promise<null | Error>;
   public abstract chat(text: string): Promise<void>;
+}
+
+interface ChatRefItem {
+  ref_text: string;
+  segment_id: string;
+}
+export async function getCurrentRef(): Promise<null | ChatRefItem> {
+  let doc = await workspace.document;
+  let pos = await window.getCursorPosition();
+  let lines = await doc.buffer.lines;
+  let line = lines[pos.line];
+  if (!line) {
+    return null;
+  }
+  let start = pos.character;
+  while (start >= 0) {
+    let ch = line[start];
+    if (!ch || ch == '[') break;
+    start -= 1;
+  }
+  if (start < 0) {
+    return null;
+  }
+  let end = pos.character;
+  while (end < line.length) {
+    let ch = line[end];
+    if (!ch || ch == ']') break;
+    end += 1;
+  }
+  if (end >= line.length) {
+    return null;
+  }
+  let ref_text = line.substring(start, end + 1);
+
+  let line_start = pos.line - 1;
+  let segment_id = '';
+  for (; line_start >= 0; --line_start) {
+    const l = lines[line_start];
+    if (l.length > 6 && l.slice(0, 6) == '>> id:') {
+      segment_id = l.slice(6).trim();
+      break;
+    }
+  }
+  if (segment_id.length == 0) {
+    return null;
+  }
+  return {
+    ref_text,
+    segment_id,
+  };
 }

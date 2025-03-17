@@ -9,7 +9,7 @@ import http from 'http';
 import { window, workspace, Position } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
-import { BaseChatChannel, ChatItem } from './base';
+import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 
 interface KimiChatItem {
   id: string;
@@ -18,6 +18,26 @@ interface KimiChatItem {
   updated_at: string;
   status: string;
   type: string;
+}
+
+interface KimiChatRef {
+  ref_id: string;
+  ref_doc: {
+    title: string;
+    url: string;
+    source_label: string;
+    abstract: string;
+    published_time_str: string;
+    rag_segments: {
+      id: string;
+      text: string;
+    }[];
+  };
+}
+
+interface KimiChatRefItem {
+  segment_id: string;
+  refs: KimiChatRef[] | null;
 }
 
 interface KimiChatData {
@@ -104,7 +124,8 @@ class KimiChat extends BaseChatChannel {
         'Safari/537.36 ' +
         'Edg/91.0.864.41',
       Origin: 'https://kimi.moonshot.cn',
-      Referer: 'https://kimi.moonshot.cn/',
+      Referer: 'https://kimi.moonshot.cn',
+      'x-msh-platform': 'web',
     };
     this.urls = [];
   }
@@ -113,7 +134,7 @@ class KimiChat extends BaseChatChannel {
     return 'Kimi';
   }
 
-  public addUrl(url: string) {
+  private addUrl(url: string) {
     this.urls.push(url);
     return this.urls.length;
   }
@@ -127,126 +148,141 @@ class KimiChat extends BaseChatChannel {
   //   return null;
   // }
 
-  private parseRefId(s: string): {
-    type: 'none' | 'ref_card' | 'search_plus';
-    id: number;
-  } {
-    const regex0 = new RegExp(/^\[\^([0-9]*)\^\]$/);
-    const arr0 = regex0.exec(s);
-    if (arr0 && arr0.length >= 2) {
-      return { type: 'ref_card', id: parseInt(arr0[1]) };
-    }
+  // private parseRefId(s: string): {
+  //   type: 'none' | 'ref_card' | 'search_plus';
+  //   id: number;
+  // } {
+  //   const regex0 = new RegExp(/^\[\^([0-9]*)\^\]$/);
+  //   const arr0 = regex0.exec(s);
+  //   if (arr0 && arr0.length >= 2) {
+  //     return { type: 'ref_card', id: parseInt(arr0[1]) };
+  //   }
 
-    const regex1 = new RegExp(/^\[([0-9]*)\]$/);
-    const arr1 = regex1.exec(s);
-    if (arr1 && arr1.length >= 2) {
-      return { type: 'search_plus', id: parseInt(arr1[1]) };
-    }
+  //   const regex1 = new RegExp(/^\[([0-9]*)\]$/);
+  //   const arr1 = regex1.exec(s);
+  //   if (arr1 && arr1.length >= 2) {
+  //     return { type: 'search_plus', id: parseInt(arr1[1]) };
+  //   }
 
-    return { type: 'none', id: -1 };
-  }
+  //   return { type: 'none', id: -1 };
+  // }
 
   public async getRef() {
-    const doc = await workspace.document;
-    const pos = await window.getCursorPosition();
-    const lines = await doc.buffer.lines;
-    const line = lines[pos.line];
-    if (!line) {
+    let ref_item = await getCurrentRef();
+    if (!ref_item) {
       return null;
     }
-    let start = pos.character;
-    while (start >= 0) {
-      let ch = line[start];
-      if (!ch || ch == '[') break;
-      start -= 1;
-    }
-    if (start < 0) {
-      return null;
-    }
-    let end = pos.character;
-    while (end < line.length) {
-      let ch = line[end];
-      if (!ch || ch == ']') break;
-      end += 1;
-    }
-    if (end >= line.length) {
-      return null;
-    }
-    const text = line.substring(start, end + 1);
-    const ref = this.parseRefId(text);
-    if (ref.type == 'none') {
-      return null;
-    } else if (ref.type == 'ref_card') {
-      const query = this.getRefCardQuery(pos, start, lines, ref.id);
-      if (query == null) {
-        return null;
-      }
-      const card = await this.refCard(query);
-      if (card instanceof Error) {
-        logger.error(card);
-        return null;
-      }
 
-      let text = `${card.ref_doc.title}\n\n${card.ref_doc.url}`;
-      if (card.ref_doc.rag_segments) {
-        text += '\n\n';
-        for (const seg of card.ref_doc.rag_segments) {
-          text += seg.text.replace(/<\/?label>/gi, '');
-        }
+    let regex = new RegExp(/^\[\^([0-9]*)\^\]$/);
+    let arr = regex.exec(ref_item.ref_text);
+    if (!arr || arr.length < 2) {
+      return null;
+    }
+    let ref_id = arr[1];
+
+    let cache_key = `${this.chat_id}-${ref_item.segment_id}.json`;
+    let cache = await this.getFileCache(cache_key);
+    let item: null | KimiChatRefItem = null;
+    if (cache instanceof Error) {
+      let tmp = await this.refCard(ref_item.segment_id);
+      if (tmp instanceof Error) {
+        logger.error(tmp);
+        return null;
+      } else {
+        item = tmp;
+        this.setFileCache(cache_key, JSON.stringify(item));
+      }
+    } else {
+      item = JSON.parse(cache.toString()) as KimiChatRefItem;
+    }
+
+    if (!item.refs) {
+      return null;
+    }
+    for (let ref of item.refs) {
+      if (ref.ref_id != ref_id) {
+        continue;
+      }
+      let text =
+        `[${ref.ref_doc.title}](${ref.ref_doc.url})\n` +
+        `${ref.ref_doc.source_label} - ${ref.ref_doc.published_time_str}\n`;
+      for (let seg of ref.ref_doc.rag_segments) {
+        text += `#${seg.text}`;
       }
       return text;
-    } else if (ref.type == 'search_plus') {
-      if (ref.id > 0 && ref.id - 1 < this.urls.length) {
-        return this.urls[ref.id - 1];
-      }
     }
+
+    // if (ref.type == 'none') {
+    //   return null;
+    // } else if (ref.type == 'ref_card') {
+    //   const query = this.getRefCardQuery(pos, start, lines, ref.id);
+    //   if (query == null) {
+    //     return null;
+    //   }
+    //   const card = await this.refCard(query);
+    //   if (card instanceof Error) {
+    //     logger.error(card);
+    //     return null;
+    //   }
+
+    //   let text = `${card.ref_doc.title}\n\n${card.ref_doc.url}`;
+    //   if (card.ref_doc.rag_segments) {
+    //     text += '\n\n';
+    //     for (const seg of card.ref_doc.rag_segments) {
+    //       text += seg.text.replace(/<\/?label>/gi, '');
+    //     }
+    //   }
+    //   return text;
+    // } else if (ref.type == 'search_plus') {
+    //   if (ref.id > 0 && ref.id - 1 < this.urls.length) {
+    //     return this.urls[ref.id - 1];
+    //   }
+    // }
     return null;
   }
 
-  private getRefCardQuery(
-    pos: Position,
-    start: number,
-    lines: string[],
-    ref_id: number,
-  ): KimiChatRefCardQuery | null {
-    let line_start = pos.line - 1;
-    let segment_id = '';
-    for (; line_start >= 0; --line_start) {
-      const l = lines[line_start];
-      if (l.length > 6 && l.slice(0, 6) == '>> id:') {
-        segment_id = l.slice(6).trim();
-        break;
-      }
-    }
-    if (segment_id.length == 0) {
-      return null;
-    }
+  // private getRefCardQuery(
+  //   segment_id: string,
+  //   ref_id: number,
+  // ): KimiChatRefCardQuery | null {
+  //   // let line_start = pos.line - 1;
+  //   // let segment_id = '';
+  //   // for (; line_start >= 0; --line_start) {
+  //   //   const l = lines[line_start];
+  //   //   if (l.length > 6 && l.slice(0, 6) == '>> id:') {
+  //   //     segment_id = l.slice(6).trim();
+  //   //     break;
+  //   //   }
+  //   // }
+  //   // if (segment_id.length == 0) {
+  //   //   return null;
+  //   // }
 
-    let index = 0;
-    for (let i = line_start + 1; i <= pos.line; ++i) {
-      const l = lines[i];
-      for (let j = 0; j < l.length; ) {
-        const p = l.indexOf('[^', j);
-        if (p == -1) {
-          break;
-        }
+  //   let index = 0;
+  //   for (let i = line_start + 1; i <= pos.line; ++i) {
+  //     const l = lines[i];
+  //     for (let j = 0; j < l.length; ) {
+  //       const p = l.indexOf('[^', j);
+  //       if (p == -1) {
+  //         break;
+  //       }
 
-        index += 1;
-        if (pos.line == i && start == p) {
-          return {
-            idx_s: 1,
-            idx_z: 0,
-            index,
-            ref_id,
-            segment_id,
-          };
-        } else {
-          j = p + 1;
-        }
-      }
-    }
-    return null;
-  }
+  //       index += 1;
+  //       if (pos.line == i && start == p) {
+  //         return {
+  //           idx_s: 1,
+  //           idx_z: 0,
+  //           index,
+  //           ref_id,
+  //           segment_id,
+  //         };
+  //       } else {
+  //         j = p + 1;
+  //       }
+  //     }
+  //   }
+  //   return null;
+  // }
 
   private getHeaders(): http.OutgoingHttpHeaders {
     this.headers['X-Traffic-Id'] = Array.from({ length: 20 }, () =>
@@ -355,27 +391,36 @@ class KimiChat extends BaseChatChannel {
     }
   }
 
-  public async refCard(
-    query: KimiChatRefCardQuery,
-  ): Promise<KimiChatRefCardItem | Error> {
+  private async refCard(segment_id: string): Promise<KimiChatRefItem | Error> {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
-        path: '/api/chat/segment/v2/rag-refs',
+        path: '/api/chat/segment/v3/rag-refs',
         method: 'POST',
         protocol: 'https:',
         headers: this.getHeaders(),
         timeout: 1000,
       },
-      data: JSON.stringify({ with_rag_segs: true, query: [query] }),
+      data: JSON.stringify({
+        queries: [
+          {
+            chat_id: this.chat_id,
+            sid: segment_id,
+            z_idx: 0,
+          },
+        ],
+      }),
     };
     const resp = await this.sendHttpRequest(req);
     if (resp instanceof Error) {
       return resp;
     }
     if (resp.statusCode == 200 && resp.body) {
-      const obj = JSON.parse(resp.body.toString());
-      return obj['items'][0];
+      let obj = JSON.parse(resp.body.toString());
+      let items = obj['items'] as KimiChatRefItem[];
+      if (items.length > 0) {
+        return items[0];
+      }
     }
     return new CocExtError(
       CocExtError.ERR_KIMI,
