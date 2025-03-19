@@ -490,7 +490,6 @@ class DeepseekChat extends BaseChatChannel {
     }
 
     this.appendUserInput(new Date().toISOString(), prompt);
-    this.append('');
 
     var headers = this.getHeader();
     headers['x-ds-pow-response'] = challenge;

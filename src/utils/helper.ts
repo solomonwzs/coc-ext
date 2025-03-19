@@ -71,6 +71,19 @@ export async function echoMessage(hl: string, msg: string) {
   await nvim.exec(`echohl None`);
 }
 
+async function winid2bufnr(winid: number): Promise<number> {
+  let { nvim } = workspace;
+  let winnr = await nvim.call('win_id2win', winid);
+  if (!winnr) {
+    return -1;
+  }
+  let bufnr = await nvim.call('winbufnr', [winnr]);
+  if (!bufnr) {
+    return -1;
+  }
+  return bufnr;
+}
+
 export async function popup(
   content: string,
   title?: string,
@@ -80,20 +93,26 @@ export async function popup(
   if (content.length == 0) {
     return;
   }
-  if (!filetype) {
-    filetype = 'text';
-  }
   if (!cfg) {
     cfg = defauleFloatWinConfig();
   }
   const doc = [
     {
       content: title && title.length != 0 ? `${title}\n\n${content}` : content,
-      filetype: filetype,
+      filetype: 'text',
     },
   ];
   const win = window.createFloatFactory(cfg);
   await win.show(doc);
+
+  if (!win.window || !filetype) {
+    return;
+  }
+  let bufnr = await winid2bufnr(win.window.id);
+  if (bufnr == -1) {
+    return;
+  }
+  await workspace.nvim.call('setbufvar', [bufnr, '&filetype', filetype]);
 }
 
 export function getDocumentPath(

@@ -1,6 +1,6 @@
 import { window, workspace, TextEdit } from 'coc.nvim';
 import { logger } from './logger';
-import { sleepMs } from './helper';
+import { sleepMs, popup } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 import { showNotification } from '../utils/notify';
@@ -121,6 +121,10 @@ export async function debugPrompt() {
   });
 }
 
+export async function debugPopup() {
+  await popup('# 123\n## abc\n---\nthis is a test', '', 'markdown');
+}
+
 export async function debug(_cmd: string, ..._args: any[]): Promise<any> {
-  await debugPrompt();
+  await debugPopup();
 }

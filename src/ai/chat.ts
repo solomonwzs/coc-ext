@@ -126,7 +126,7 @@ export function aiChatRef(): () => ProviderResult<any> {
     if (ai_name == kimiChat.getChatName()) {
       const text = await kimiChat.getRef();
       if (text) {
-        popup(text, '', 'markdown');
+        await popup(text, '', 'markdown');
       }
     } else if (ai_name == deepseekChat.getChatName()) {
       await deepseekChat.getSearchResults();

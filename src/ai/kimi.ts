@@ -6,7 +6,6 @@ import {
   HttpResponse,
 } from '../utils/http';
 import http from 'http';
-import { window, workspace, Position } from 'coc.nvim';
 import { logger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
