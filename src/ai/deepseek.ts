@@ -260,6 +260,8 @@ class DeepseekChat extends BaseChatChannel {
         'Edg/91.0.864.41',
       authorization: `Bearer ${this.auth_key}`,
       Origin: 'https://chat.deepseek.com',
+      'x-client-locale': 'zh_CN',
+      'x-client-platform': 'web',
     };
   }
 
@@ -524,7 +526,7 @@ class DeepseekChat extends BaseChatChannel {
                 return;
               }
               if (line.slice(6, 12) == '[DONE]') {
-                this.append(' (END)');
+                this.append('\n(END)');
                 return;
               }
 
@@ -540,7 +542,11 @@ class DeepseekChat extends BaseChatChannel {
               if (this.parent_id != data.message_id) {
                 this.append(`>> id:${data.message_id}\n`);
               }
-              this.parent_id = data.message_id;
+              if (data.message_id < 0) {
+                logger.error(line);
+              } else {
+                this.parent_id = data.message_id;
+              }
             });
         } catch (e) {
           logger.debug(chunk.toString());
