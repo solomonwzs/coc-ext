@@ -11,6 +11,9 @@ import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import { callShell } from '../utils/externalexec';
 import { showNotification } from '../utils/notify';
+import fs from 'fs';
+import path from 'path';
+import { fsAccess } from '../utils/file';
 
 export class ClfFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
@@ -21,17 +24,30 @@ export class ClfFormatter extends BaseFormatter {
     return false;
   }
 
-  public async formatDocument(
-    document: TextDocument,
-    options: FormattingOptions,
-    _token: CancellationToken,
-    range?: Range,
-  ): Promise<TextEdit[]> {
-    if (range) {
-      return [];
-    }
+  private async confFileExist(filepath: string) {
+    let p = path.dirname(filepath);
+    while (true) {
+      if (
+        (await fsAccess(path.join(p, '.clang-format'), fs.constants.F_OK)) ==
+          null ||
+        (await fsAccess(path.join(p, '_clang-format'), fs.constants.F_OK)) ==
+          null
+      ) {
+        return true;
+      }
 
-    const filepath = Uri.parse(document.uri).fsPath;
+      let p0 = path.dirname(p);
+      if (p == p0) {
+        return false;
+      } else {
+        p = p0;
+      }
+    }
+  }
+
+  private getSetting(
+    options: FormattingOptions,
+  ): Record<string, string | number | boolean> {
     const setting: Record<string, string | number | boolean> = {};
     if (this.setting.args) {
       for (const k in this.setting.args) {
@@ -47,12 +63,29 @@ export class ClfFormatter extends BaseFormatter {
     if (!setting['BasedOnStyle']) {
       setting['BasedOnStyle'] = 'Google';
     }
-    const args: string[] = [
-      '-style',
-      JSON.stringify(setting),
-      '--assume-filename',
-      filepath,
-    ];
+    return setting;
+  }
+
+  public async formatDocument(
+    document: TextDocument,
+    options: FormattingOptions,
+    _token: CancellationToken,
+    range?: Range,
+  ): Promise<TextEdit[]> {
+    if (range) {
+      return [];
+    }
+
+    const filepath = Uri.parse(document.uri).fsPath;
+
+    let args = (await this.confFileExist(filepath))
+      ? ['--assume-filename', filepath]
+      : [
+          '-style',
+          JSON.stringify(this.getSetting(options)),
+          '--assume-filename',
+          filepath,
+        ];
 
     // if (range) {
     //   args.push('--lines', `${range.start.line}:${range.end.line}`);

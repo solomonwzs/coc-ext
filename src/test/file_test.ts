@@ -67,3 +67,16 @@ export function readTest() {
     console.log(data.toString());
   });
 }
+
+export function pathTest2() {
+  let p = '/home/solomon/tmp/note';
+  while (p.length != 0) {
+    let p0 = path.dirname(p);
+    console.log(p0);
+    if (p == p0) {
+      break;
+    } else {
+      p = p0;
+    }
+  }
+}
