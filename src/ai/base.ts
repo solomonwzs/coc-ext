@@ -150,11 +150,17 @@ export abstract class BaseChatChannel {
   public abstract chat(text: string): Promise<void>;
 }
 
+interface ChatRefOptions {
+  start: string;
+  end: string;
+}
 interface ChatRefItem {
   ref_text: string;
   segment_id: string;
 }
-export async function getCurrentRef(): Promise<null | ChatRefItem> {
+export async function getCurrentRef(
+  opts?: ChatRefOptions,
+): Promise<null | ChatRefItem> {
   let doc = await workspace.document;
   let pos = await window.getCursorPosition();
   let lines = await doc.buffer.lines;
@@ -162,10 +168,13 @@ export async function getCurrentRef(): Promise<null | ChatRefItem> {
   if (!line) {
     return null;
   }
+
+  let ch0 = opts ? opts.start : '[';
+  let ch1 = opts ? opts.start : ']';
   let start = pos.character;
   while (start >= 0) {
     let ch = line[start];
-    if (!ch || ch == '[') break;
+    if (!ch || ch == ch0) break;
     start -= 1;
   }
   if (start < 0) {
@@ -174,7 +183,7 @@ export async function getCurrentRef(): Promise<null | ChatRefItem> {
   let end = pos.character;
   while (end < line.length) {
     let ch = line[end];
-    if (!ch || ch == ']') break;
+    if (!ch || ch == ch1) break;
     end += 1;
   }
   if (end >= line.length) {

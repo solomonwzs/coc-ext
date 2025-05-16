@@ -9,6 +9,7 @@ import http from 'http';
 import { logger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
+import { popup, ScratchWindow } from '../utils/helper';
 
 interface KimiChatItem {
   id: string;
@@ -50,20 +51,27 @@ interface KimiChatData {
   };
 }
 
+interface KimiChatSearchMessage {
+  type: string;
+  title?: string;
+  url?: string;
+  date?: string;
+  site_name?: string;
+  snippet?: string;
+}
+
+interface KimiChatSearchPlus {
+  event: string;
+  msg: KimiChatSearchMessage;
+}
+
 interface KimiChatScrollItem {
   id: string;
   context_type: string;
   role: string;
   created_at: string;
   content: string;
-  search_plus?: {
-    event: string;
-    msg: {
-      type: string;
-      title?: string;
-      url?: string;
-    };
-  }[];
+  search_plus?: KimiChatSearchPlus[];
   contents: {
     zones: {
       index: number;
@@ -83,37 +91,14 @@ interface KimiChatScrollItem {
   };
 }
 
-interface KimiChatRefCardItem {
-  segment_id: string;
-  ref_doc: {
-    id: string;
-    index: number;
-    title: string;
-    url: string;
-    rag_segments: {
-      id: string;
-      index: number;
-      text: string;
-    }[];
-  };
-}
-
-interface KimiChatRefCardQuery {
-  idx_s: number;
-  idx_z: number;
-  index: number;
-  ref_id: number;
-  segment_id: string;
-}
+let search_window = new ScratchWindow('Kimi Search', 'markdown');
 
 class KimiChat extends BaseChatChannel {
-  private rtoken: string;
   private headers: http.OutgoingHttpHeaders;
   private urls: string[];
 
-  constructor(public readonly refresh_token: string) {
+  constructor(readonly rtoken: string) {
     super();
-    this.rtoken = refresh_token;
     this.headers = {
       'Content-Type': 'application/json',
       'User-Agent':
@@ -138,65 +123,65 @@ class KimiChat extends BaseChatChannel {
     return this.urls.length;
   }
 
-  // private checkLineNr2Segment(line: number) {
-  //   for (const i of this.segments) {
-  //     if (i.start <= line && line <= i.end) {
-  //       return i;
-  //     }
-  //   }
-  //   return null;
-  // }
-
-  // private parseRefId(s: string): {
-  //   type: 'none' | 'ref_card' | 'search_plus';
-  //   id: number;
-  // } {
-  //   const regex0 = new RegExp(/^\[\^([0-9]*)\^\]$/);
-  //   const arr0 = regex0.exec(s);
-  //   if (arr0 && arr0.length >= 2) {
-  //     return { type: 'ref_card', id: parseInt(arr0[1]) };
-  //   }
-
-  //   const regex1 = new RegExp(/^\[([0-9]*)\]$/);
-  //   const arr1 = regex1.exec(s);
-  //   if (arr1 && arr1.length >= 2) {
-  //     return { type: 'search_plus', id: parseInt(arr1[1]) };
-  //   }
-
-  //   return { type: 'none', id: -1 };
-  // }
-
-  public async getRef() {
-    let ref_item = await getCurrentRef();
-    if (!ref_item) {
-      return null;
+  private async tryGetSearchResult(segment_id: string, ref_text: string) {
+    let regex = new RegExp(/^\[search result \([0-9]*\)\]$/);
+    let arr = regex.exec(ref_text);
+    if (!arr || arr.length != 1) {
+      return -1;
     }
 
+    let cache_key = `${this.chat_id}-${segment_id}-search.json`;
+    let cache = await this.getFileCache(cache_key);
+    if (cache instanceof Error) {
+      return;
+    }
+
+    let items = JSON.parse(cache.toString()) as KimiChatSearchPlus[];
+    let lines: string[] = [];
+    let idx = 0;
+    for (let item of items) {
+      if (item.msg.type != 'get_res') {
+        continue;
+      }
+      idx += 1;
+      lines.push(
+        `[${idx} - ${item.msg.site_name} - ${item.msg.date}](${item.msg.url})`,
+      );
+      lines.push(`# ${item.msg.title}`);
+      lines.push(`${item.msg.snippet}`);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+    }
+    await search_window.open(lines);
+  }
+
+  private async tryGetRef(segment_id: string, ref_text: string) {
     let regex = new RegExp(/^\[\^([0-9]*)\^\]$/);
-    let arr = regex.exec(ref_item.ref_text);
+    let arr = regex.exec(ref_text);
     if (!arr || arr.length < 2) {
-      return null;
+      return -1;
     }
     let ref_id = arr[1];
 
-    let cache_key = `${this.chat_id}-${ref_item.segment_id}.json`;
+    let cache_key = `${this.chat_id}-${segment_id}.json`;
     let cache = await this.getFileCache(cache_key);
     let item: null | KimiChatRefItem = null;
     if (cache instanceof Error) {
-      let tmp = await this.refCard(ref_item.segment_id);
+      let tmp = await this.refCard(segment_id);
       if (tmp instanceof Error) {
         logger.error(tmp);
-        return null;
+        return;
       } else {
         item = tmp;
-        this.setFileCache(cache_key, JSON.stringify(item));
+        await this.setFileCache(cache_key, JSON.stringify(item));
       }
     } else {
       item = JSON.parse(cache.toString()) as KimiChatRefItem;
     }
 
     if (!item.refs) {
-      return null;
+      return;
     }
     for (let ref of item.refs) {
       if (ref.ref_id != ref_id) {
@@ -208,80 +193,23 @@ class KimiChat extends BaseChatChannel {
       for (let seg of ref.ref_doc.rag_segments) {
         text += `#${seg.text}`;
       }
-      return text;
+      await popup(text, '', 'markdown');
+      return;
     }
-
-    // if (ref.type == 'none') {
-    //   return null;
-    // } else if (ref.type == 'ref_card') {
-    //   const query = this.getRefCardQuery(pos, start, lines, ref.id);
-    //   if (query == null) {
-    //     return null;
-    //   }
-    //   const card = await this.refCard(query);
-    //   if (card instanceof Error) {
-    //     logger.error(card);
-    //     return null;
-    //   }
-
-    //   let text = `${card.ref_doc.title}\n\n${card.ref_doc.url}`;
-    //   if (card.ref_doc.rag_segments) {
-    //     text += '\n\n';
-    //     for (const seg of card.ref_doc.rag_segments) {
-    //       text += seg.text.replace(/<\/?label>/gi, '');
-    //     }
-    //   }
-    //   return text;
-    // } else if (ref.type == 'search_plus') {
-    //   if (ref.id > 0 && ref.id - 1 < this.urls.length) {
-    //     return this.urls[ref.id - 1];
-    //   }
-    // }
-    return null;
   }
 
-  // private getRefCardQuery(
-  //   segment_id: string,
-  //   ref_id: number,
-  // ): KimiChatRefCardQuery | null {
-  //   // let line_start = pos.line - 1;
-  //   // let segment_id = '';
-  //   // for (; line_start >= 0; --line_start) {
-  //   //   const l = lines[line_start];
-  //   //   if (l.length > 6 && l.slice(0, 6) == '>> id:') {
-  //   //     segment_id = l.slice(6).trim();
-  //   //     break;
-  //   //   }
-  //   // }
-  //   // if (segment_id.length == 0) {
-  //   //   return null;
-  //   // }
+  public async showItem() {
+    let ref_item = await getCurrentRef();
+    logger.debug(ref_item);
+    if (!ref_item) {
+      return;
+    }
 
-  //   let index = 0;
-  //   for (let i = line_start + 1; i <= pos.line; ++i) {
-  //     const l = lines[i];
-  //     for (let j = 0; j < l.length; ) {
-  //       const p = l.indexOf('[^', j);
-  //       if (p == -1) {
-  //         break;
-  //       }
-
-  //       index += 1;
-  //       if (pos.line == i && start == p) {
-  //         return {
-  //           idx_s: 1,
-  //           idx_z: 0,
-  //           index,
-  //           ref_id,
-  //           segment_id,
-  //         };
-  //       } else {
-  //         j = p + 1;
-  //       }
-  //     }
-  //   }
-  //   return null;
-  // }
+    if ((await this.tryGetRef(ref_item.segment_id, ref_item.ref_text)) !== -1) {
+      return;
+    }
+    await this.tryGetSearchResult(ref_item.segment_id, ref_item.ref_text);
+  }
 
   private getHeaders(): http.OutgoingHttpHeaders {
     this.headers['X-Traffic-Id'] = Array.from({ length: 20 }, () =>
@@ -444,6 +372,7 @@ class KimiChat extends BaseChatChannel {
       return resp;
     }
     if (resp.statusCode == 200 && resp.body) {
+      // logger.debug(resp.body.toString());
       let obj = JSON.parse(resp.body.toString());
       if (obj['items']) {
         return obj['items'];
@@ -469,17 +398,21 @@ class KimiChat extends BaseChatChannel {
         this.appendUserInput(item.created_at, item.content);
       } else {
         this.append(`>> id:${item.id}\n`);
-        if (item.search_plus) {
-          for (const search of item.search_plus) {
-            if (search.msg.type == 'get_res') {
-              let idx = -1;
-              if (search.msg.url) {
-                idx = this.addUrl(search.msg.url);
-              }
-              this.append(`[${idx}] ${search.msg.title}`);
+        if (item.search_plus && item.search_plus.length > 0) {
+          let cnt = 0;
+          for (let i of item.search_plus) {
+            if (i.msg.type == 'get_res') {
+              ++cnt;
             }
           }
-          this.append('');
+          if (cnt > 0) {
+            let cache_key = `${this.chat_id}-${item.id}-search.json`;
+            await this.setFileCache(
+              cache_key,
+              JSON.stringify(item.search_plus),
+            );
+            this.append(`[search result (${cnt})]\n`);
+          }
         }
         this.append(item.content);
       }

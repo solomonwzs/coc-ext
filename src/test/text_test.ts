@@ -62,12 +62,19 @@ export function textTest() {
   text = '则判定\u003clabel\u003e为\u003c/label\u003e垃圾';
   console.log(text);
 
-  console.log(new Date(1738927991000).toLocaleString());
+  let date = new Date(1738927991000);
+  console.log(date.toLocaleString());
+  console.log([date.getFullYear(), date.getMonth() + 1, date.getDate()]);
+
   console.log(new Date().toLocaleString());
   console.log(Date.now());
 
   let s = 'data: [DONE]--';
   console.log(s.slice(6, 12));
+
+  let arr: string[] = [];
+  arr.concat(['1', '2']);
+  console.log(arr);
 }
 
 export function colorTest() {

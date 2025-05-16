@@ -1,6 +1,6 @@
 import { window, workspace, TextEdit } from 'coc.nvim';
 import { logger } from './logger';
-import { sleepMs, popup } from './helper';
+import { sleepMs, popup, newScratchWindow } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 import { showNotification } from '../utils/notify';
@@ -125,6 +125,22 @@ export async function debugPopup() {
   await popup('# 123\n## abc\n---\nthis is a test', '', 'markdown');
 }
 
+export async function debugNewWin() {
+  newScratchWindow({
+    ver: true,
+    name: 'DEBUG',
+    lines: ['# 123', '## abc', '---', 'this is a test'],
+    filetype: 'markdown',
+  });
+  // let wins = (await workspace.nvim.call(
+  //   'coc_ext#newScratchWindow',
+  // )) as number[];
+  // if (wins.length < 2 || wins[1] == -1) {
+  //   logger.error('fail');
+  // }
+  // logger.debug(wins);
+}
+
 export async function debug(_cmd: string, ..._args: any[]): Promise<any> {
-  await debugPopup();
+  await debugNewWin();
 }

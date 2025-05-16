@@ -38,7 +38,7 @@ import { leader_recv } from './leaderf/leaderf';
 import {
   aiChatSelect,
   aiChatChat,
-  aiChatRef,
+  aiChatShow,
   aiChatQuickChat,
   aiChatOpen,
 } from './ai/chat';
@@ -276,7 +276,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sync: false,
     }),
 
-    workspace.registerKeymap(['n'], 'ext-ai-ref', aiChatRef(), {
+    workspace.registerKeymap(['n'], 'ext-ai-show', aiChatShow(), {
       sync: false,
     }),
 

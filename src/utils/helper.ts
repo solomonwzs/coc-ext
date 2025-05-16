@@ -14,6 +14,7 @@ import { getcfg } from './config';
 import path from 'path';
 import { Nullable, OpenOptions, CocExtFloatConfig } from './types';
 import { TextEncoder } from 'util';
+import { logger } from './logger';
 
 function defauleFloatWinConfig(): FloatWinConfig {
   let conf = getcfg<CocExtFloatConfig>('floatConfig', {});
@@ -207,4 +208,74 @@ export function sleepMs(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+interface ScratchWinConf {
+  ver?: boolean;
+  name?: string;
+  filetype?: string;
+  lines: string[];
+}
+interface ScratchWinResult {
+  ori_winnr: number;
+  ori_winid: number;
+  new_winnr?: number;
+  new_winid?: number;
+  new_bufnr?: number;
+}
+export async function newScratchWindow(conf: ScratchWinConf) {
+  let { nvim } = workspace;
+  let res = (await nvim.call('coc_ext#newScratchWindow', [
+    conf.ver ? 1 : 0,
+  ])) as ScratchWinResult;
+  // logger.debug(res);
+  if (!res.new_winnr || !res.new_winid || !res.new_bufnr) {
+    return Error('create scratch window fail');
+  }
+
+  await nvim.call('coc#compat#buf_set_lines', [
+    res.new_bufnr,
+    0,
+    -1,
+    conf.lines,
+  ]);
+  if (conf.name) {
+    await nvim.exec(`execute 'file [${conf.name}]'`);
+  }
+  if (conf.filetype) {
+    await nvim.call('setbufvar', [res.new_bufnr, '&filetype', conf.filetype]);
+  }
+  return res.new_winid;
+}
+
+export class ScratchWindow {
+  private winid: number;
+
+  constructor(
+    readonly name: string,
+    readonly filetype: string,
+  ) {
+    this.winid = -1;
+  }
+
+  public async open(lines: string[]) {
+    if (this.winid != -1) {
+      let { nvim } = workspace;
+      let bufnr = (await nvim.call('winbufnr', [this.winid])) as number;
+      if (bufnr != -1) {
+        await nvim.call('coc#compat#buf_set_lines', [bufnr, 0, -1, lines]);
+        await nvim.call('win_gotoid', [this.winid]);
+        return;
+      }
+    }
+
+    let winid = await newScratchWindow({
+      name: this.name,
+      filetype: this.filetype,
+      lines,
+    });
+    if (!(winid instanceof Error)) {
+      this.winid = winid;
+    }
+  }
 }

@@ -3,7 +3,7 @@ import { BaseChatChannel } from './base';
 import { kimiChat } from './kimi';
 import { deepseekChat } from './deepseek';
 import { bailianChat } from './bailian';
-import { echoMessage, getText, popup } from '../utils/helper';
+import { echoMessage, getText } from '../utils/helper';
 import { logger } from '../utils/logger';
 
 let aiChat: BaseChatChannel | null = null;
@@ -117,19 +117,16 @@ export function aiChatQuickChat(): () => ProviderResult<any> {
   };
 }
 
-export function aiChatRef(): () => ProviderResult<any> {
+export function aiChatShow(): () => ProviderResult<any> {
   return async () => {
     let { nvim } = workspace;
     let bufnr = await nvim.call('bufnr');
     let ai_name = await nvim.call('getbufvar', [bufnr, 'ai_name']);
 
     if (ai_name == kimiChat.getChatName()) {
-      const text = await kimiChat.getRef();
-      if (text) {
-        await popup(text, '', 'markdown');
-      }
+      await kimiChat.showItem();
     } else if (ai_name == deepseekChat.getChatName()) {
-      await deepseekChat.getSearchResults();
+      await deepseekChat.showItem();
     }
   };
 }

@@ -7,13 +7,14 @@ import {
   HttpRequest,
   HttpRequestCallback,
 } from '../utils/http';
-import { BaseChatChannel, ChatItem } from './base';
+import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { logger } from '../utils/logger';
-import { fsAccess, fsReadFile, fsWriteFile } from '../utils/file';
+import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
 import fs from 'fs';
 import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';
+import { popup, ScratchWindow } from '../utils/helper';
 
 interface DeepseekChatSession {
   id: string;
@@ -215,24 +216,17 @@ async function getWasm(dir: string): Promise<DeepseekSha3Wasm | Error> {
   return new DeepseekSha3Wasm(await WebAssembly.instantiate(wasmBuf, {}));
 }
 
-async function searchResult2Markdown(json_filename: string) {
-  let json_cont = await fsReadFile(json_filename);
-  if (json_cont instanceof Error) {
-    return json_cont;
-  }
-
-  let search_results = JSON.parse(
-    json_cont.toString(),
-  ) as DeepseekChatSearchResult[];
-  let text = '';
-  for (const result of search_results) {
-    if (text.length > 0) {
-      text += '---';
-    }
-    text += `[${result.title}](${result.url})\n${result.site_name} ${new Date(result.published_at * 1000).toISOString()}\n${result.snippet}\n`;
-  }
-  return text;
+function searchReault2Lines(item: DeepseekChatSearchResult, idx: number) {
+  let lines: string[] = [];
+  let date = new Date(item.published_at * 1000);
+  let dstr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  lines.push(`[${idx} - ${item.site_name} - ${dstr}](${item.url})`);
+  lines.push(`# ${item.title}`);
+  lines.push(`${item.snippet}`);
+  return lines;
 }
+
+let search_window = new ScratchWindow('Deepseek Search', 'markdown');
 
 class DeepseekChat extends BaseChatChannel {
   private auth_key: string;
@@ -384,9 +378,12 @@ class DeepseekChat extends BaseChatChannel {
         this.append(`>> id:${msg.message_id}\n`);
 
         if (msg.search_results) {
-          let cacheFile = `${this.cache_dir}/${this.chat_id}-${msg.message_id}.json`;
-          await fsWriteFile(cacheFile, JSON.stringify(msg.search_results));
-          this.append(`[search_results(${msg.search_results.length})]\n`);
+          let cache_key = `${this.chat_id}-${msg.message_id}-search.json`;
+          await this.setFileCache(
+            cache_key,
+            JSON.stringify(msg.search_results),
+          );
+          this.append(`[search result (${msg.search_results.length})]\n`);
         }
 
         if (msg.thinking_enabled && msg.thinking_content) {
@@ -401,34 +398,68 @@ class DeepseekChat extends BaseChatChannel {
     return null;
   }
 
-  public async getSearchResults() {
-    const doc = await workspace.document;
-    const pos = await window.getCursorPosition();
-    const lines = await doc.buffer.lines;
-    const line = lines[pos.line];
-    if (!line) {
-      return null;
+  private async tryGetSearchResult(message_id: string, ref_text: string) {
+    let regex = new RegExp(/^\[search result \([0-9]*\)\]$/);
+    let arr = regex.exec(ref_text);
+    if (!arr || arr.length != 1) {
+      return -1;
     }
-    let start = pos.character;
-    while (start >= 0) {
-      let ch = line[start];
-      if (!ch || ch == '[') break;
-      start -= 1;
+
+    let cache_key = `${this.chat_id}-${message_id}-search.json`;
+    let cache = await this.getFileCache(cache_key);
+    if (cache instanceof Error) {
+      return;
     }
-    if (start < 0) {
-      return null;
+    let items = JSON.parse(cache.toString()) as DeepseekChatSearchResult[];
+
+    let lines: string[] = [];
+    let idx = 0;
+    for (let item of items) {
+      idx += 1;
+      lines = lines.concat(searchReault2Lines(item, idx));
+      lines.push('');
+      lines.push('---');
+      lines.push('');
     }
-    let end = pos.character;
-    while (end < line.length) {
-      let ch = line[end];
-      if (!ch || ch == ']') break;
-      end += 1;
+    await search_window.open(lines);
+  }
+
+  private async tryGetRef(message_id: string, ref_text: string) {
+    let regex = new RegExp(/^\[citation:([0-9]*)\]$/);
+    let arr = regex.exec(ref_text);
+    if (!arr || arr.length != 2) {
+      return -1;
     }
-    if (end >= line.length) {
-      return null;
+    let ref_id = parseInt(arr[1]);
+
+    let cache_key = `${this.chat_id}-${message_id}-search.json`;
+    let cache = await this.getFileCache(cache_key);
+    if (cache instanceof Error) {
+      return -1;
     }
-    const text = line.substring(start, end + 1);
-    logger.debug(text);
+    let items = JSON.parse(cache.toString()) as DeepseekChatSearchResult[];
+
+    for (let item of items) {
+      if (item.cite_index !== ref_id) {
+        continue;
+      }
+
+      let text = searchReault2Lines(item, item.cite_index).join('\n');
+      await popup(text, '', 'markdown');
+      return;
+    }
+  }
+
+  public async showItem() {
+    let ref_item = await getCurrentRef();
+    if (!ref_item) {
+      return;
+    }
+
+    if ((await this.tryGetRef(ref_item.segment_id, ref_item.ref_text)) !== -1) {
+      return;
+    }
+    await this.tryGetSearchResult(ref_item.segment_id, ref_item.ref_text);
   }
 
   private async getPowChallenge(target_path: string): Promise<string | Error> {

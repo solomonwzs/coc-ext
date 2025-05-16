@@ -23,5 +23,5 @@ nmap <silent> <leader>ch <Plug>(coc-ext-ai-chat-n)
 vmap <silent> <leader>ch <Plug>(coc-ext-ai-chat-v)
 augroup my_coc_nvim
   autocmd!
-  autocmd FileType aichat nnoremap <buffer> K <Plug>(coc-ext-ai-ref)
+  autocmd FileType aichat nnoremap <buffer> K <Plug>(coc-ext-ai-show)
 augroup END
