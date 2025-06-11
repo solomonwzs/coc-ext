@@ -133,7 +133,7 @@ export abstract class BaseChatChannel {
       this.channel.show();
       winid = await nvim.call('bufwinid', name);
       this.bufnr = await nvim.call('bufnr', name);
-      await nvim.call('coc#compat#execute', [winid, 'setl wrap']);
+      await nvim.call('win_execute', [winid, 'setl wrap']);
       await nvim.call('win_execute', [winid, 'set ft=aichat']);
     } else {
       await nvim.call('win_gotoid', [winid]);
