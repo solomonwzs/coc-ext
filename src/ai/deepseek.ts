@@ -82,20 +82,34 @@ interface DeepseekChatResponse {
 }
 
 interface DeepseekChatCompletion {
-  choices: {
-    finish_reason: string | undefined;
-    index: number;
-    delta: {
-      content: string | undefined;
-      type: string;
-      role: string | undefined;
-    };
-  }[];
-  model: string;
-  chunk_token_usage: number;
-  created: number;
-  message_id: number;
-  parent_id: number;
+  request_message_id?: number;
+  response_message_id?: number;
+  v?:
+    | {
+        response: {
+          message_id: number;
+          parent_id: number;
+          model: string;
+          role: string;
+          content: string;
+          thinking_enabled: boolean;
+          thinking_content?: any;
+          thinking_elapsed_secs?: any;
+          ban_edit: boolean;
+          ban_regenerate: boolean;
+          status: string;
+          accumulated_token_usage: number;
+          files: any[];
+          tips: any[];
+          inserted_at: number;
+          search_enabled: boolean;
+          search_status: string;
+          search_results: any;
+        };
+      }
+    | string;
+  p?: string;
+  o?: string;
 }
 
 class DeepseekSha3Wasm {
@@ -524,7 +538,7 @@ class DeepseekChat extends BaseChatChannel {
 
     this.appendUserInput(new Date().toISOString(), prompt);
 
-    var headers = this.getHeader();
+    let headers = this.getHeader();
     headers['x-ds-pow-response'] = challenge;
     const req: HttpRequest = {
       args: {
@@ -543,6 +557,8 @@ class DeepseekChat extends BaseChatChannel {
         thinking_enabled: false,
       }),
     };
+    let event = '';
+    let p = '';
     const cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
@@ -556,27 +572,36 @@ class DeepseekChat extends BaseChatChannel {
               if (line.length == 0) {
                 return;
               }
-              if (line.slice(6, 12) == '[DONE]') {
-                this.append('\n(END)');
+
+              if (line.slice(0, 6) === 'event:') {
+                event = line.slice(7).trim();
+                // logger.debug(event);
+                if (event === 'close') {
+                  this.append('\n(END)');
+                }
                 return;
               }
 
-              const data = JSON.parse(line.slice(5)) as DeepseekChatCompletion;
-              if (data.choices.length > 0) {
-                for (const choice of data.choices) {
-                  if (choice.delta.content) {
-                    this.append(choice.delta.content, false);
-                  }
-                }
+              let comp = JSON.parse(line.slice(5)) as DeepseekChatCompletion;
+
+              if (
+                event === 'ready' &&
+                comp.request_message_id != undefined &&
+                comp.response_message_id != undefined
+              ) {
+                this.append(`>> id:${comp.request_message_id}\n`);
+                this.parent_id = comp.response_message_id;
+                return;
               }
 
-              if (this.parent_id != data.message_id) {
-                this.append(`>> id:${data.message_id}\n`);
-              }
-              if (data.message_id < 0) {
-                logger.error(line);
-              } else {
-                this.parent_id = data.message_id;
+              if (event === 'update_session') {
+                if (comp.p) {
+                  p = comp.p;
+                }
+
+                if (p === 'response/content' && typeof comp.v === 'string') {
+                  this.append(comp.v, false);
+                }
               }
             });
         } catch (e) {
