@@ -41,7 +41,9 @@ import {
   aiChatShow,
   aiChatQuickChat,
   aiChatOpen,
+  AiChatList,
 } from './ai/chat';
+import { kimiChat } from './ai/kimi';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -361,6 +363,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new RgwordsList(workspace.nvim)),
     listManager.registerList(new AutocmdList(workspace.nvim)),
     listManager.registerList(new HighlightList(workspace.nvim)),
+
+    listManager.registerList(new AiChatList('ai_chat_kimi', kimiChat)),
 
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id

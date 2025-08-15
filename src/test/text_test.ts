@@ -96,3 +96,19 @@ export async function aes256Test() {
     console.log(s1);
   }
 }
+
+export async function contentTextWidthTest() {
+  let ascii = 0;
+  let nonAscii = 0;
+  let str = 'Hello, 世界!';
+
+  for (const ch of str) {
+    const code = ch.codePointAt(0)!;
+    if (code <= 0x7f) {
+      ascii += 1;
+    } else {
+      nonAscii += 1;
+    }
+  }
+  console.log({ ascii, nonAscii });
+}

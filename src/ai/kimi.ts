@@ -11,6 +11,24 @@ import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
 
+interface KimiChatRequest {
+  kimiplus_id?: string;
+  extend?: {
+    sidebar: boolean;
+  };
+  model?: 'k1.5' | 'k2';
+  messages: {
+    role: string;
+    content: string;
+  }[];
+  refs?: any[];
+  history?: any[];
+  scene_labels?: any[];
+  use_search?: boolean;
+  use_semantic_memory?: boolean;
+  use_deep_research?: boolean;
+}
+
 interface KimiChatItem {
   id: string;
   name: string;
@@ -478,6 +496,24 @@ class KimiChat extends BaseChatChannel {
         statusCode = -1;
       },
     };
+    let chat_req: KimiChatRequest = {
+      kimiplus_id: 'kimi',
+      extend: {
+        sidebar: true,
+      },
+      model: 'k2',
+      messages: [
+        {
+          role: 'user',
+          content: text,
+        },
+      ],
+      refs: [],
+      scene_labels: [],
+      use_search: true,
+      use_semantic_memory: false,
+      use_deep_research: false,
+    };
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
@@ -486,16 +522,7 @@ class KimiChat extends BaseChatChannel {
         protocol: 'https:',
         headers: this.getHeaders(),
       },
-      data: JSON.stringify({
-        messages: [
-          {
-            role: 'user',
-            content: text,
-          },
-        ],
-        refs: [],
-        use_search: true,
-      }),
+      data: JSON.stringify(chat_req),
     };
     await sendHttpRequestWithCallback(req, cb);
     if (statusCode == 401) {

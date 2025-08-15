@@ -5,8 +5,10 @@ import { deepseekChat } from './deepseek';
 import { bailianChat } from './bailian';
 import { echoMessage, getText } from '../utils/helper';
 import { logger } from '../utils/logger';
+import { countTextWidth } from '../utils/helper';
+import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 
-let aiChat: BaseChatChannel | null = null;
+let globalAiChat: BaseChatChannel | null = null;
 
 export async function aiChatSelect() {
   let choose = await window.showQuickPick(
@@ -18,23 +20,23 @@ export async function aiChatSelect() {
     { title: 'Choose AI' },
   );
   if (choose) {
-    aiChat = choose.chat;
-    if (!aiChat) {
+    globalAiChat = choose.chat;
+    if (!globalAiChat) {
       return;
     }
   }
 }
 
 export async function aiChatOpen() {
-  if (!aiChat) {
+  if (!globalAiChat) {
     await aiChatSelect();
-    if (!aiChat) {
+    if (!globalAiChat) {
       return -1;
     }
   }
 
-  if (!aiChat.getCurrentChatId()) {
-    let items = await aiChat.getChatList();
+  if (!globalAiChat.getCurrentChatId()) {
+    let items = await globalAiChat.getChatList();
     if (items instanceof Error) {
       logger.error(items);
       echoMessage('ErrorMsg', items.message);
@@ -50,21 +52,21 @@ export async function aiChatOpen() {
         return -1;
       }
 
-      const chat_id = await aiChat.createChatId(new_name);
+      const chat_id = await globalAiChat.createChatId(new_name);
       if (chat_id instanceof Error) {
         logger.error(chat_id);
         return -1;
       }
-      aiChat.setCurrentChatId(chat_id);
+      globalAiChat.setCurrentChatId(chat_id);
     } else {
-      aiChat.setCurrentChatId(choose.chat_id);
-      const err = await aiChat.showHistoryMessages();
+      globalAiChat.setCurrentChatId(choose.chat_id);
+      const err = await globalAiChat.showHistoryMessages();
       if (err instanceof Error) {
         logger.error(err);
       }
     }
   }
-  await aiChat.show();
+  await globalAiChat.show();
   return 0;
 }
 
@@ -76,25 +78,25 @@ export function aiChatChat(): () => ProviderResult<any> {
     }
 
     let ret = await aiChatOpen();
-    if (ret != 0 || !aiChat) {
+    if (ret != 0 || !globalAiChat) {
       return;
     }
-    await aiChat.openAutoScroll();
-    await aiChat.chat(text);
-    aiChat.closeAutoScroll();
+    await globalAiChat.openAutoScroll();
+    await globalAiChat.chat(text);
+    globalAiChat.closeAutoScroll();
   };
 }
 
 export function aiChatQuickChat(): () => ProviderResult<any> {
   return async () => {
     let ret = await aiChatOpen();
-    if (ret != 0 || !aiChat) {
+    if (ret != 0 || !globalAiChat) {
       return;
     }
 
     let n = (await workspace.nvim.eval('&columns')) as number;
     let inputbox = await window.createInputBox(
-      `AI Chat <${aiChat.getChatName()}>`,
+      `AI Chat <${globalAiChat.getChatName()}>`,
       '',
       {
         position: 'center',
@@ -111,9 +113,9 @@ export function aiChatQuickChat(): () => ProviderResult<any> {
       return;
     }
 
-    await aiChat.openAutoScroll();
-    await aiChat.chat(text);
-    aiChat.closeAutoScroll();
+    await globalAiChat.openAutoScroll();
+    await globalAiChat.chat(text);
+    globalAiChat.closeAutoScroll();
   };
 }
 
@@ -129,4 +131,60 @@ export function aiChatShow(): () => ProviderResult<any> {
       await deepseekChat.showItem();
     }
   };
+}
+
+export class AiChatList extends BasicList {
+  // public readonly name: string;
+  public readonly description = 'CocList for coc-ext-common';
+  public readonly defaultAction = 'open';
+  public actions: ListAction[] = [];
+
+  constructor(
+    public readonly name: string,
+    private readonly aiChat: BaseChatChannel,
+  ) {
+    super();
+    this.addAction('open', AiChatList.open);
+  }
+
+  private static async open(
+    item: ListItem,
+    _context: ListContext,
+  ): Promise<void> {
+    logger.debug(item);
+  }
+
+  public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
+    let items = await this.aiChat.getChatList();
+    if (items instanceof Error) {
+      return null;
+    }
+
+    let max_width = 0;
+    for (const i of items) {
+      let w = countTextWidth(i.label);
+      if (w > max_width) {
+        max_width = w;
+      }
+    }
+
+    let res: ListItem[] = [];
+    for (const i of items) {
+      let lable_width = countTextWidth(i.label);
+      let label_bytelen = Buffer.byteLength(i.label);
+      let spaces = ' '.repeat(max_width - lable_width + 2);
+      let label = `${i.label}${spaces}${i.chat_id}  ${i.description}`;
+      res.push({
+        label,
+        data: i,
+        ansiHighlights: [
+          {
+            span: [label_bytelen, Buffer.byteLength(label)],
+            hlGroup: 'Comment',
+          },
+        ],
+      });
+    }
+    return res;
+  }
 }

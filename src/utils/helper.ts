@@ -210,6 +210,19 @@ export function sleepMs(ms: number) {
   });
 }
 
+export function countTextWidth(text: string) {
+  let w = 0;
+  for (const ch of text) {
+    const code = ch.codePointAt(0)!; // 取第一个码点
+    if (code <= 0x7f) {
+      w += 1;
+    } else {
+      w += 2;
+    }
+  }
+  return w;
+}
+
 interface ScratchWinConf {
   ver?: boolean;
   name?: string;
