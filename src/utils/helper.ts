@@ -47,10 +47,10 @@ export async function getText(
   let range: Nullable<Range> = null;
   if (mode === 'v') {
     // range = await window.getSelectedRange('v');
-    const text: string = (
-      await workspace.nvim.call('lib#common#visual_selection', [escape ? 1 : 0])
-    ).toString();
-    return text.trim();
+    let res = await workspace.nvim.call('lib#common#visual_selection', [
+      escape ? 1 : 0,
+    ]);
+    return res ? res.toString().trim() : '';
   } else {
     const pos = await window.getCursorPosition();
     range = doc.getWordRangeAtPosition(pos);
@@ -82,7 +82,7 @@ async function winid2bufnr(winid: number): Promise<number> {
   if (!bufnr) {
     return -1;
   }
-  return bufnr;
+  return bufnr as number;
 }
 
 export async function popup(

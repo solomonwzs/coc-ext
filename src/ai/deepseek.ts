@@ -1,5 +1,4 @@
 import { CocExtError } from '../utils/common';
-import { window, workspace, Position } from 'coc.nvim';
 import http from 'http';
 import {
   sendHttpRequest,
@@ -16,7 +15,7 @@ import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';
 import { popup, ScratchWindow } from '../utils/helper';
 
-interface DeepseekChatSession {
+interface ChatSession {
   id: string;
   seq_id: number;
   agent: string;
@@ -28,7 +27,7 @@ interface DeepseekChatSession {
   updated_at: number;
 }
 
-interface DeepseekChatSearchResult {
+interface ChatSearchResult {
   url: string;
   title: string;
   snippet: string;
@@ -36,9 +35,10 @@ interface DeepseekChatSearchResult {
   published_at: number;
   site_name: string;
   site_icon: string;
+  query_indexes?: number[];
 }
 
-interface DeepseekChatMessage {
+interface ChatMessage {
   message_id: number;
   parent_id: number | undefined;
   model: string;
@@ -51,10 +51,10 @@ interface DeepseekChatMessage {
   accumulated_token_usage: number;
   inserted_at: number;
   search_enabled: boolean;
-  search_results?: DeepseekChatSearchResult[];
+  search_results?: ChatSearchResult[];
 }
 
-interface DeepseekChatChallenge {
+interface ChatChallenge {
   algorithm: string;
   challenge: string;
   salt: string;
@@ -65,54 +65,65 @@ interface DeepseekChatChallenge {
   target_path: string;
 }
 
-interface DeepseekChatResponse {
+interface ChatResponse {
   code: number;
   msg: string;
   data: {
     biz_code: number;
     biz_msg: string;
     biz_data?: {
-      chat_session?: DeepseekChatSession;
-      chat_sessions?: DeepseekChatSession[];
-      chat_messages?: DeepseekChatMessage[];
-      challenge?: DeepseekChatChallenge;
+      chat_session?: ChatSession;
+      chat_sessions?: ChatSession[];
+      chat_messages?: ChatMessage[];
+      challenge?: ChatChallenge;
       id?: string;
     };
   };
 }
 
-interface DeepseekChatCompletion {
-  request_message_id?: number;
-  response_message_id?: number;
-  v?:
-    | {
-        response: {
-          message_id: number;
-          parent_id: number;
-          model: string;
-          role: string;
-          content: string;
-          thinking_enabled: boolean;
-          thinking_content?: any;
-          thinking_elapsed_secs?: any;
-          ban_edit: boolean;
-          ban_regenerate: boolean;
-          status: string;
-          accumulated_token_usage: number;
-          files: any[];
-          tips: any[];
-          inserted_at: number;
-          search_enabled: boolean;
-          search_status: string;
-          search_results: any;
-        };
-      }
-    | string;
-  p?: string;
-  o?: string;
+interface ChatComplResp {
+  response: {
+    message_id: number;
+    parent_id: number;
+    model: string;
+    role: string;
+    content: string;
+    thinking_enabled: boolean;
+    thinking_content?: any;
+    thinking_elapsed_secs?: any;
+    ban_edit: boolean;
+    ban_regenerate: boolean;
+    status: string;
+    accumulated_token_usage: number;
+    files: any[];
+    tips: any[];
+    inserted_at: number;
+    search_enabled: boolean;
+    search_status: string;
+    search_results: any;
+  };
 }
 
-class DeepseekSha3Wasm {
+interface ChatPV {
+  p: string;
+  v: any;
+}
+
+interface ChatComplData {
+  request_message_id?: number;
+  response_message_id?: number;
+  updated_at?: number;
+  o?: string;
+  p?: string;
+  v?: ChatComplResp | string | ChatSearchResult[] | ChatPV[];
+}
+
+interface ChatCompletion {
+  event?: string;
+  data?: ChatComplData;
+}
+
+class Sha3Wasm {
   private memory: WebAssembly.Memory;
   private addToStack: (delta: number) => number;
   private alloc: (size: number, align: number) => number;
@@ -204,7 +215,7 @@ class DeepseekSha3Wasm {
   }
 }
 
-async function getWasm(dir: string): Promise<DeepseekSha3Wasm | Error> {
+async function getWasm(dir: string): Promise<Sha3Wasm | Error> {
   let conf = getcfg<CocExtAIChatConfig>('', {});
   let wasmPath =
     conf.deepseekWasmPath && conf.deepseekWasmPath.length > 0
@@ -227,31 +238,75 @@ async function getWasm(dir: string): Promise<DeepseekSha3Wasm | Error> {
   if (wasmBuf instanceof Error) {
     return wasmBuf;
   }
-  return new DeepseekSha3Wasm(await WebAssembly.instantiate(wasmBuf, {}));
+  let bytes = wasmBuf.buffer as ArrayBuffer;
+  return new Sha3Wasm(await WebAssembly.instantiate(bytes, {}));
 }
 
-function searchReault2Lines(item: DeepseekChatSearchResult, idx: number) {
+function searchReault2Lines(item: ChatSearchResult, idx: number) {
   let lines: string[] = [];
   let date = new Date(item.published_at * 1000);
   let dstr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-  lines.push(`[${idx} - ${item.site_name} - ${dstr}](${item.url})`);
-  lines.push(`# ${item.title}`);
-  lines.push(`${item.snippet}`);
+  lines.push(`# ${idx} - ${item.title}`);
+  lines.push('');
+  lines.push(`[${item.site_name} - ${dstr}](${item.url})`);
+  lines.push('');
+  lines.push(item.snippet);
   return lines;
 }
 
-let search_window = new ScratchWindow('Deepseek Search', 'markdown');
+let searchWindow = new ScratchWindow('Deepseek Search', 'markdown');
+
+class ChunkDecoder {
+  private cache: Buffer;
+
+  constructor() {
+    this.cache = Buffer.from('');
+  }
+
+  public decode(buf: Buffer): ChatCompletion[] {
+    this.cache = Buffer.concat([this.cache, buf]);
+
+    let out: ChatCompletion[] = [];
+    while (this.cache.length > 0) {
+      let pos = this.cache.indexOf('\n');
+      if (pos < 0) {
+        break;
+      } else {
+        let str = this.cache.subarray(0, pos).toString();
+        this.cache = this.cache.subarray(pos + 1);
+
+        try {
+          if (str.slice(0, 6) === 'event:') {
+            out.push({ event: str.slice(7).trim() });
+          } else if (str.slice(0, 5) === 'data:') {
+            out.push({ data: JSON.parse(str.slice(5)) });
+          } else if (str.length > 0) {
+            logger.debug(str);
+          }
+        } catch (e) {
+          logger.debug(str);
+          logger.error(e);
+        }
+      }
+    }
+    return out;
+  }
+}
 
 class DeepseekChat extends BaseChatChannel {
-  private auth_key: string;
-  private parent_id: number | null;
-  private sha3_wasm: DeepseekSha3Wasm | null;
+  private authKey: string;
+  private currentMsgid: number | null;
+  private sha3Wasm: Sha3Wasm | null;
 
   constructor(public readonly key: string) {
     super();
-    this.auth_key = key;
-    this.parent_id = null;
-    this.sha3_wasm = null;
+    this.authKey = key;
+    this.currentMsgid = null;
+    this.sha3Wasm = null;
+  }
+
+  public reset() {
+    this.currentMsgid = null;
   }
 
   public getChatName(): string {
@@ -266,7 +321,7 @@ class DeepseekChat extends BaseChatChannel {
         'Chrome/91.0.4472.77 ' +
         'Safari/537.36 ' +
         'Edg/91.0.864.41',
-      authorization: `Bearer ${this.auth_key}`,
+      authorization: `Bearer ${this.authKey}`,
       Origin: 'https://chat.deepseek.com',
       'x-client-locale': 'zh_CN',
       'x-client-platform': 'web',
@@ -274,58 +329,58 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   private async httpQuery(
-    req: HttpRequest,
-  ): Promise<DeepseekChatResponse | CocExtError> {
-    const resp = await sendHttpRequest(req);
+    method: string,
+    path: string,
+    d?: any,
+  ): Promise<ChatResponse | CocExtError> {
+    let req: HttpRequest = {
+      args: {
+        host: 'chat.deepseek.com',
+        path,
+        method,
+        protocol: 'https:',
+        headers: this.getHeader(),
+      },
+    };
+    if (d) {
+      req.data = JSON.stringify(d);
+    }
+    let resp = await sendHttpRequest(req);
     if (resp.statusCode != 200 || !resp.body) {
       return new CocExtError(
         CocExtError.ERR_DEEPSEEK,
         `[Deepseek] statusCode: ${resp.statusCode}, error: ${resp.error}, path: ${req.args.path}`,
       );
     }
-    return JSON.parse(resp.body.toString()) as DeepseekChatResponse;
-  }
-
-  private async httpGet(
-    path: string,
-  ): Promise<DeepseekChatResponse | CocExtError> {
-    const req: HttpRequest = {
-      args: {
-        host: 'chat.deepseek.com',
-        path,
-        method: 'GET',
-        protocol: 'https:',
-        headers: this.getHeader(),
-      },
-    };
-    return this.httpQuery(req);
+    return JSON.parse(resp.body.toString()) as ChatResponse;
   }
 
   public async getChatList(): Promise<ChatItem[] | Error> {
-    const resp = await this.httpGet(
+    let resp = await this.httpQuery(
+      'GET',
       '/api/v0/chat_session/fetch_page?count=100',
     );
     if (resp instanceof Error) {
       return resp;
     }
-    const chat_sessions = resp.data.biz_data?.chat_sessions;
-    if (chat_sessions == undefined) {
+    let chatSessions = resp.data.biz_data?.chat_sessions;
+    if (chatSessions == undefined) {
       return new CocExtError(
         CocExtError.ERR_DEEPSEEK,
         '[Deepseek] get sessions fail',
       );
     }
 
-    const id_set: Set<string> = new Set();
+    const idSet: Set<string> = new Set();
     const list: ChatItem[] = [];
-    for (const sess of chat_sessions) {
-      if (id_set.has(sess.id)) {
+    for (const sess of chatSessions) {
+      if (idSet.has(sess.id)) {
         continue;
       }
-      id_set.add(sess.id);
+      idSet.add(sess.id);
       list.push({
         label: sess.title,
-        chat_id: sess.id,
+        chatId: sess.id,
         description: new Date(sess.updated_at * 1000).toISOString(),
       });
     }
@@ -333,19 +388,9 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   public async createChatId(_name: string): Promise<string | Error> {
-    let req: HttpRequest = {
-      args: {
-        host: 'chat.deepseek.com',
-        path: '/api/v0/chat_session/create',
-        method: 'POST',
-        protocol: 'https:',
-        headers: this.getHeader(),
-      },
-      data: JSON.stringify({
-        character_id: null,
-      }),
-    };
-    let resp = await this.httpQuery(req);
+    let resp = await this.httpQuery('POST', '/api/v0/chat_session/create', {
+      character_id: null,
+    });
     if (resp instanceof Error) {
       return resp;
     }
@@ -361,8 +406,9 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
-    const resp = await this.httpGet(
-      `/api/v0/chat/history_messages?chat_session_id=${this.chat_id}`,
+    let resp = await this.httpQuery(
+      'GET',
+      `/api/v0/chat/history_messages?chat_session_id=${this.chatId}`,
     );
     if (resp instanceof Error) {
       return resp;
@@ -375,86 +421,80 @@ class DeepseekChat extends BaseChatChannel {
       );
     }
 
-    let err = await this.checkCacheDir();
-    if (err) {
-      return err;
-    }
-
-    this.parent_id = null;
+    this.currentMsgid = null;
     for (const msg of messages) {
-      this.parent_id = msg.message_id;
+      this.currentMsgid = msg.message_id;
       if (msg.role == 'USER') {
-        this.appendUserInput(
+        this.chan.appendUserInput(
           new Date(msg.inserted_at * 1000).toISOString(),
           msg.content,
         );
       } else {
-        this.append(`>> id:${msg.message_id}\n`);
+        this.chan.append(`>> id:${msg.message_id}\n`);
 
         if (msg.search_results) {
-          let cache_key = `${this.chat_id}-${msg.message_id}-search.json`;
-          await this.setFileCache(
-            cache_key,
-            JSON.stringify(msg.search_results),
+          let cacheKey = `${this.chatId}-${msg.message_id}-search.json`;
+          await this.cache.set(cacheKey, JSON.stringify(msg.search_results));
+          this.chan.append(
+            ` [search result (${msg.search_results.length})]\n`,
           );
-          this.append(`[search result (${msg.search_results.length})]\n`);
         }
 
         if (msg.thinking_enabled && msg.thinking_content) {
-          this.append('```');
-          this.append(msg.thinking_content);
-          this.append('```');
+          this.chan.append('---');
+          this.chan.append(msg.thinking_content);
+          this.chan.append('\n---\n');
         }
-        this.append(msg.content);
+        this.chan.append(msg.content);
       }
     }
 
     return null;
   }
 
-  private async tryGetSearchResult(message_id: string, ref_text: string) {
+  private async tryGetSearchResult(messageId: string, refText: string) {
     let regex = new RegExp(/^\[search result \([0-9]*\)\]$/);
-    let arr = regex.exec(ref_text);
+    let arr = regex.exec(refText);
     if (!arr || arr.length != 1) {
       return -1;
     }
 
-    let cache_key = `${this.chat_id}-${message_id}-search.json`;
-    let cache = await this.getFileCache(cache_key);
+    let cacheKey = `${this.chatId}-${messageId}-search.json`;
+    let cache = await this.cache.get(cacheKey);
     if (cache instanceof Error) {
       return;
     }
-    let items = JSON.parse(cache.toString()) as DeepseekChatSearchResult[];
+    let items = JSON.parse(cache.toString()) as ChatSearchResult[];
 
     let lines: string[] = [];
     let idx = 0;
     for (let item of items) {
       idx += 1;
-      lines = lines.concat(searchReault2Lines(item, idx));
+      lines.push(...searchReault2Lines(item, idx));
       lines.push('');
       lines.push('---');
       lines.push('');
     }
-    await search_window.open(lines);
+    await searchWindow.open(lines);
   }
 
-  private async tryGetRef(message_id: string, ref_text: string) {
+  private async tryGetRef(messageId: string, refText: string) {
     let regex = new RegExp(/^\[citation:([0-9]*)\]$/);
-    let arr = regex.exec(ref_text);
+    let arr = regex.exec(refText);
     if (!arr || arr.length != 2) {
       return -1;
     }
-    let ref_id = parseInt(arr[1]);
+    let refId = parseInt(arr[1]);
 
-    let cache_key = `${this.chat_id}-${message_id}-search.json`;
-    let cache = await this.getFileCache(cache_key);
+    let cacheKey = `${this.chatId}-${messageId}-search.json`;
+    let cache = await this.cache.get(cacheKey);
     if (cache instanceof Error) {
       return -1;
     }
-    let items = JSON.parse(cache.toString()) as DeepseekChatSearchResult[];
+    let items = JSON.parse(cache.toString()) as ChatSearchResult[];
 
     for (let item of items) {
-      if (item.cite_index !== ref_id) {
+      if (item.cite_index !== refId) {
         continue;
       }
 
@@ -465,51 +505,43 @@ class DeepseekChat extends BaseChatChannel {
   }
 
   public async showItem() {
-    let ref_item = await getCurrentRef();
-    if (!ref_item) {
+    let refItem = await getCurrentRef();
+    if (!refItem) {
       return;
     }
 
-    if ((await this.tryGetRef(ref_item.segment_id, ref_item.ref_text)) !== -1) {
+    if ((await this.tryGetRef(refItem.segmentId, refItem.refText)) !== -1) {
       return;
     }
-    await this.tryGetSearchResult(ref_item.segment_id, ref_item.ref_text);
+    await this.tryGetSearchResult(refItem.segmentId, refItem.refText);
   }
 
-  private async getPowChallenge(target_path: string): Promise<string | Error> {
-    const req: HttpRequest = {
-      args: {
-        host: 'chat.deepseek.com',
-        path: '/api/v0/chat/create_pow_challenge',
-        method: 'POST',
-        protocol: 'https:',
-        headers: this.getHeader(),
-      },
-      data: JSON.stringify({
-        target_path,
-      }),
-    };
-    const resp = await this.httpQuery(req);
+  private async getPowChallenge(targetPath: string): Promise<string | Error> {
+    let resp = await this.httpQuery(
+      'POST',
+      '/api/v0/chat/create_pow_challenge',
+      { target_path: targetPath },
+    );
     if (resp instanceof Error) {
       return resp;
     }
-    const challenge = resp.data.biz_data?.challenge;
+    let challenge = resp.data.biz_data?.challenge;
     if (!challenge) {
       return new CocExtError(
         CocExtError.ERR_DEEPSEEK,
         '[Deepseek] get challenge fail',
       );
     } else {
-      if (!this.sha3_wasm) {
-        let err = await this.checkCacheDir();
+      if (!this.sha3Wasm) {
+        let err = await this.cache.checkDir();
         if (err) {
           return err;
         }
-        let wasm = await getWasm(this.cache_dir);
+        let wasm = await getWasm(this.cache.dir);
         if (wasm instanceof Error) {
           return wasm;
         }
-        this.sha3_wasm = wasm;
+        this.sha3Wasm = wasm;
       }
 
       let obj = {
@@ -518,7 +550,7 @@ class DeepseekChat extends BaseChatChannel {
         salt: challenge.salt,
         signature: challenge.signature,
         target_path: challenge.target_path,
-        answer: this.sha3_wasm.computePowAnswer(
+        answer: this.sha3Wasm.computePowAnswer(
           challenge.challenge,
           challenge.salt,
           challenge.difficulty,
@@ -536,7 +568,7 @@ class DeepseekChat extends BaseChatChannel {
       return;
     }
 
-    this.appendUserInput(new Date().toISOString(), prompt);
+    this.chan.appendUserInput(new Date().toISOString(), prompt);
 
     let headers = this.getHeader();
     headers['x-ds-pow-response'] = challenge;
@@ -549,14 +581,17 @@ class DeepseekChat extends BaseChatChannel {
         headers,
       },
       data: JSON.stringify({
-        chat_session_id: this.chat_id,
-        parent_message_id: this.parent_id,
+        chat_session_id: this.chatId,
+        parent_message_id: this.currentMsgid,
         prompt,
         ref_file_ids: [],
         search_enabled: true,
-        thinking_enabled: false,
+        thinking_enabled: true,
       }),
     };
+
+    let decoder = new ChunkDecoder();
+    let searchResults: ChatSearchResult[] = [];
     let event = '';
     let p = '';
     const cb: HttpRequestCallback = {
@@ -564,54 +599,60 @@ class DeepseekChat extends BaseChatChannel {
         if (rsp.statusCode != 200) {
           return;
         }
-        try {
-          chunk
-            .toString()
-            .split('\n')
-            .forEach((line: string) => {
-              if (line.length == 0) {
-                return;
-              }
 
-              if (line.slice(0, 6) === 'event:') {
-                event = line.slice(7).trim();
-                // logger.debug(event);
-                if (event === 'close') {
-                  this.append('\n(END)');
-                }
-                return;
-              }
-
-              let comp = JSON.parse(line.slice(5)) as DeepseekChatCompletion;
-
+        let msgList = decoder.decode(chunk);
+        for (let msg of msgList) {
+          if (msg.event) {
+            event = msg.event;
+            if (event === 'close') {
+              this.chan.append('\n(END)');
+            }
+          } else if (msg.data) {
+            if (event === 'ready') {
               if (
-                event === 'ready' &&
-                comp.request_message_id != undefined &&
-                comp.response_message_id != undefined
+                msg.data.request_message_id != undefined &&
+                msg.data.response_message_id != undefined
               ) {
-                this.append(`>> id:${comp.request_message_id}\n`);
-                this.parent_id = comp.response_message_id;
-                return;
+                this.chan.append(`>> id:${msg.data.response_message_id}\n`);
+                this.currentMsgid = msg.data.response_message_id;
+              }
+            } else if (event === 'update_session') {
+              if (msg.data.p) {
+                p = msg.data.p;
               }
 
-              if (event === 'update_session') {
-                if (comp.p) {
-                  p = comp.p;
+              if (p === 'response/search_status') {
+                if (msg.data.v === 'FINISHED' && searchResults.length > 0) {
+                  this.chan.append(
+                    ` [search result (${searchResults.length})]\n`,
+                  );
                 }
-
-                if (p === 'response/content' && typeof comp.v === 'string') {
-                  this.append(comp.v, false);
+              } else if (p === 'response/search_results') {
+                if (Array.isArray(msg.data.v)) {
+                  searchResults.push(...(msg.data.v as ChatSearchResult[]));
                 }
+              } else if (
+                p === 'response/content' &&
+                typeof msg.data.v === 'string'
+              ) {
+                this.chan.append(msg.data.v, false);
+              } else if (p === 'response/thinking_content') {
+                if (msg.data.p === 'response/thinking_content') {
+                  this.chan.append('---');
+                }
+                if (typeof msg.data.v === 'string') {
+                  this.chan.append(msg.data.v, false);
+                }
+              } else if (p === 'response/thinking_elapsed_secs') {
+                this.chan.append('\n\n---\n');
               }
-            });
-        } catch (e) {
-          logger.debug(chunk.toString());
-          logger.error(e);
+            }
+          }
         }
       },
       onError: (err: Error) => {
-        this.append(' (ERROR) ');
-        this.append(err.message);
+        this.chan.append(' (ERROR) ');
+        this.chan.append(err.message);
       },
       onEnd: (rsp: http.IncomingMessage) => {
         logger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}`);
@@ -621,6 +662,18 @@ class DeepseekChat extends BaseChatChannel {
       },
     };
     await sendHttpRequestWithCallback(req, cb);
+
+    if (searchResults.length > 0) {
+      let cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
+      await this.cache.set(cacheKey, JSON.stringify(searchResults));
+    }
+  }
+
+  public async delSession(chatId: string): Promise<null | Error> {
+    let resp = await this.httpQuery('POST', '/api/v0/chat_session/delete', {
+      chat_session_id: chatId,
+    });
+    return resp instanceof Error ? resp : null;
   }
 }
 

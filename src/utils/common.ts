@@ -47,6 +47,9 @@ export function stringify(value: any): string {
     return value;
   } else if (value instanceof String) {
     return value.toString();
+  } else if (value instanceof Error) {
+    let s = JSON.stringify(value, null, 2);
+    return `${value.stack} ${s}`;
   } else {
     return JSON.stringify(value, null, 2);
   }
@@ -92,6 +95,7 @@ export class CocExtError extends Error {
 
   constructor(errorCode: number, message: string) {
     super(message);
+
     this.name = 'CocExtError';
     this.errorCode = errorCode;
   }

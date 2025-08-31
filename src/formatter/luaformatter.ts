@@ -5,11 +5,8 @@ import {
   Range,
   TextEdit,
 } from 'coc.nvim';
-import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { callShell } from '../utils/externalexec';
-import { showNotification } from '../utils/notify';
 
 export class LuaFormatter extends BaseFormatter {
   private opts: string[];
@@ -40,7 +37,7 @@ export class LuaFormatter extends BaseFormatter {
   }
 
   public async formatDocument(
-    document: TextDocument,
+    doc: TextDocument,
     options: FormattingOptions,
     _token: CancellationToken,
     range?: Range,
@@ -49,7 +46,7 @@ export class LuaFormatter extends BaseFormatter {
       return [];
     }
 
-    const opts: string[] = [];
+    let opts: string[] = [];
     if (options.tabSize !== undefined && !this.opts_has_indent_width) {
       opts.push(`--indent-width=${options.tabSize}`);
     }
@@ -60,30 +57,7 @@ export class LuaFormatter extends BaseFormatter {
         opts.push('--use-tab');
       }
     }
-
-    const exec = this.setting.exec ? this.setting.exec : 'lua-format';
-    const resp = await callShell(
-      exec,
-      this.opts.concat(opts),
-      document.getText(),
-    );
-    if (resp.exitCode != 0) {
-      showNotification(`lua-format fail, ret ${resp.exitCode}`, 'formatter');
-      if (resp.error) {
-        logger.error(resp.error.toString());
-      }
-    } else if (resp.data) {
-      showNotification('lua-format ok', 'formatter');
-      return [
-        TextEdit.replace(
-          {
-            start: { line: 0, character: 0 },
-            end: { line: document.lineCount, character: 0 },
-          },
-          resp.data.toString(),
-        ),
-      ];
-    }
-    return [];
+    let exec = this.setting.exec ? this.setting.exec : 'lua-format';
+    return this.callShellFormatDocment(exec, this.opts.concat(opts), doc);
   }
 }

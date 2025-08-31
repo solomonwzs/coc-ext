@@ -6,11 +6,8 @@ import {
   TextEdit,
   workspace,
 } from 'coc.nvim';
-import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { callShell } from '../utils/externalexec';
-import { showNotification } from '../utils/notify';
 
 const filetype2Parser: Record<string, string> = {
   javascript: 'babel-flow',
@@ -27,7 +24,7 @@ export class PrettierFormatter extends BaseFormatter {
   }
 
   public async formatDocument(
-    document: TextDocument,
+    doc: TextDocument,
     _options: FormattingOptions,
     _token: CancellationToken,
     range?: Range,
@@ -36,14 +33,14 @@ export class PrettierFormatter extends BaseFormatter {
       return [];
     }
 
-    const args: string[] = [];
+    let args: string[] = [];
     if (this.setting.args) {
       args.push(...(this.setting.args as string[]));
     }
 
-    const { nvim } = workspace;
-    const filetype = (await nvim.eval('&filetype')) as string;
-    const parser = filetype2Parser[filetype];
+    let { nvim } = workspace;
+    let filetype = (await nvim.eval('&filetype')) as string;
+    let parser = filetype2Parser[filetype];
     if (parser) {
       args.push(`--parser=${parser}`);
     } else {
@@ -53,25 +50,8 @@ export class PrettierFormatter extends BaseFormatter {
       args.push('--html-whitespace-sensitivity=ignore');
     }
 
-    const exec = this.setting.exec ? this.setting.exec : 'prettier';
-    const resp = await callShell(exec, args, document.getText());
-    if (resp.exitCode != 0) {
-      showNotification(`prettier fail, ret ${resp.exitCode}`, 'formatter');
-      if (resp.error) {
-        logger.error(resp.error.toString());
-      }
-    } else if (resp.data) {
-      showNotification('prettier ok', 'formatter');
-      return [
-        TextEdit.replace(
-          {
-            start: { line: 0, character: 0 },
-            end: { line: document.lineCount, character: 0 },
-          },
-          resp.data.toString(),
-        ),
-      ];
-    }
-    return [];
+    let exec = this.setting.exec ? this.setting.exec : 'prettier';
+
+    return this.callShellFormatDocment(exec, args, doc);
   }
 }

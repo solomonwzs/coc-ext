@@ -1,102 +1,87 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
 import os from 'os';
 import { fsReadFile, fsWriteFile, fsMkdir } from '../utils/file';
+import { logger } from '../utils/logger';
 
 export interface ChatItem {
   label: string;
-  chat_id: string;
+  chatId: string;
   description: string;
 }
 
-export abstract class BaseChatChannel {
-  private channel: OutputChannel | null;
-  private bufnr: number;
-  private chat_name: string;
-  private winid: number;
+export class FileCache {
+  private ready: boolean = false;
+  constructor(public readonly dir: string) {}
 
-  protected cache_dir: string;
-  protected chat_id: string | undefined;
-
-  constructor() {
-    this.channel = null;
-    this.bufnr = -1;
-    this.chat_id = undefined;
-    this.chat_name = this.getChatName();
-    this.winid = -1;
-    this.cache_dir = '';
-  }
-
-  protected async checkCacheDir() {
-    if (this.cache_dir.length != 0) {
+  public async checkDir() {
+    if (this.ready) {
       return null;
     }
-    let dir = `${os.homedir}/.cache/chat_${this.getChatName()}`;
-    let err = await fsMkdir(dir, { recursive: true, mode: 0o755 });
+    let err = await fsMkdir(this.dir, { recursive: true, mode: 0o755 });
     if (err) {
       return err;
     }
-    this.cache_dir = dir;
+    this.ready = true;
     return null;
   }
 
-  protected async setFileCache(
-    key: string,
-    data: string | NodeJS.ArrayBufferView,
-  ) {
-    let err = await this.checkCacheDir();
+  public async set(key: string, data: string | NodeJS.ArrayBufferView) {
+    let err = await this.checkDir();
     if (err) {
       return err;
     }
-    let cache_file = `${this.cache_dir}/${key}`;
-    return await fsWriteFile(cache_file, data);
+    let cacheFile = `${this.dir}/${key}`;
+    return await fsWriteFile(cacheFile, data);
   }
 
-  protected async getFileCache(key: string) {
-    let err = await this.checkCacheDir();
+  public async get(key: string) {
+    let err = await this.checkDir();
     if (err) {
       return err;
     }
-    let cache_file = `${this.cache_dir}/${key}`;
-    return await fsReadFile(cache_file);
+    let cacheFile = `${this.dir}/${key}`;
+    return await fsReadFile(cacheFile);
+  }
+}
+
+export class ChatChannel {
+  protected channel: OutputChannel;
+  protected winid: number;
+
+  constructor(protected chatName: string) {
+    this.channel = window.createOutputChannel(chatName);
+    this.winid = -1;
   }
 
-  public getCurrentChatId() {
-    return this.chat_id;
+  public async show() {
+    let { nvim } = workspace;
+    let winid = await nvim.call('bufwinid', this.chatName);
+    if (winid == -1) {
+      this.channel.show();
+      winid = await nvim.call('bufwinid', this.chatName);
+      // let bufnr = (await nvim.call('bufnr', this.chatName)) as number;
+      await nvim.call('win_execute', [winid, 'setl wrap']);
+      await nvim.call('win_execute', [winid, 'set ft=aichat']);
+    } else {
+      await nvim.call('win_gotoid', [winid]);
+    }
+    await nvim.call('win_execute', [winid, 'norm G']);
   }
 
-  public setCurrentChatId(chat_id: string) {
-    this.chat_id = chat_id;
+  public async hide() {
+    this.channel.hide();
   }
 
   public async openAutoScroll() {
     let { nvim } = workspace;
-    this.winid = await nvim.call(
-      'bufwinid',
-      `${this.chat_name}-${this.chat_id}`,
-    );
+    this.winid = (await nvim.call('bufwinid', this.chatName)) as number;
   }
 
-  public closeAutoScroll() {
+  public async closeAutoScroll() {
     this.winid = -1;
   }
 
-  public async bufferLines() {
-    const doc = workspace.getDocument(this.bufnr);
-    if (doc == null) {
-      return -1;
-    }
-    return (await doc.buffer.lines).length;
-  }
-
-  public append(text: string, newline: boolean = true) {
-    if (this.channel) {
-    } else if (this.chat_id) {
-      this.channel = window.createOutputChannel(
-        `${this.chat_name}-${this.chat_id}`,
-      );
-    } else {
-      return;
-    }
+  public async append(text: string, newline: boolean = true) {
     if (newline) {
       this.channel.appendLine(text);
     } else {
@@ -105,11 +90,11 @@ export abstract class BaseChatChannel {
 
     if (this.winid != -1) {
       let { nvim } = workspace;
-      nvim.call('win_execute', [this.winid, 'norm G']);
+      await nvim.call('win_execute', [this.winid, 'norm G']);
     }
   }
 
-  public appendUserInput(datetime: string, text: string) {
+  public async appendUserInput(datetime: string, text: string) {
     this.append(`\n>> ${datetime}`);
     let lines = text.split('\n');
     for (const i of lines) {
@@ -117,37 +102,63 @@ export abstract class BaseChatChannel {
     }
   }
 
-  public async show() {
-    if (!this.chat_id) {
-      return;
+  public clear() {
+    if (this.channel.content.length != 0) {
+      this.channel.dispose();
+      this.channel = window.createOutputChannel(this.chatName);
+      this.winid = -1;
     }
+  }
+}
 
-    const name = `${this.chat_name}-${this.chat_id}`;
-    if (!this.channel) {
-      this.channel = window.createOutputChannel(name);
-    }
+export abstract class BaseChatChannel {
+  protected chatId: string | undefined;
+  protected cache: FileCache;
+  protected chan: ChatChannel;
 
-    let { nvim } = workspace;
-    let winid = await nvim.call('bufwinid', name);
-    if (winid == -1) {
-      this.channel.show();
-      winid = await nvim.call('bufwinid', name);
-      this.bufnr = await nvim.call('bufnr', name);
-      await nvim.call('win_execute', [winid, 'setl wrap']);
-      await nvim.call('win_execute', [winid, 'set ft=aichat']);
-    } else {
-      await nvim.call('win_gotoid', [winid]);
-    }
-
-    await nvim.call('setbufvar', [this.bufnr, 'ai_name', this.chat_name]);
-    await nvim.call('win_execute', [winid, 'norm G']);
+  constructor() {
+    this.chatId = undefined;
+    this.cache = new FileCache(
+      `${os.homedir}/.cache/chat_${this.getChatName()}`,
+    );
+    this.chan = new ChatChannel(this.getChatName());
   }
 
+  public getCurrentChatId() {
+    return this.chatId;
+  }
+
+  public setCurrentChatId(chatId: string) {
+    this.chatId = chatId;
+    this.chan.clear();
+  }
+
+  public async sendChat(text: string) {
+    await this.chan.openAutoScroll();
+    await this.chat(text);
+    this.chan.closeAutoScroll();
+  }
+
+  public async show() {
+    await this.chan.show();
+  }
+
+  public hide() {
+    this.chan.hide();
+  }
+
+  public clear() {
+    this.chan.clear();
+  }
+
+  public abstract reset(): void;
   public abstract getChatName(): string;
   public abstract getChatList(): Promise<ChatItem[] | Error>;
   public abstract createChatId(name: string): Promise<string | Error>;
   public abstract showHistoryMessages(): Promise<null | Error>;
+  public abstract showItem(): Promise<void>;
   public abstract chat(text: string): Promise<void>;
+  public abstract delSession(chatId: string): Promise<null | Error>;
 }
 
 interface ChatRefOptions {
@@ -155,8 +166,8 @@ interface ChatRefOptions {
   end: string;
 }
 interface ChatRefItem {
-  ref_text: string;
-  segment_id: string;
+  refText: string;
+  segmentId: string;
 }
 export async function getCurrentRef(
   opts?: ChatRefOptions,
@@ -189,22 +200,22 @@ export async function getCurrentRef(
   if (end >= line.length) {
     return null;
   }
-  let ref_text = line.substring(start, end + 1);
+  let refText = line.substring(start, end + 1);
 
-  let line_start = pos.line - 1;
-  let segment_id = '';
-  for (; line_start >= 0; --line_start) {
-    const l = lines[line_start];
+  let lineStart = pos.line - 1;
+  let segmentId = '';
+  for (; lineStart >= 0; --lineStart) {
+    const l = lines[lineStart];
     if (l.length > 6 && l.slice(0, 6) == '>> id:') {
-      segment_id = l.slice(6).trim();
+      segmentId = l.slice(6).trim();
       break;
     }
   }
-  if (segment_id.length == 0) {
+  if (segmentId.length == 0) {
     return null;
   }
   return {
-    ref_text,
-    segment_id,
+    refText,
+    segmentId,
   };
 }

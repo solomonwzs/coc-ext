@@ -4,20 +4,14 @@ import {
   CancellationToken,
   Range,
   TextEdit,
+  Uri,
 } from 'coc.nvim';
-import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
+import { FormatterSetting } from '../utils/types';
 
-export class ShellFormatter extends BaseFormatter {
-  private opts: string[];
-
+export class CmakeFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {
     super(setting);
-
-    this.opts = [];
-    if (this.setting.args) {
-      this.opts.push(...(this.setting.args as string[]));
-    }
   }
 
   public supportRangeFormat(): boolean {
@@ -33,7 +27,9 @@ export class ShellFormatter extends BaseFormatter {
     if (range) {
       return [];
     }
-    let exec = this.setting.exec ? this.setting.exec : 'shfmt';
-    return this.callShellFormatDocment(exec, this.opts, doc);
+    let filepath = Uri.parse(doc.uri).fsPath;
+    let exec = this.setting.exec ? this.setting.exec : 'cmake-format';
+    let args = [filepath];
+    return this.callShellFormatDocment(exec, args, doc);
   }
 }

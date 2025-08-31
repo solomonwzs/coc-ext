@@ -6,11 +6,8 @@ import {
   TextEdit,
   Uri,
 } from 'coc.nvim';
-import { logger } from '../utils/logger';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
-import { callShell } from '../utils/externalexec';
-import { showNotification } from '../utils/notify';
 import fs from 'fs';
 import path from 'path';
 import { fsAccess } from '../utils/file';
@@ -67,7 +64,7 @@ export class ClfFormatter extends BaseFormatter {
   }
 
   public async formatDocument(
-    document: TextDocument,
+    doc: TextDocument,
     options: FormattingOptions,
     _token: CancellationToken,
     range?: Range,
@@ -75,9 +72,7 @@ export class ClfFormatter extends BaseFormatter {
     if (range) {
       return [];
     }
-
-    const filepath = Uri.parse(document.uri).fsPath;
-
+    let filepath = Uri.parse(doc.uri).fsPath;
     let args = (await this.confFileExist(filepath))
       ? ['--assume-filename', filepath]
       : [
@@ -86,30 +81,10 @@ export class ClfFormatter extends BaseFormatter {
           '--assume-filename',
           filepath,
         ];
-
     // if (range) {
     //   args.push('--lines', `${range.start.line}:${range.end.line}`);
     // }
-
-    const exec = this.setting.exec ? this.setting.exec : 'clang-format';
-    const resp = await callShell(exec, args, document.getText());
-    if (resp.exitCode != 0) {
-      showNotification(`clang-format fail, ret ${resp.exitCode}`, 'formatter');
-      if (resp.error) {
-        logger.error(resp.error.toString());
-      }
-    } else if (resp.data) {
-      showNotification('clang-format ok', 'formatter');
-      return [
-        TextEdit.replace(
-          {
-            start: { line: 0, character: 0 },
-            end: { line: document.lineCount, character: 0 },
-          },
-          resp.data.toString(),
-        ),
-      ];
-    }
-    return [];
+    let exec = this.setting.exec ? this.setting.exec : 'clang-format';
+    return this.callShellFormatDocment(exec, args, doc);
   }
 }

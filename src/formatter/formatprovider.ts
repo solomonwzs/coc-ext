@@ -17,12 +17,11 @@ import { PrettierFormatter } from '../formatter/prettierformatter';
 import { BazelFormatter } from '../formatter/bazelformatter';
 import { LuaFormatter } from '../formatter/luaformatter';
 import { ShellFormatter } from '../formatter/shellformatter';
+import { CmakeFormatter } from '../formatter/cmakeformatter';
 import { showNotification } from '../utils/notify';
 
 export class FormattingEditProvider
-  implements
-    DocumentFormattingEditProvider,
-    DocumentRangeFormattingEditProvider
+  implements DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider
 {
   private formatter: BaseFormatter | null;
 
@@ -37,6 +36,8 @@ export class FormattingEditProvider
       this.formatter = new LuaFormatter(setting);
     } else if (setting.provider == 'shfmt') {
       this.formatter = new ShellFormatter(setting);
+    } else if (setting.provider == 'cmake-format') {
+      this.formatter = new CmakeFormatter(setting);
     } else {
       this.formatter = null;
     }

@@ -41,9 +41,10 @@ import {
   aiChatShow,
   aiChatQuickChat,
   aiChatOpen,
+  aiChatInputOpen,
   AiChatList,
+  name2AiChat,
 } from './ai/chat';
-import { kimiChat } from './ai/kimi';
 
 const cppFmtSetting: FormatterSetting = {
   provider: 'clang-format',
@@ -75,9 +76,14 @@ const shFmtSetting: FormatterSetting = {
   args: ['-i', '4'],
 };
 
+const cmakeFmtSetting: FormatterSetting = {
+  provider: 'cmake-format',
+};
+
 const defaultFmtSetting: Record<string, FormatterSetting> = {
   bzl: bzlFmtSteeing,
   c: cppFmtSetting,
+  cmake: cmakeFmtSetting,
   cpp: cppFmtSetting,
   html: prettierFmtSetting,
   javascript: prettierFmtSetting,
@@ -271,7 +277,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sync: false,
     }),
 
-    workspace.registerKeymap(['n'], 'ext-ai-chat-n', aiChatQuickChat(), {
+    workspace.registerKeymap(['n'], 'ext-ai-chat-n', aiChatInputOpen(), {
       sync: false,
     }),
     workspace.registerKeymap(['v'], 'ext-ai-chat-v', aiChatChat(), {
@@ -364,8 +370,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     listManager.registerList(new AutocmdList(workspace.nvim)),
     listManager.registerList(new HighlightList(workspace.nvim)),
 
-    listManager.registerList(new AiChatList('ai_chat_kimi', kimiChat)),
-
     // sources.createSource({
     //   name: 'coc-ext-common completion source', // unique id
     //   doComplete: async () => {
@@ -382,6 +386,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
     //   },
     // })
   );
+
+  for (let [k, v] of name2AiChat) {
+    context.subscriptions.push(
+      listManager.registerList(new AiChatList(`aichat_${k}`, v)),
+    );
+  }
 }
 
 // async function getCompletionItems(): Promise<CompleteResult> {

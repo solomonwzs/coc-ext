@@ -1,30 +1,43 @@
 import { window, workspace, ProviderResult } from 'coc.nvim';
-import { BaseChatChannel } from './base';
-import { kimiChat } from './kimi';
+import { BaseChatChannel, ChatItem } from './base';
+import { kimiChatV2 } from './kimi_v2';
 import { deepseekChat } from './deepseek';
-import { bailianChat } from './bailian';
-import { echoMessage, getText } from '../utils/helper';
+import {
+  echoMessage,
+  getText,
+  countTextWidth,
+  ScratchWindow,
+} from '../utils/helper';
 import { logger } from '../utils/logger';
-import { countTextWidth } from '../utils/helper';
-import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
+import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
+
+export let name2AiChat = new Map<string, BaseChatChannel>([
+  [kimiChatV2.getChatName(), kimiChatV2],
+  [deepseekChat.getChatName(), deepseekChat],
+]);
 
 let globalAiChat: BaseChatChannel | null = null;
+let globalScratchWindow = new ScratchWindow('Chat Input', 'text');
 
 export async function aiChatSelect() {
-  let choose = await window.showQuickPick(
-    [
-      { label: 'Kimi', chat: kimiChat },
-      { label: 'Deepseek', chat: deepseekChat },
-      { label: 'Bailian', chat: bailianChat },
-    ],
-    { title: 'Choose AI' },
-  );
+  let quickItems: any[] = [];
+  for (let [k, v] of name2AiChat) {
+    quickItems.push({ label: k, chat: v });
+  }
+
+  let choose = await window.showQuickPick(quickItems, { title: 'Choose AI' });
   if (choose) {
     globalAiChat = choose.chat;
     if (!globalAiChat) {
       return;
     }
   }
+}
+
+export function aiChatInputOpen() {
+  return async () => {
+    globalScratchWindow.open(['']);
+  };
 }
 
 export async function aiChatOpen() {
@@ -42,9 +55,9 @@ export async function aiChatOpen() {
       echoMessage('ErrorMsg', items.message);
       return -1;
     }
-    items.push({ label: 'Create', chat_id: '', description: '' });
+    items.push({ label: 'Create', chatId: '', description: '' });
     let choose = await window.showQuickPick(items, { title: 'Choose Chat' });
-    if (!choose || choose.chat_id.length == 0) {
+    if (!choose || choose.chatId.length == 0) {
       let new_name = await window.requestInput('Name', '', {
         position: 'center',
       });
@@ -52,15 +65,15 @@ export async function aiChatOpen() {
         return -1;
       }
 
-      const chat_id = await globalAiChat.createChatId(new_name);
-      if (chat_id instanceof Error) {
-        logger.error(chat_id);
+      let chatId = await globalAiChat.createChatId(new_name);
+      if (chatId instanceof Error) {
+        logger.error(chatId);
         return -1;
       }
-      globalAiChat.setCurrentChatId(chat_id);
+      globalAiChat.setCurrentChatId(chatId);
     } else {
-      globalAiChat.setCurrentChatId(choose.chat_id);
-      const err = await globalAiChat.showHistoryMessages();
+      globalAiChat.setCurrentChatId(choose.chatId);
+      let err = await globalAiChat.showHistoryMessages();
       if (err instanceof Error) {
         logger.error(err);
       }
@@ -72,7 +85,7 @@ export async function aiChatOpen() {
 
 export function aiChatChat(): () => ProviderResult<any> {
   return async () => {
-    const text = await getText('v');
+    let text = await getText('v');
     if (text.length == 0) {
       return;
     }
@@ -81,9 +94,7 @@ export function aiChatChat(): () => ProviderResult<any> {
     if (ret != 0 || !globalAiChat) {
       return;
     }
-    await globalAiChat.openAutoScroll();
-    await globalAiChat.chat(text);
-    globalAiChat.closeAutoScroll();
+    await globalAiChat.sendChat(text);
   };
 }
 
@@ -113,23 +124,23 @@ export function aiChatQuickChat(): () => ProviderResult<any> {
       return;
     }
 
-    await globalAiChat.openAutoScroll();
-    await globalAiChat.chat(text);
-    globalAiChat.closeAutoScroll();
+    await globalAiChat.sendChat(text);
   };
 }
 
 export function aiChatShow(): () => ProviderResult<any> {
   return async () => {
-    let { nvim } = workspace;
-    let bufnr = await nvim.call('bufnr');
-    let ai_name = await nvim.call('getbufvar', [bufnr, 'ai_name']);
-
-    if (ai_name == kimiChat.getChatName()) {
-      await kimiChat.showItem();
-    } else if (ai_name == deepseekChat.getChatName()) {
-      await deepseekChat.showItem();
+    if (globalAiChat != null) {
+      await globalAiChat.showItem();
     }
+    // let { nvim } = workspace;
+    // let bufnr = await nvim.call('bufnr');
+    // let ai_name = (await nvim.call('getbufvar', [bufnr, 'ai_name'])) as string;
+
+    // let ch = name2AiChat.get(ai_name);
+    // if (ch) {
+    //   await ch.showItem();
+    // }
   };
 }
 
@@ -144,24 +155,86 @@ export class AiChatList extends BasicList {
     private readonly aiChat: BaseChatChannel,
   ) {
     super();
-    this.addAction('open', AiChatList.open);
-  }
 
-  private static async open(
-    item: ListItem,
-    _context: ListContext,
-  ): Promise<void> {
-    logger.debug(item);
+    this.addAction('open', async (item: ListItem, _context: ListContext) => {
+      if (globalAiChat != null) {
+        if (globalAiChat == this.aiChat) {
+          globalAiChat.clear();
+        } else {
+          globalAiChat.hide();
+        }
+      }
+
+      let data: ChatItem = item.data;
+
+      this.aiChat.setCurrentChatId(data.chatId);
+      let err = await this.aiChat.showHistoryMessages();
+      if (err instanceof Error) {
+        logger.error(err);
+      }
+
+      globalAiChat = this.aiChat;
+      await globalAiChat.show();
+    });
+
+    this.addAction(
+      'delete',
+      async (item: ListItem, _context: ListContext) => {
+        let i = item.data as ChatItem;
+        let del = await window.showPrompt(`Delete session [ ${i.label} ]`);
+        if (del) {
+          let err = await this.aiChat.delSession(i.chatId);
+          if (err instanceof Error) {
+            logger.error(err);
+          }
+
+          if (this.aiChat.getCurrentChatId() === i.chatId) {
+            this.aiChat.clear();
+          }
+          if (globalAiChat == this.aiChat) {
+            globalAiChat = null;
+          }
+        }
+      },
+      {
+        reload: true,
+        persist: true,
+      },
+    );
+
+    this.addAction('new', async (_item: ListItem, _context: ListContext) => {
+      let new_name = await window.requestInput('Name', '', {
+        position: 'center',
+      });
+      if (new_name.length == 0) {
+        echoMessage('ErrorMsg', 'Input name first');
+        return;
+      }
+      let chatId = await this.aiChat.createChatId(new_name);
+      if (chatId instanceof Error) {
+        logger.error(chatId);
+        echoMessage('ErrorMsg', 'create session fail');
+        return;
+      }
+
+      this.aiChat.reset();
+      this.aiChat.setCurrentChatId(chatId);
+      await this.aiChat.show();
+
+      globalAiChat = this.aiChat;
+    });
   }
 
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
     let items = await this.aiChat.getChatList();
     if (items instanceof Error) {
+      logger.error(items);
+      echoMessage('ErrorMsg', items.message);
       return null;
     }
 
     let max_width = 0;
-    for (const i of items) {
+    for (let i of items) {
       let w = countTextWidth(i.label);
       if (w > max_width) {
         max_width = w;
@@ -169,11 +242,11 @@ export class AiChatList extends BasicList {
     }
 
     let res: ListItem[] = [];
-    for (const i of items) {
+    for (let i of items) {
       let lable_width = countTextWidth(i.label);
       let label_bytelen = Buffer.byteLength(i.label);
       let spaces = ' '.repeat(max_width - lable_width + 2);
-      let label = `${i.label}${spaces}${i.chat_id}  ${i.description}`;
+      let label = `${i.label}${spaces}${i.description}`;
       res.push({
         label,
         data: i,

@@ -128,7 +128,13 @@ class KimiChat extends BaseChatChannel {
       Origin: 'https://kimi.moonshot.cn',
       Referer: 'https://kimi.moonshot.cn',
       'x-msh-platform': 'web',
+      'x-language': 'zh-CN',
+      'r-timezone': 'Asia/Shanghai',
     };
+    this.urls = [];
+  }
+
+  public reset() {
     this.urls = [];
   }
 
@@ -148,8 +154,8 @@ class KimiChat extends BaseChatChannel {
       return -1;
     }
 
-    let cache_key = `${this.chat_id}-${segment_id}-search.json`;
-    let cache = await this.getFileCache(cache_key);
+    let cache_key = `${this.chatId}-${segment_id}-search.json`;
+    let cache = await this.cache.get(cache_key);
     if (cache instanceof Error) {
       return;
     }
@@ -182,8 +188,8 @@ class KimiChat extends BaseChatChannel {
     }
     let ref_id = arr[1];
 
-    let cache_key = `${this.chat_id}-${segment_id}.json`;
-    let cache = await this.getFileCache(cache_key);
+    let cache_key = `${this.chatId}-${segment_id}.json`;
+    let cache = await this.cache.get(cache_key);
     let item: null | KimiChatRefItem = null;
     if (cache instanceof Error) {
       let tmp = await this.refCard(segment_id);
@@ -192,7 +198,7 @@ class KimiChat extends BaseChatChannel {
         return;
       } else {
         item = tmp;
-        await this.setFileCache(cache_key, JSON.stringify(item));
+        await this.cache.set(cache_key, JSON.stringify(item));
       }
     } else {
       item = JSON.parse(cache.toString()) as KimiChatRefItem;
@@ -218,21 +224,24 @@ class KimiChat extends BaseChatChannel {
 
   public async showItem() {
     let ref_item = await getCurrentRef();
-    logger.debug(ref_item);
+    // logger.debug(ref_item);
     if (!ref_item) {
       return;
     }
 
-    if ((await this.tryGetRef(ref_item.segment_id, ref_item.ref_text)) !== -1) {
+    if ((await this.tryGetRef(ref_item.segmentId, ref_item.refText)) !== -1) {
       return;
     }
-    await this.tryGetSearchResult(ref_item.segment_id, ref_item.ref_text);
+    await this.tryGetSearchResult(ref_item.segmentId, ref_item.refText);
   }
 
-  private getHeaders(): http.OutgoingHttpHeaders {
+  private getHeaders(
+    contentType: string = 'application/json',
+  ): http.OutgoingHttpHeaders {
     this.headers['X-Traffic-Id'] = Array.from({ length: 20 }, () =>
       Math.floor(Math.random() * 36).toString(36),
     ).join('');
+    this.headers['Content-Type'] = contentType;
     return this.headers;
   }
 
@@ -323,7 +332,7 @@ class KimiChat extends BaseChatChannel {
       if (obj['items']) {
         const chat_list = obj['items'] as KimiChatItem[];
         return chat_list.map((i) => {
-          return { label: i.name, chat_id: i.id, description: i.updated_at };
+          return { label: i.name, chatId: i.id, description: i.updated_at };
         });
       } else {
         return [];
@@ -349,7 +358,7 @@ class KimiChat extends BaseChatChannel {
       data: JSON.stringify({
         queries: [
           {
-            chat_id: this.chat_id,
+            chatId: this.chatId,
             sid: segment_id,
             z_idx: 0,
           },
@@ -377,7 +386,7 @@ class KimiChat extends BaseChatChannel {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
-        path: `/api/chat/${this.chat_id}/segment/scroll`,
+        path: `/api/chat/${this.chatId}/segment/scroll`,
         method: 'POST',
         protocol: 'https:',
         headers: this.getHeaders(),
@@ -424,11 +433,8 @@ class KimiChat extends BaseChatChannel {
             }
           }
           if (cnt > 0) {
-            let cache_key = `${this.chat_id}-${item.id}-search.json`;
-            await this.setFileCache(
-              cache_key,
-              JSON.stringify(item.search_plus),
-            );
+            let cache_key = `${this.chatId}-${item.id}-search.json`;
+            await this.cache.set(cache_key, JSON.stringify(item.search_plus));
             this.append(`[search result (${cnt})]\n`);
           }
         }
@@ -439,7 +445,7 @@ class KimiChat extends BaseChatChannel {
   }
 
   public async chat(text: string) {
-    if (!this.chat_id) {
+    if (!this.chatId) {
       return;
     }
     this.appendUserInput(new Date().toISOString(), text);
@@ -517,7 +523,7 @@ class KimiChat extends BaseChatChannel {
     const req: HttpRequest = {
       args: {
         host: 'kimi.moonshot.cn',
-        path: `/api/chat/${this.chat_id}/completion/stream`,
+        path: `/api/chat/${this.chatId}/completion/stream`,
         method: 'POST',
         protocol: 'https:',
         headers: this.getHeaders(),
@@ -535,15 +541,33 @@ class KimiChat extends BaseChatChannel {
     logger.info(statusCode);
   }
 
+  public async delSession(chatId: string): Promise<null | Error> {
+    let req: HttpRequest = {
+      args: {
+        host: 'www.kimi.com',
+        path: '/apiv2/kimi.chat.v1.ChatService/DeleteChat',
+        method: 'POST',
+        protocol: 'https:',
+        headers: this.getHeaders(),
+      },
+      data: `{"chatId":"${chatId}"}`,
+    };
+    let resp = await this.sendHttpRequest(req);
+    if (resp instanceof Error) {
+      return resp;
+    }
+    return null;
+  }
+
   // public async debug() {
   //   console.log(await this.getAccessToken());
   //   console.log(await this.createChatId('Kimi'));
-  //   console.log(this.chat_id);
+  //   console.log(this.chatId);
 
   //   const req: HttpRequest = {
   //     args: {
   //       host: 'kimi.moonshot.cn',
-  //       path: `/api/chat/${this.chat_id}/completion/stream`,
+  //       path: `/api/chat/${this.chatId}/completion/stream`,
   //       method: 'POST',
   //       protocol: 'https:',
   //       headers: this.getHeaders(),

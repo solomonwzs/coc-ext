@@ -3,7 +3,7 @@ import { callShell } from './externalexec';
 // import { logger } from './logger';
 
 export function decodeStr(str: string, enc: string): string {
-  const re = /\x(..)/g;
+  const re = /\\x(..)/g;
   let expl = re.exec(str);
   const buf: number[] = [];
   while (expl) {

@@ -6,6 +6,9 @@ import {
   TextEdit,
 } from 'coc.nvim';
 import { FormatterSetting } from '../utils/types';
+import { callShell } from '../utils/externalexec';
+import { showNotification } from '../utils/notify';
+import { logger } from '../utils/logger';
 
 export abstract class BaseFormatter {
   protected setting: FormatterSetting;
@@ -22,4 +25,30 @@ export abstract class BaseFormatter {
   ): Promise<TextEdit[]>;
 
   public abstract supportRangeFormat(): boolean;
+
+  protected async callShellFormatDocment(
+    exec: string,
+    args: string[],
+    doc: TextDocument,
+  ): Promise<TextEdit[]> {
+    let resp = await callShell(exec, args, doc.getText());
+    if (resp.exitCode != 0) {
+      showNotification(`${exec} fail, ret ${resp.exitCode}`, 'formatter');
+      if (resp.error) {
+        logger.error(resp.error.toString());
+      }
+    } else if (resp.data) {
+      showNotification(`${exec} ok`, 'formatter');
+      return [
+        TextEdit.replace(
+          {
+            start: { line: 0, character: 0 },
+            end: { line: doc.lineCount, character: 0 },
+          },
+          resp.data.toString(),
+        ),
+      ];
+    }
+    return [];
+  }
 }
