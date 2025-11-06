@@ -28,12 +28,32 @@ interface Search {
   webPages?: WebPage[];
 }
 
+interface FileInfo {
+  id: string;
+  meta: {
+    name: string;
+    contentType: string;
+    sizeBytes: string;
+    checksum: string;
+    ext: string;
+    createTime: string;
+    type: string;
+  };
+  blob: {
+    signUrl: string;
+    previewUrl: string;
+  };
+  tokenCount: string;
+  status: string;
+}
+
 interface Block {
   id: string;
   text?: {
     content: string;
   };
   search?: Search;
+  file?: FileInfo;
 }
 
 interface Ref {
@@ -387,27 +407,37 @@ class KimiChatV2 extends BaseChatChannel {
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
-    const msgList = await this.chatScroll();
+    let msgList = await this.chatScroll();
     if (msgList instanceof Error) {
       return msgList;
     }
 
     for (const msg of msgList) {
-      if (
-        msg.role == 'user' &&
-        msg.blocks &&
-        msg.blocks.length > 0 &&
-        msg.blocks[0].text
-      ) {
-        this.chan.appendUserInput(
-          msg.createTime ? msg.createTime : '',
-          msg.blocks[0].text.content,
-        );
-      } else if (msg.role == 'assistant' && msg.blocks) {
+      if (!msg.blocks || msg.blocks.length == 0) {
+        continue;
+      }
+
+      if (msg.role == 'user') {
+        for (let block of msg.blocks.reverse()) {
+          if (block.text) {
+            this.chan.appendUserInput(
+              msg.createTime ? msg.createTime : '',
+              block.text.content,
+            );
+          } else if (block.file) {
+            this.chan.appendUserInput(
+              block.file.meta.createTime,
+              ` [file: ${block.file.meta.name}](${block.file.blob.previewUrl})`,
+            );
+          } else {
+            logger.debug(block);
+          }
+        }
+      } else if (msg.role == 'assistant') {
         this.currentMsgid = msg.id;
         this.chan.append(`>> id:${msg.id}\n`);
 
-        for (let block of msg.blocks) {
+        for (let block of msg.blocks.reverse()) {
           if (block.search) {
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             await this.cache.set(cacheKey, JSON.stringify(block.search));
@@ -418,6 +448,8 @@ class KimiChatV2 extends BaseChatChannel {
             }
           } else if (block.text) {
             this.chan.append(block.text.content);
+          } else {
+            logger.debug(block);
           }
         }
 
