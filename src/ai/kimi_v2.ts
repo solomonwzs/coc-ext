@@ -47,6 +47,17 @@ interface FileInfo {
   status: string;
 }
 
+interface Exception {
+  error: {
+    reason: string;
+    localizedMessage: {
+      locale: string;
+      message: string;
+    };
+    severity: string;
+  };
+}
+
 interface Block {
   id: string;
   text?: {
@@ -54,6 +65,7 @@ interface Block {
   };
   search?: Search;
   file?: FileInfo;
+  exception?: Exception;
 }
 
 interface Ref {
@@ -245,7 +257,6 @@ class KimiChatV2 extends BaseChatChannel {
       return -1;
     }
     let refId = arr[1];
-    logger.debug(refId);
 
     let cacheKey = `${this.chatId}-${segment_id}-refs.json`;
     let cache = await this.cache.get(cacheKey);
@@ -253,7 +264,6 @@ class KimiChatV2 extends BaseChatChannel {
       logger.error(cache);
       return 0;
     }
-    logger.debug(cache.toString());
     let refs = JSON.parse(cache.toString()) as Ref[];
     for (let chunk of refs) {
       if (chunk.id != refId) {
@@ -271,7 +281,6 @@ class KimiChatV2 extends BaseChatChannel {
 
   public async showItem() {
     let refItem = await getCurrentRef();
-    logger.debug(refItem);
     if (!refItem) {
       return;
     }
@@ -437,7 +446,7 @@ class KimiChatV2 extends BaseChatChannel {
         this.currentMsgid = msg.id;
         this.chan.append(`>> id:${msg.id}\n`);
 
-        for (let block of msg.blocks.reverse()) {
+        for (let block of msg.blocks) {
           if (block.search) {
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             await this.cache.set(cacheKey, JSON.stringify(block.search));
@@ -448,6 +457,10 @@ class KimiChatV2 extends BaseChatChannel {
             }
           } else if (block.text) {
             this.chan.append(block.text.content);
+          } else if (block.exception) {
+            this.chan.append(
+              ` ${block.exception.error.localizedMessage.message}`,
+            );
           } else {
             logger.debug(block);
           }
@@ -504,6 +517,14 @@ class KimiChatV2 extends BaseChatChannel {
             ) {
               this.chan.append(`>> id:${msg.message.id}\n`);
               this.currentMsgid = msg.message.id;
+            } else if (
+              msg.op === 'set' &&
+              msg.mask === 'block.text' &&
+              msg.block &&
+              msg.block.text &&
+              msg.block.text.content
+            ) {
+              this.chan.append(msg.block.text.content, false);
             } else if (msg.op === 'append' && msg.block) {
               if (
                 msg.block.text &&

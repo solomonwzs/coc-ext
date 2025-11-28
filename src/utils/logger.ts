@@ -1,6 +1,6 @@
 import { OutputChannel, window } from 'coc.nvim';
 import { getcfg } from './config';
-import { stringify, getCallStack } from './common';
+import { stringify } from './common';
 import path from 'path';
 
 export class Logger {
@@ -18,6 +18,10 @@ export class Logger {
     return this.channel.dispose();
   }
 
+  private padZero(i: number, n: number) {
+    return i.toString().padStart(n, '0');
+  }
+
   private logLevel(level: string, value: any): void {
     const now = new Date();
     const str = stringify(value);
@@ -27,12 +31,12 @@ export class Logger {
         const re = /at ((.*) \()?([^:]+):(\d+):(\d+)\)?/g;
         const expl = re.exec(stack[3]);
         if (expl) {
-          // const func = expl[2];
+          const func = expl[2];
           const file = path.basename(expl[3]);
           const line = expl[4];
           // const char = expl[5];
           this.channel.appendLine(
-            `${now.toISOString()} ${level} [${file}:${line}] ${str}`,
+            `${now.getFullYear()}-${this.padZero(now.getMonth() + 1, 2)}-${this.padZero(now.getDate(), 2)} ${this.padZero(now.getHours(), 2)}:${this.padZero(now.getMinutes(), 2)}:${this.padZero(now.getSeconds(), 2)} ${level} [${file}:${func}:${line}] ${str}`,
           );
           return;
         }
