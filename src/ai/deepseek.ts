@@ -294,13 +294,11 @@ class ChunkDecoder {
 }
 
 class DeepseekChat extends BaseChatChannel {
-  private authKey: string;
   private currentMsgid: number | null;
   private sha3Wasm: Sha3Wasm | null;
 
-  constructor(public readonly key: string) {
+  constructor(readonly authKey: string) {
     super();
-    this.authKey = key;
     this.currentMsgid = null;
     this.sha3Wasm = null;
   }
