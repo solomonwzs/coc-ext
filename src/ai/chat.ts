@@ -1,7 +1,8 @@
 import { window, workspace, ProviderResult } from 'coc.nvim';
 import { BaseChatChannel, ChatItem } from './base';
-import { kimiChatV2 } from './kimi_v2';
+import { commonChat } from './common';
 import { deepseekChat } from './deepseek';
+import { kimiChatV2 } from './kimi_v2';
 import {
   echoMessage,
   getText,
@@ -14,6 +15,7 @@ import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
 export let name2AiChat = new Map<string, BaseChatChannel>([
   [kimiChatV2.getChatName(), kimiChatV2],
   [deepseekChat.getChatName(), deepseekChat],
+  [commonChat.getChatName(), commonChat],
 ]);
 
 let globalAiChat: BaseChatChannel | null = null;
@@ -156,7 +158,29 @@ export class AiChatList extends BasicList {
   ) {
     super();
 
-    this.addAction('open', async (item: ListItem, _context: ListContext) => {
+    let newAction = async (_item: ListItem, _context: ListContext) => {
+      let new_name = await window.requestInput('Name', '', {
+        position: 'center',
+      });
+      if (new_name.length == 0) {
+        echoMessage('ErrorMsg', 'Input name first');
+        return;
+      }
+      let chatId = await this.aiChat.createChatId(new_name);
+      if (chatId instanceof Error) {
+        logger.error(chatId);
+        echoMessage('ErrorMsg', 'create session fail');
+        return;
+      }
+
+      this.aiChat.reset();
+      this.aiChat.setCurrentChatId(chatId);
+      await this.aiChat.show();
+
+      globalAiChat = this.aiChat;
+    };
+
+    this.addAction('open', async (item: ListItem, context: ListContext) => {
       if (globalAiChat != null) {
         if (globalAiChat == this.aiChat) {
           globalAiChat.clear();
@@ -165,16 +189,20 @@ export class AiChatList extends BasicList {
         }
       }
 
-      let data: ChatItem = item.data;
+      if (item.data === '$new') {
+        await newAction(item, context);
+      } else {
+        let data: ChatItem = item.data;
 
-      this.aiChat.setCurrentChatId(data.chatId);
-      let err = await this.aiChat.showHistoryMessages();
-      if (err instanceof Error) {
-        logger.error(err);
+        this.aiChat.setCurrentChatId(data.chatId);
+        let err = await this.aiChat.showHistoryMessages();
+        if (err instanceof Error) {
+          logger.error(err);
+        }
+
+        globalAiChat = this.aiChat;
+        await globalAiChat.show();
       }
-
-      globalAiChat = this.aiChat;
-      await globalAiChat.show();
     });
 
     this.addAction(
@@ -202,27 +230,7 @@ export class AiChatList extends BasicList {
       },
     );
 
-    this.addAction('new', async (_item: ListItem, _context: ListContext) => {
-      let new_name = await window.requestInput('Name', '', {
-        position: 'center',
-      });
-      if (new_name.length == 0) {
-        echoMessage('ErrorMsg', 'Input name first');
-        return;
-      }
-      let chatId = await this.aiChat.createChatId(new_name);
-      if (chatId instanceof Error) {
-        logger.error(chatId);
-        echoMessage('ErrorMsg', 'create session fail');
-        return;
-      }
-
-      this.aiChat.reset();
-      this.aiChat.setCurrentChatId(chatId);
-      await this.aiChat.show();
-
-      globalAiChat = this.aiChat;
-    });
+    this.addAction('new', newAction);
   }
 
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
@@ -233,31 +241,43 @@ export class AiChatList extends BasicList {
       return null;
     }
 
-    let max_width = 0;
+    let maxWidth = 0;
     for (let i of items) {
       let w = countTextWidth(i.label);
-      if (w > max_width) {
-        max_width = w;
+      if (w > maxWidth) {
+        maxWidth = w;
       }
     }
 
     let res: ListItem[] = [];
     for (let i of items) {
-      let lable_width = countTextWidth(i.label);
-      let label_bytelen = Buffer.byteLength(i.label);
-      let spaces = ' '.repeat(max_width - lable_width + 2);
+      let lableWidth = countTextWidth(i.label);
+      let labelByteLen = Buffer.byteLength(i.label);
+      let spaces = ' '.repeat(maxWidth - lableWidth + 2);
       let label = `${i.label}${spaces}${i.description}`;
       res.push({
         label,
         data: i,
         ansiHighlights: [
           {
-            span: [label_bytelen, Buffer.byteLength(label)],
+            span: [labelByteLen, Buffer.byteLength(label)],
             hlGroup: 'Comment',
           },
         ],
       });
     }
+
+    let newLabel = '[  New Session ]';
+    res.push({
+      label: newLabel,
+      data: '$new',
+      ansiHighlights: [
+        {
+          span: [0, Buffer.byteLength(newLabel)],
+          hlGroup: 'Cursor',
+        },
+      ],
+    });
     return res;
   }
 }

@@ -104,6 +104,7 @@ export class CocExtError extends Error {
   static ERR_AUTH = -2;
   static ERR_KIMI = -3;
   static ERR_DEEPSEEK = -4;
+  static ERR_COMM_AI = -5;
 }
 
 export class CocExtErrnoError extends Error {

@@ -202,7 +202,7 @@ export async function sendHttpRequestWithCallback(
 
 export async function simpleHttpDownloadFile(addr: string, pathname: string) {
   const url = new URL(addr);
-  const proxy_url = getEnvHttpProxy(url.protocol == 'https:');
+  const proxyUrl = getEnvHttpProxy(url.protocol == 'https:');
   const req: HttpRequest = {
     args: {
       headers: {
@@ -218,8 +218,8 @@ export async function simpleHttpDownloadFile(addr: string, pathname: string) {
       method: 'GET',
       protocol: url.protocol,
     },
-    proxy: proxy_url
-      ? { host: proxy_url.hostname, port: parseInt(proxy_url.port) }
+    proxy: proxyUrl
+      ? { host: proxyUrl.hostname, port: parseInt(proxyUrl.port) }
       : undefined,
   };
   const fd = await fsOpen(pathname, 'w');
