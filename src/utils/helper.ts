@@ -292,3 +292,60 @@ export class ScratchWindow {
     }
   }
 }
+
+interface AlignList {
+  align: 'L' | 'R';
+  maxWidth: number;
+  strList: {
+    word: string;
+    width: number;
+  }[];
+}
+export class StringAlignHelper {
+  private alignList: AlignList[];
+
+  constructor(readonly align: string) {
+    this.alignList = [];
+    for (let i of align) {
+      let a: 'L' | 'R' = i == 'L' ? 'L' : 'R';
+      this.alignList.push({
+        align: a,
+        maxWidth: 0,
+        strList: [],
+      });
+    }
+  }
+
+  public put(...items: string[]) {
+    if (items.length != this.align.length) {
+      return -1;
+    } else {
+      for (let i = 0; i < this.align.length; ++i) {
+        let w = countTextWidth(items[i]);
+        if (this.alignList[i].maxWidth < w) {
+          this.alignList[i].maxWidth = w;
+        }
+        this.alignList[i].strList.push({
+          word: items[i],
+          width: w,
+        });
+      }
+      return 0;
+    }
+  }
+
+  public get(row: number, col: number): string {
+    if (
+      col >= this.alignList.length ||
+      row >= this.alignList[col].strList.length
+    ) {
+      return '';
+    }
+    let spaces = ' '.repeat(
+      this.alignList[col].maxWidth - this.alignList[col].strList[row].width,
+    );
+    return this.alignList[col].align == 'L'
+      ? `${this.alignList[col].strList[row].word}${spaces}`
+      : `${spaces}${this.alignList[col].strList[row].word}`;
+  }
+}

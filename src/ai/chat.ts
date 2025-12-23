@@ -1,6 +1,6 @@
 import { window, workspace, ProviderResult } from 'coc.nvim';
 import { BaseChatChannel, ChatItem } from './base';
-import { commonChat } from './common';
+import { llmCommonChat } from './llmcommon';
 import { deepseekChat } from './deepseek';
 import { kimiChatV2 } from './kimi_v2';
 import {
@@ -15,7 +15,7 @@ import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
 export let name2AiChat = new Map<string, BaseChatChannel>([
   [kimiChatV2.getChatName(), kimiChatV2],
   [deepseekChat.getChatName(), deepseekChat],
-  [commonChat.getChatName(), commonChat],
+  [llmCommonChat.getChatName(), llmCommonChat],
 ]);
 
 let globalAiChat: BaseChatChannel | null = null;

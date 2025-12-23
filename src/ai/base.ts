@@ -81,7 +81,7 @@ export class ChatChannel {
     this.winid = -1;
   }
 
-  public async append(text: string, newline: boolean = true) {
+  public append(text: string, newline: boolean = true) {
     if (newline) {
       this.channel.appendLine(text);
     } else {
@@ -90,11 +90,11 @@ export class ChatChannel {
 
     if (this.winid != -1) {
       let { nvim } = workspace;
-      await nvim.call('win_execute', [this.winid, 'norm G']);
+      nvim.call('win_execute', [this.winid, 'norm G']);
     }
   }
 
-  public async appendUserInput(datetime: string, text: string) {
+  public appendUserInput(datetime: string, text: string) {
     this.append(`\n>> ${datetime}`);
     let lines = text.split('\n');
     for (const i of lines) {
@@ -108,6 +108,44 @@ export class ChatChannel {
       this.channel = window.createOutputChannel(this.chatName);
       this.winid = -1;
     }
+  }
+}
+
+interface ChatCompletion {
+  type: string;
+  data: string;
+}
+export class ChunkDecoder {
+  private cache: Buffer;
+
+  constructor() {
+    this.cache = Buffer.from('');
+  }
+
+  public decode(buf: Buffer): ChatCompletion[] {
+    this.cache = Buffer.concat([this.cache, buf]);
+
+    let out: ChatCompletion[] = [];
+    while (this.cache.length > 0) {
+      let pos = this.cache.indexOf('\n');
+      if (pos < 0) {
+        break;
+      } else {
+        let str = this.cache.subarray(0, pos).toString();
+        this.cache = this.cache.subarray(pos + 1);
+
+        let pos0 = str.indexOf(':');
+        if (pos0 >= 0) {
+          out.push({
+            type: str.substring(0, pos0).trim(),
+            data: str.substring(pos0 + 1).trim(),
+          });
+        } else if (str.length > 0) {
+          logger.debug(str);
+        }
+      }
+    }
+    return out;
   }
 }
 

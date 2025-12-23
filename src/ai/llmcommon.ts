@@ -6,20 +6,21 @@ import {
   HttpRequest,
   HttpRequestCallback,
 } from '../utils/http';
-import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
+import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
 import { logger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
 import fs from 'fs';
 import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';
-import { popup, ScratchWindow, countTextWidth } from '../utils/helper';
+import {
+  popup,
+  ScratchWindow,
+  countTextWidth,
+  StringAlignHelper,
+} from '../utils/helper';
 import { getEnvHttpProxy } from '../utils/common';
 import { window, workspace, ProviderResult } from 'coc.nvim';
-
-interface IDictionary {
-  [index: string]: string;
-}
 
 interface LlmServConfig {
   auth_headers: {
@@ -43,23 +44,44 @@ interface LlmModelsResponse {
   models: LlmModels[];
 }
 
-interface ChatMessage {
+interface LlmChatMessage {
   role: string;
   content: string;
 }
 
-interface ChatRecords {
+interface LlmChatRequest {
   model: string;
-  messages: ChatMessage[];
+  messages: LlmChatMessage[];
   temperature: number;
   top_p: number;
   stream: boolean;
 }
 
-class CommonChat extends BaseChatChannel {
+interface LlmChatResponseData {
+  choices: {
+    delta: {
+      role?: string;
+      content?: string;
+      tool_calls: any[];
+    };
+    index: number;
+    finish_reason?: string;
+  }[];
+  created: number;
+  id: string;
+  model: string;
+  object: string;
+  usage: {
+    completion_tokens: number;
+    prompt_tokens: number;
+    total_tokens: number;
+  };
+}
+
+class LlmCommonChat extends BaseChatChannel {
   private endpoint: URL;
   private headers: http.OutgoingHttpHeaders;
-  private chatRecords: ChatRecords;
+  private chatChain: LlmChatRequest;
   private proxy:
     | {
         host: string;
@@ -78,7 +100,7 @@ class CommonChat extends BaseChatChannel {
       this.headers[key] = servConf.auth_headers[key];
     }
 
-    this.chatRecords = {
+    this.chatChain = {
       model: '',
       messages: [],
       temperature: 1,
@@ -96,11 +118,11 @@ class CommonChat extends BaseChatChannel {
   }
 
   public reset(): void {
-    this.chatRecords.messages = [];
+    this.chatChain.messages = [];
   }
 
   public getChatName(): string {
-    return 'Common';
+    return 'LlmCommon';
   }
 
   public async getChatList(): Promise<ChatItem[] | Error> {
@@ -126,17 +148,14 @@ class CommonChat extends BaseChatChannel {
         `[CommAI] statusCode: ${resp.statusCode}, path: ${req.args.path}, resp: ${resp.body?.toString()}`,
       );
     }
-    let llmResp = JSON.parse(resp.body.toString()) as LlmModelsResponse;
 
-    let maxWidth = 0;
+    let llmResp = JSON.parse(resp.body.toString()) as LlmModelsResponse;
+    let alignHelper = new StringAlignHelper('LR');
     for (let i of llmResp.models) {
       if (!i.enabled) {
         continue;
       }
-      let w = countTextWidth(i.alias);
-      if (w > maxWidth) {
-        maxWidth = w;
-      }
+      alignHelper.put(i.alias, i.tokenLimit.toString());
     }
 
     let quickItems: any[] = [];
@@ -144,23 +163,26 @@ class CommonChat extends BaseChatChannel {
       if (!i.enabled) {
         continue;
       }
-      let lableWidth = countTextWidth(i.alias);
-      let spaces = ' '.repeat(maxWidth - lableWidth + 2);
+      let n = quickItems.length;
       quickItems.push({
-        label: `${i.alias}${spaces}f[${i.enableFunctionCall ? 'o' : 'x'}] m[${i.multimodalEnabled ? 'o' : 'x'}] t[${i.tokenLimit}]`,
+        label: `${alignHelper.get(n, 0)}    f[${i.enableFunctionCall ? 'o' : 'x'}] m[${i.multimodalEnabled ? 'o' : 'x'}] t[${alignHelper.get(n, 1)}]`,
         data: i,
       });
     }
-    let choose: LlmModels = await window.showQuickPick(quickItems, {
+
+    let choose = await window.showQuickPick(quickItems, {
       title: 'Choose model',
     });
     if (choose) {
-      this.model = choose;
-      this.chatRecords.model = choose.name;
+      logger.debug(choose);
+      this.model = choose.data;
+      this.chatChain.model = choose.data.name;
     } else {
       return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
     }
-    return crypto.randomUUID();
+    let chatId = crypto.randomUUID();
+    this.headers['X-Conversation-Id'] = chatId;
+    return chatId;
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
@@ -170,7 +192,60 @@ class CommonChat extends BaseChatChannel {
   public async showItem(): Promise<void> {}
 
   public async chat(text: string): Promise<void> {
+    let reqId = crypto.randomUUID();
     this.chan.appendUserInput(new Date().toISOString(), text);
+    this.chan.append(`>> id:${reqId}\n`);
+
+    this.chatChain.messages.push({
+      role: 'user',
+      content: text,
+    });
+
+    let decoder = new ChunkDecoder();
+    let respText: string = '';
+    let cb: HttpRequestCallback = {
+      onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
+        if (rsp.statusCode != 200) {
+          logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
+          return;
+        }
+
+        let msgList = decoder.decode(chunk);
+        for (let m of msgList) {
+          let data = JSON.parse(m.data) as LlmChatResponseData;
+          for (let c of data.choices) {
+            if (c.finish_reason === 'stop') {
+              this.chatChain.messages.push({
+                role: 'assistant',
+                content: respText,
+              });
+              this.chan.append(
+                ` (END, tokens: in ${data.usage.prompt_tokens}, out ${data.usage.completion_tokens}, all ${data.usage.total_tokens})`,
+              );
+            } else if (c.delta.content) {
+              respText += c.delta.content;
+              this.chan.append(c.delta.content, false);
+            }
+          }
+        }
+      },
+    };
+
+    this.headers['Content-Type'] = 'application/json';
+    this.headers['X-Request-Id'] = reqId;
+    let req: HttpRequest = {
+      args: {
+        host: this.endpoint.hostname,
+        path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
+        method: 'POST',
+        protocol: this.endpoint.protocol,
+        headers: this.headers,
+        timeout: 1000,
+      },
+      proxy: this.proxy,
+      data: JSON.stringify(this.chatChain),
+    };
+    await sendHttpRequestWithCallback(req, cb);
   }
 
   public async delSession(_chatId: string): Promise<null | Error> {
@@ -178,7 +253,7 @@ class CommonChat extends BaseChatChannel {
   }
 }
 
-function create_common_chat() {
+function create_llm_common_chat() {
   if (process.env.MY_AI_COMMON_CONF_PATH) {
     let confPath = process.env.MY_AI_COMMON_CONF_PATH;
     try {
@@ -186,16 +261,15 @@ function create_common_chat() {
       let conf = JSON.parse(
         fs.readFileSync(confPath).toString(),
       ) as LlmServConfig;
-      logger.debug(conf);
-      return new CommonChat(conf);
+      return new LlmCommonChat(conf);
     } catch (err) {
       logger.error(err);
     }
   }
-  return new CommonChat({
+  return new LlmCommonChat({
     auth_headers: {},
-    endpoint: '',
+    endpoint: 'http://127.0.0.1',
   });
 }
 
-export const commonChat = create_common_chat();
+export const llmCommonChat = create_llm_common_chat();

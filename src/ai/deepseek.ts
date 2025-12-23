@@ -6,7 +6,7 @@ import {
   HttpRequest,
   HttpRequestCallback,
 } from '../utils/http';
-import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
+import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
 import { logger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
@@ -116,11 +116,6 @@ interface ChatComplData {
   o?: string;
   p?: string;
   v?: ChatComplResp | string | ChatSearchResult[] | ChatPV[];
-}
-
-interface ChatCompletion {
-  event?: string;
-  data?: ChatComplData;
 }
 
 class Sha3Wasm {
@@ -255,43 +250,6 @@ function searchReault2Lines(item: ChatSearchResult, idx: number) {
 }
 
 let searchWindow = new ScratchWindow('Deepseek Search', 'markdown');
-
-class ChunkDecoder {
-  private cache: Buffer;
-
-  constructor() {
-    this.cache = Buffer.from('');
-  }
-
-  public decode(buf: Buffer): ChatCompletion[] {
-    this.cache = Buffer.concat([this.cache, buf]);
-
-    let out: ChatCompletion[] = [];
-    while (this.cache.length > 0) {
-      let pos = this.cache.indexOf('\n');
-      if (pos < 0) {
-        break;
-      } else {
-        let str = this.cache.subarray(0, pos).toString();
-        this.cache = this.cache.subarray(pos + 1);
-
-        try {
-          if (str.slice(0, 6) === 'event:') {
-            out.push({ event: str.slice(7).trim() });
-          } else if (str.slice(0, 5) === 'data:') {
-            out.push({ data: JSON.parse(str.slice(5)) });
-          } else if (str.length > 0) {
-            logger.debug(str);
-          }
-        } catch (e) {
-          logger.debug(str);
-          logger.error(e);
-        }
-      }
-    }
-    return out;
-  }
-}
 
 class DeepseekChat extends BaseChatChannel {
   private currentMsgid: number | null;
@@ -584,7 +542,7 @@ class DeepseekChat extends BaseChatChannel {
         prompt,
         ref_file_ids: [],
         search_enabled: true,
-        thinking_enabled: true,
+        thinking_enabled: false,
       }),
     };
 
@@ -599,52 +557,52 @@ class DeepseekChat extends BaseChatChannel {
         }
 
         let msgList = decoder.decode(chunk);
-        for (let msg of msgList) {
-          if (msg.event) {
-            event = msg.event;
+        for (let m of msgList) {
+          if (m.type === 'event') {
+            event = m.data;
             if (event === 'close') {
               this.chan.append('\n(END)');
             }
-          } else if (msg.data) {
+          } else if (m.type === 'data') {
+            let d = JSON.parse(m.data) as ChatComplData;
             if (event === 'ready') {
               if (
-                msg.data.request_message_id != undefined &&
-                msg.data.response_message_id != undefined
+                d.request_message_id != undefined &&
+                d.response_message_id != undefined
               ) {
-                this.chan.append(`>> id:${msg.data.response_message_id}\n`);
-                this.currentMsgid = msg.data.response_message_id;
+                this.chan.append(`>> id:${d.response_message_id}\n`);
+                this.currentMsgid = d.response_message_id;
               }
             } else if (event === 'update_session') {
-              if (msg.data.p) {
-                p = msg.data.p;
+              if (d.p) {
+                p = d.p;
               }
 
               if (p === 'response/search_status') {
-                if (msg.data.v === 'FINISHED' && searchResults.length > 0) {
+                if (d.v === 'FINISHED' && searchResults.length > 0) {
                   this.chan.append(
                     ` [search result (${searchResults.length})]\n`,
                   );
                 }
               } else if (p === 'response/search_results') {
-                if (Array.isArray(msg.data.v)) {
-                  searchResults.push(...(msg.data.v as ChatSearchResult[]));
+                if (Array.isArray(d.v)) {
+                  searchResults.push(...(d.v as ChatSearchResult[]));
                 }
-              } else if (
-                p === 'response/content' &&
-                typeof msg.data.v === 'string'
-              ) {
-                this.chan.append(msg.data.v, false);
+              } else if (p === 'response/content' && typeof d.v === 'string') {
+                this.chan.append(d.v, false);
               } else if (p === 'response/thinking_content') {
-                if (msg.data.p === 'response/thinking_content') {
+                if (d.p === 'response/thinking_content') {
                   this.chan.append('---');
                 }
-                if (typeof msg.data.v === 'string') {
-                  this.chan.append(msg.data.v, false);
+                if (typeof d.v === 'string') {
+                  this.chan.append(d.v, false);
                 }
               } else if (p === 'response/thinking_elapsed_secs') {
                 this.chan.append('\n\n---\n');
               }
             }
+          } else {
+            logger.debug(m);
           }
         }
       },
