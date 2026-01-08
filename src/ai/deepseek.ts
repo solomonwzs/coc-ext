@@ -281,6 +281,7 @@ class DeepseekChat extends BaseChatChannel {
       Origin: 'https://chat.deepseek.com',
       'x-client-locale': 'zh_CN',
       'x-client-platform': 'web',
+      'Content-Type': 'application/json',
     };
   }
 
@@ -611,7 +612,9 @@ class DeepseekChat extends BaseChatChannel {
         this.chan.append(err.message);
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        logger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}`);
+        logger.info(
+          `[Deepseek] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`,
+        );
       },
       onTimeout: () => {
         logger.error('[Deepseek] timeout');

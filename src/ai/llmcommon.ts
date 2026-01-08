@@ -49,9 +49,38 @@ interface LlmChatMessage {
   content: string;
 }
 
+interface LlmChatTool {
+  type: string;
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: string;
+      properties: {
+        [index: string]: {
+          type: string;
+          description?: string;
+          format?: 'email' | 'hostname' | 'ipv4' | 'ipv6' | 'uuid';
+          pattern?: string;
+          minimum?: number;
+          maximum?: number;
+          exclusiveMinimum?: number;
+          exclusiveMaximum?: number;
+          default?: number;
+          multipleOf?: number;
+          enum?: string[];
+          anyOf?: any;
+        };
+      };
+      required: string[];
+    };
+  };
+}
+
 interface LlmChatRequest {
   model: string;
   messages: LlmChatMessage[];
+  tools?: LlmChatTool[];
   temperature: number;
   top_p: number;
   stream: boolean;
@@ -60,12 +89,15 @@ interface LlmChatRequest {
 interface LlmChatResponseData {
   choices: {
     delta: {
-      role?: string;
-      content?: string;
-      tool_calls: any[];
+      role?: string | null;
+      content?: string | null;
+      tool_calls: any[] | null;
+      reasoning_content?: string;
     };
     index: number;
-    finish_reason?: string;
+    finish_reason?: string | null;
+    logprobs?: null;
+    matched_stop?: number | null;
   }[];
   created: number;
   id: string;
@@ -75,7 +107,10 @@ interface LlmChatResponseData {
     completion_tokens: number;
     prompt_tokens: number;
     total_tokens: number;
-  };
+    prompt_tokens_details: {
+      cached_tokens: number;
+    };
+  } | null;
 }
 
 class LlmCommonChat extends BaseChatChannel {
@@ -103,6 +138,22 @@ class LlmCommonChat extends BaseChatChannel {
     this.chatChain = {
       model: '',
       messages: [],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'get_weather',
+            description: '查询指定城市天气',
+            parameters: {
+              type: 'object',
+              required: ['location'],
+              properties: {
+                location: { type: 'string', description: '城市名称' },
+              },
+            },
+          },
+        },
+      ],
       temperature: 1,
       top_p: 0.95,
       stream: true,
@@ -201,33 +252,72 @@ class LlmCommonChat extends BaseChatChannel {
       content: text,
     });
 
+    const kStatusNone = 0;
+    const kStatusReasoning = 1;
+    const kStatusContent = 2;
+    const kStatusStop = 3;
+
     let decoder = new ChunkDecoder();
     let respText: string = '';
+    let status: number = kStatusNone;
+    let promptTokens: number = 0;
+    let completionTokens: number = 0;
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
           logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
         }
+        logger.debug(chunk.toString());
 
         let msgList = decoder.decode(chunk);
         for (let m of msgList) {
-          let data = JSON.parse(m.data) as LlmChatResponseData;
-          for (let c of data.choices) {
-            if (c.finish_reason === 'stop') {
-              this.chatChain.messages.push({
-                role: 'assistant',
-                content: respText,
-              });
-              this.chan.append(
-                ` (END, tokens: in ${data.usage.prompt_tokens}, out ${data.usage.completion_tokens}, all ${data.usage.total_tokens})`,
-              );
-            } else if (c.delta.content) {
-              respText += c.delta.content;
-              this.chan.append(c.delta.content, false);
+          try {
+            let data = JSON.parse(m.data) as LlmChatResponseData;
+            for (let c of data.choices) {
+              if (c.delta.reasoning_content) {
+                if (status != kStatusReasoning) {
+                  this.chan.append('\n---');
+                }
+                status = kStatusReasoning;
+
+                respText += c.delta.reasoning_content;
+                this.chan.append(c.delta.reasoning_content, false);
+              } else if (c.delta.content) {
+                if (status == kStatusReasoning) {
+                  this.chan.append('\n---');
+                }
+                status = kStatusContent;
+
+                respText += c.delta.content;
+                this.chan.append(c.delta.content, false);
+              }
+
+              if (c.finish_reason === 'stop') {
+                status = kStatusStop;
+
+                this.chatChain.messages.push({
+                  role: 'assistant',
+                  content: respText,
+                });
+              }
             }
+
+            if (data.usage) {
+              promptTokens = data.usage.prompt_tokens;
+              completionTokens = data.usage.completion_tokens;
+            }
+          } catch (e) {
+            logger.error(e);
+            logger.debug(m.data);
           }
         }
+      },
+      onEnd: (rsp: http.IncomingMessage) => {
+        logger.debug(rsp.statusCode);
+        this.chan.append(
+          ` (\`END\`, usage: in \`${promptTokens}\`, out \`${completionTokens}\`, total \`${promptTokens + completionTokens}\`)`,
+        );
       },
     };
 
