@@ -7,6 +7,7 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
+import { LlmChatRequest, LlmChatResponseData } from './context';
 import { logger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
@@ -44,74 +45,32 @@ interface LlmModelsResponse {
   models: LlmModels[];
 }
 
-interface LlmChatMessage {
-  role: string;
-  content: string;
-}
-
-interface LlmChatTool {
-  type: string;
-  function: {
-    name: string;
-    description: string;
-    parameters: {
-      type: string;
-      properties: {
-        [index: string]: {
-          type: string;
-          description?: string;
-          format?: 'email' | 'hostname' | 'ipv4' | 'ipv6' | 'uuid';
-          pattern?: string;
-          minimum?: number;
-          maximum?: number;
-          exclusiveMinimum?: number;
-          exclusiveMaximum?: number;
-          default?: number;
-          multipleOf?: number;
-          enum?: string[];
-          anyOf?: any;
-        };
-      };
-      required: string[];
-    };
-  };
-}
-
-interface LlmChatRequest {
-  model: string;
-  messages: LlmChatMessage[];
-  tools?: LlmChatTool[];
-  temperature: number;
-  top_p: number;
-  stream: boolean;
-}
-
-interface LlmChatResponseData {
-  choices: {
-    delta: {
-      role?: string | null;
-      content?: string | null;
-      tool_calls: any[] | null;
-      reasoning_content?: string;
-    };
-    index: number;
-    finish_reason?: string | null;
-    logprobs?: null;
-    matched_stop?: number | null;
-  }[];
-  created: number;
-  id: string;
-  model: string;
-  object: string;
-  usage: {
-    completion_tokens: number;
-    prompt_tokens: number;
-    total_tokens: number;
-    prompt_tokens_details: {
-      cached_tokens: number;
-    };
-  } | null;
-}
+// interface LlmChatResponseData {
+//   choices: {
+//     delta: {
+//       role?: string | null;
+//       content?: string | null;
+//       tool_calls: any[] | null;
+//       reasoning_content?: string;
+//     };
+//     index: number;
+//     finish_reason?: string | null;
+//     logprobs?: null;
+//     matched_stop?: number | null;
+//   }[];
+//   created: number;
+//   id: string;
+//   model: string;
+//   object: string;
+//   usage: {
+//     completion_tokens: number;
+//     prompt_tokens: number;
+//     total_tokens: number;
+//     prompt_tokens_details: {
+//       cached_tokens: number;
+//     };
+//   } | null;
+// }
 
 class LlmCommonChat extends BaseChatChannel {
   private endpoint: URL;
@@ -268,12 +227,17 @@ class LlmCommonChat extends BaseChatChannel {
           logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
         }
-        logger.debug(chunk.toString());
 
         let msgList = decoder.decode(chunk);
         for (let m of msgList) {
+          logger.debug(m.data);
+          if (m.data == '[DONE]') {
+            continue;
+          }
+
           try {
             let data = JSON.parse(m.data) as LlmChatResponseData;
+            logger.debug(data);
             for (let c of data.choices) {
               if (c.delta.reasoning_content) {
                 if (status != kStatusReasoning) {
@@ -293,7 +257,7 @@ class LlmCommonChat extends BaseChatChannel {
                 this.chan.append(c.delta.content, false);
               }
 
-              if (c.finish_reason === 'stop') {
+              if (c.finish_reason) {
                 status = kStatusStop;
 
                 this.chatChain.messages.push({
