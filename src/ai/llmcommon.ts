@@ -112,10 +112,25 @@ class LlmCommonChat extends BaseChatChannel {
             },
           },
         },
+        {
+          type: 'function',
+          function: {
+            name: 'get_traffic_info',
+            description: '查询指定城市交通信息',
+            parameters: {
+              type: 'object',
+              required: ['location'],
+              properties: {
+                location: { type: 'string', description: '城市名称' },
+              },
+            },
+          },
+        },
       ],
       temperature: 1,
       top_p: 0.95,
       stream: true,
+      // stream: false,
     };
 
     if (servConf.proxy) {
@@ -223,6 +238,7 @@ class LlmCommonChat extends BaseChatChannel {
     let completionTokens: number = 0;
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
+        logger.debug(chunk.toString());
         if (rsp.statusCode != 200) {
           logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
@@ -230,7 +246,6 @@ class LlmCommonChat extends BaseChatChannel {
 
         let msgList = decoder.decode(chunk);
         for (let m of msgList) {
-          logger.debug(m.data);
           if (m.data == '[DONE]') {
             continue;
           }
@@ -291,6 +306,7 @@ class LlmCommonChat extends BaseChatChannel {
       args: {
         host: this.endpoint.hostname,
         path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
+        // path: `${this.endpoint.pathname}/v1/chat/completions`,
         method: 'POST',
         protocol: this.endpoint.protocol,
         headers: this.headers,
