@@ -45,32 +45,114 @@ interface LlmModelsResponse {
   models: LlmModels[];
 }
 
-// interface LlmChatResponseData {
-//   choices: {
-//     delta: {
-//       role?: string | null;
-//       content?: string | null;
-//       tool_calls: any[] | null;
-//       reasoning_content?: string;
-//     };
-//     index: number;
-//     finish_reason?: string | null;
-//     logprobs?: null;
-//     matched_stop?: number | null;
-//   }[];
-//   created: number;
-//   id: string;
-//   model: string;
-//   object: string;
-//   usage: {
-//     completion_tokens: number;
-//     prompt_tokens: number;
-//     total_tokens: number;
-//     prompt_tokens_details: {
-//       cached_tokens: number;
-//     };
-//   } | null;
-// }
+interface LlmFunctionCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+
+class LlmCaller {
+  private endpoint: URL;
+  private headers: http.OutgoingHttpHeaders;
+  private proxy:
+    | {
+        host: string;
+        port: number;
+      }
+    | undefined;
+
+  constructor(servConf: LlmServConfig) {
+    this.endpoint = new URL(servConf.endpoint);
+
+    this.headers = {};
+    for (let key in servConf.auth_headers) {
+      this.headers[key] = servConf.auth_headers[key];
+    }
+
+    if (servConf.proxy) {
+      let proxyUrl = new URL(servConf.proxy);
+      this.proxy = {
+        host: proxyUrl.hostname,
+        port: parseInt(proxyUrl.port),
+      };
+    }
+  }
+
+  private async httpQuery(
+    method: string,
+    path: string,
+    data?: any,
+  ): Promise<string | CocExtError> {
+    let req: HttpRequest = {
+      args: {
+        host: this.endpoint.hostname,
+        path: `${this.endpoint.pathname}${path}`,
+        method,
+        protocol: this.endpoint.protocol,
+        headers: this.headers,
+        timeout: 1000,
+      },
+      proxy: this.proxy,
+      data,
+    };
+    let resp = await sendHttpRequest(req);
+    if (resp.statusCode != 200 || !resp.body) {
+      return new CocExtError(
+        CocExtError.ERR_COMM_AI,
+        `[CommAI] statusCode: ${resp.statusCode}, path: ${req.args.path}, resp: ${resp.body?.toString()}`,
+      );
+    }
+    return resp.body.toString();
+  }
+
+  public async models(): Promise<LlmModelsResponse | CocExtError> {
+    delete this.headers['Content-Type'];
+    delete this.headers['X-Request-Id'];
+
+    let res = await this.httpQuery('GET', '/v1/models');
+    return res instanceof Error ? res : (JSON.parse(res) as LlmModelsResponse);
+  }
+
+  public async completions(
+    data: LlmChatRequest,
+  ): Promise<LlmChatResponseData | CocExtError> {
+    this.headers['Content-Type'] = 'application/json';
+    this.headers['X-Request-Id'] = crypto.randomUUID();
+
+    data.stream = false;
+    let res = await this.httpQuery(
+      'POST',
+      '/v1/chat/completions',
+      JSON.stringify(data),
+    );
+    return res instanceof Error
+      ? res
+      : (JSON.parse(res) as LlmChatResponseData);
+  }
+
+  public async completionsSSE(
+    data: LlmChatRequest,
+    cb: HttpRequestCallback,
+  ): Promise<void> {
+    this.headers['Content-Type'] = 'application/json';
+    this.headers['X-Request-Id'] = crypto.randomUUID();
+
+    data.stream = true;
+    let req: HttpRequest = {
+      args: {
+        host: this.endpoint.hostname,
+        path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
+        method: 'POST',
+        protocol: this.endpoint.protocol,
+        headers: this.headers,
+        timeout: 1000,
+      },
+      proxy: this.proxy,
+      data: JSON.stringify(data),
+    };
+    await sendHttpRequestWithCallback(req, cb);
+  }
+}
 
 class LlmCommonChat extends BaseChatChannel {
   private endpoint: URL;
@@ -129,8 +211,8 @@ class LlmCommonChat extends BaseChatChannel {
       ],
       temperature: 1,
       top_p: 0.95,
-      stream: true,
-      // stream: false,
+      // stream: true,
+      stream: false,
     };
 
     if (servConf.proxy) {
@@ -231,6 +313,7 @@ class LlmCommonChat extends BaseChatChannel {
     const kStatusContent = 2;
     const kStatusStop = 3;
 
+    let fcList: LlmFunctionCall[] = [];
     let decoder = new ChunkDecoder();
     let respText: string = '';
     let status: number = kStatusNone;
@@ -254,7 +337,7 @@ class LlmCommonChat extends BaseChatChannel {
             let data = JSON.parse(m.data) as LlmChatResponseData;
             logger.debug(data);
             for (let c of data.choices) {
-              if (c.delta.reasoning_content) {
+              if (c.delta && c.delta.reasoning_content) {
                 if (status != kStatusReasoning) {
                   this.chan.append('\n---');
                 }
@@ -262,7 +345,9 @@ class LlmCommonChat extends BaseChatChannel {
 
                 respText += c.delta.reasoning_content;
                 this.chan.append(c.delta.reasoning_content, false);
-              } else if (c.delta.content) {
+              }
+
+              if (c.delta && c.delta.content) {
                 if (status == kStatusReasoning) {
                   this.chan.append('\n---');
                 }
@@ -270,6 +355,28 @@ class LlmCommonChat extends BaseChatChannel {
 
                 respText += c.delta.content;
                 this.chan.append(c.delta.content, false);
+              }
+
+              if (c.delta && c.delta.tool_calls) {
+                for (let t of c.delta.tool_calls) {
+                  if (fcList.length == 0 || t.id) {
+                    fcList.push({
+                      id: t.id,
+                      name: t.function.name ? t.function.name : '',
+                      arguments: t.function.arguments
+                        ? t.function.arguments
+                        : '',
+                    });
+                  } else {
+                    let func = fcList[fcList.length - 1];
+                    if (t.function.name) {
+                      func.name += t.function.name;
+                    }
+                    if (t.function.arguments) {
+                      func.arguments += t.function.arguments;
+                    }
+                  }
+                }
               }
 
               if (c.finish_reason) {
@@ -297,6 +404,7 @@ class LlmCommonChat extends BaseChatChannel {
         this.chan.append(
           ` (\`END\`, usage: in \`${promptTokens}\`, out \`${completionTokens}\`, total \`${promptTokens + completionTokens}\`)`,
         );
+        logger.debug(fcList);
       },
     };
 
@@ -305,8 +413,8 @@ class LlmCommonChat extends BaseChatChannel {
     let req: HttpRequest = {
       args: {
         host: this.endpoint.hostname,
-        path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
-        // path: `${this.endpoint.pathname}/v1/chat/completions`,
+        // path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
+        path: `${this.endpoint.pathname}/v1/chat/completions`,
         method: 'POST',
         protocol: this.endpoint.protocol,
         headers: this.headers,

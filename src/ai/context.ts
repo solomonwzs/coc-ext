@@ -61,8 +61,8 @@ interface LlmChatResponseDataMessage {
     id: string;
     type: 'function';
     function: {
-      name: string;
-      arguments: string;
+      name: string | null;
+      arguments: string | null;
     };
     index?: number;
   }[];
@@ -71,7 +71,7 @@ interface LlmChatResponseDataMessage {
 export interface LlmChatResponseData {
   id: string;
   choices: {
-    delta: LlmChatResponseDataMessage;
+    delta?: LlmChatResponseDataMessage;
     message?: LlmChatResponseDataMessage;
     logprobs?: {};
     finish_reason?:
