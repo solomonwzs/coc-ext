@@ -105,6 +105,10 @@ class LlmCaller {
     return resp.body.toString();
   }
 
+  public setConersationId(id: string) {
+    this.headers['X-Conversation-Id'] = id;
+  }
+
   public async models(): Promise<LlmModelsResponse | CocExtError> {
     delete this.headers['Content-Type'];
     delete this.headers['X-Request-Id'];
@@ -155,26 +159,14 @@ class LlmCaller {
 }
 
 class LlmCommonChat extends BaseChatChannel {
-  private endpoint: URL;
-  private headers: http.OutgoingHttpHeaders;
+  private caller: LlmCaller;
   private chatChain: LlmChatRequest;
-  private proxy:
-    | {
-        host: string;
-        port: number;
-      }
-    | undefined;
   private model: LlmModels | undefined;
 
   constructor(servConf: LlmServConfig) {
     super();
 
-    this.endpoint = new URL(servConf.endpoint);
-
-    this.headers = {};
-    for (let key in servConf.auth_headers) {
-      this.headers[key] = servConf.auth_headers[key];
-    }
+    this.caller = new LlmCaller(servConf);
 
     this.chatChain = {
       model: '',
@@ -214,14 +206,6 @@ class LlmCommonChat extends BaseChatChannel {
       // stream: true,
       stream: false,
     };
-
-    if (servConf.proxy) {
-      let proxyUrl = new URL(servConf.proxy);
-      this.proxy = {
-        host: proxyUrl.hostname,
-        port: parseInt(proxyUrl.port),
-      };
-    }
   }
 
   public reset(): void {
@@ -237,26 +221,11 @@ class LlmCommonChat extends BaseChatChannel {
   }
 
   public async createChatId(_name: string): Promise<string | Error> {
-    let req: HttpRequest = {
-      args: {
-        host: this.endpoint.hostname,
-        path: `${this.endpoint.pathname}/v1/models`,
-        method: 'GET',
-        protocol: this.endpoint.protocol,
-        headers: this.headers,
-        timeout: 1000,
-      },
-      proxy: this.proxy,
-    };
-    let resp = await sendHttpRequest(req);
-    if (resp.statusCode != 200 || !resp.body) {
-      return new CocExtError(
-        CocExtError.ERR_COMM_AI,
-        `[CommAI] statusCode: ${resp.statusCode}, path: ${req.args.path}, resp: ${resp.body?.toString()}`,
-      );
+    let llmResp = await this.caller.models();
+    if (llmResp instanceof Error) {
+      return llmResp;
     }
 
-    let llmResp = JSON.parse(resp.body.toString()) as LlmModelsResponse;
     let alignHelper = new StringAlignHelper('LR');
     for (let i of llmResp.models) {
       if (!i.enabled) {
@@ -288,7 +257,7 @@ class LlmCommonChat extends BaseChatChannel {
       return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
     }
     let chatId = crypto.randomUUID();
-    this.headers['X-Conversation-Id'] = chatId;
+    this.caller.setConersationId(chatId);
     return chatId;
   }
 
@@ -299,9 +268,7 @@ class LlmCommonChat extends BaseChatChannel {
   public async showItem(): Promise<void> {}
 
   public async chat(text: string): Promise<void> {
-    let reqId = crypto.randomUUID();
     this.chan.appendUserInput(new Date().toISOString(), text);
-    this.chan.append(`>> id:${reqId}\n`);
 
     this.chatChain.messages.push({
       role: 'user',
@@ -313,6 +280,7 @@ class LlmCommonChat extends BaseChatChannel {
     const kStatusContent = 2;
     const kStatusStop = 3;
 
+    let reqId: string = '';
     let fcList: LlmFunctionCall[] = [];
     let decoder = new ChunkDecoder();
     let respText: string = '';
@@ -321,7 +289,7 @@ class LlmCommonChat extends BaseChatChannel {
     let completionTokens: number = 0;
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
-        logger.debug(chunk.toString());
+        // logger.debug(chunk.toString());
         if (rsp.statusCode != 200) {
           logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
@@ -336,6 +304,11 @@ class LlmCommonChat extends BaseChatChannel {
           try {
             let data = JSON.parse(m.data) as LlmChatResponseData;
             logger.debug(data);
+            if (reqId.length == 0) {
+              reqId = data.id;
+              this.chan.append(`>> id:${reqId}\n`);
+            }
+
             for (let c of data.choices) {
               if (c.delta && c.delta.reasoning_content) {
                 if (status != kStatusReasoning) {
@@ -408,22 +381,7 @@ class LlmCommonChat extends BaseChatChannel {
       },
     };
 
-    this.headers['Content-Type'] = 'application/json';
-    this.headers['X-Request-Id'] = reqId;
-    let req: HttpRequest = {
-      args: {
-        host: this.endpoint.hostname,
-        // path: `${this.endpoint.pathname}/v1/chat/completions?alt=sse`,
-        path: `${this.endpoint.pathname}/v1/chat/completions`,
-        method: 'POST',
-        protocol: this.endpoint.protocol,
-        headers: this.headers,
-        timeout: 1000,
-      },
-      proxy: this.proxy,
-      data: JSON.stringify(this.chatChain),
-    };
-    await sendHttpRequestWithCallback(req, cb);
+    await this.caller.completionsSSE(this.chatChain, cb);
   }
 
   public async delSession(_chatId: string): Promise<null | Error> {

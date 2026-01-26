@@ -50,7 +50,7 @@ export interface LlmChatRequest {
   top_p?: number; // (, 1]
   tools?: LlmChatTool[];
   logprobs?: boolean;
-  top_logprobs?: number; // (,20]
+  top_logprobs?: number; // (, 20]
 }
 
 interface LlmChatResponseDataMessage {
