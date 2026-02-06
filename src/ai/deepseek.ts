@@ -15,6 +15,12 @@ import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';
 import { popup, ScratchWindow } from '../utils/helper';
 
+let globalDeepseek = {
+  searchWindow: new ScratchWindow('Deepseek Search', 'markdown'),
+  host: 'chat.deepseek.com',
+  timeout: 5000,
+};
+
 interface ChatSession {
   id: string;
   seq_id: number;
@@ -153,12 +159,12 @@ class Sha3Wasm {
     ) => void;
   }
 
-  private writeMemory(offset: number, data: ArrayLike<number>): void {
+  private writeBuffer(offset: number, data: ArrayLike<number>): void {
     let view = new Uint8Array(this.memory.buffer);
     view.set(data, offset);
   }
 
-  private readMemory(offset: number, size: number): Uint8Array {
+  private readBuffer(offset: number, size: number): Uint8Array {
     let view = new Uint8Array(this.memory.buffer);
     return view.slice(offset, offset + size);
   }
@@ -166,7 +172,7 @@ class Sha3Wasm {
   private encodeString(text: string): [number, number] {
     let data = Buffer.from(text);
     let ptr = this.alloc(data.length, 1);
-    this.writeMemory(ptr, data);
+    this.writeBuffer(ptr, data);
     return [ptr, data.length];
   }
 
@@ -188,14 +194,14 @@ class Sha3Wasm {
       difficulty,
     );
 
-    const statusBytes = this.readMemory(retptr, 4);
+    const statusBytes = this.readBuffer(retptr, 4);
     if (statusBytes.length !== 4) {
       this.addToStack(16);
       return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read status fail');
     }
     let status = new DataView(statusBytes.buffer).getInt32(0, true);
 
-    let valueBytes = this.readMemory(retptr + 8, 8);
+    let valueBytes = this.readBuffer(retptr + 8, 8);
     if (valueBytes.length !== 8) {
       this.addToStack(16);
       return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read value fail');
@@ -219,7 +225,7 @@ async function getWasm(dir: string): Promise<Sha3Wasm | Error> {
   let downloadUrl =
     conf.deepseekWasmURL && conf.deepseekWasmURL.length > 0
       ? conf.deepseekWasmURL
-      : 'https://chat.deepseek.com/static/sha3_wasm_bg.7b9ca65ddd.wasm';
+      : `https://${globalDeepseek.host}/static/sha3_wasm_bg.7b9ca65ddd.wasm`;
   if ((await fsAccess(wasmPath, fs.constants.R_OK)) != null) {
     if ((await simpleHttpDownloadFile(downloadUrl, wasmPath)) == -1) {
       return new CocExtError(
@@ -249,8 +255,6 @@ function searchReault2Lines(item: ChatSearchResult, idx: number) {
   return lines;
 }
 
-let searchWindow = new ScratchWindow('Deepseek Search', 'markdown');
-
 class DeepseekChat extends BaseChatChannel {
   private currentMsgid: number | null;
   private sha3Wasm: Sha3Wasm | null;
@@ -278,7 +282,7 @@ class DeepseekChat extends BaseChatChannel {
         'Safari/537.36 ' +
         'Edg/91.0.864.41',
       authorization: `Bearer ${this.authKey}`,
-      Origin: 'https://chat.deepseek.com',
+      Origin: `https://${globalDeepseek.host}`,
       'x-client-locale': 'zh_CN',
       'x-client-platform': 'web',
       'Content-Type': 'application/json',
@@ -292,7 +296,7 @@ class DeepseekChat extends BaseChatChannel {
   ): Promise<ChatResponse | CocExtError> {
     let req: HttpRequest = {
       args: {
-        host: 'chat.deepseek.com',
+        host: globalDeepseek.host,
         path,
         method,
         protocol: 'https:',
@@ -432,7 +436,7 @@ class DeepseekChat extends BaseChatChannel {
       lines.push('---');
       lines.push('');
     }
-    await searchWindow.open(lines);
+    await globalDeepseek.searchWindow.open(lines);
   }
 
   private async tryGetRef(messageId: string, refText: string) {
@@ -531,7 +535,7 @@ class DeepseekChat extends BaseChatChannel {
     headers['x-ds-pow-response'] = challenge;
     const req: HttpRequest = {
       args: {
-        host: 'chat.deepseek.com',
+        host: globalDeepseek.host,
         path: '/api/v0/chat/completion',
         method: 'POST',
         protocol: 'https:',

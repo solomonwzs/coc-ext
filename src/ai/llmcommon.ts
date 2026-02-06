@@ -7,7 +7,11 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
-import { LlmChatRequest, LlmChatResponseData } from './context';
+import {
+  LlmChatRequest,
+  LlmChatResponseData,
+  LlmContextManager,
+} from './context';
 import { logger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
@@ -160,56 +164,62 @@ class LlmCaller {
 
 class LlmCommonChat extends BaseChatChannel {
   private caller: LlmCaller;
-  private chatChain: LlmChatRequest;
+  private chatReq: LlmChatRequest;
   private model: LlmModels | undefined;
+  private ctxManager: LlmContextManager;
 
   constructor(servConf: LlmServConfig) {
     super();
 
     this.caller = new LlmCaller(servConf);
 
-    this.chatChain = {
+    this.chatReq = {
       model: '',
       messages: [],
       tools: [
-        {
-          type: 'function',
-          function: {
-            name: 'get_weather',
-            description: '查询指定城市天气',
-            parameters: {
-              type: 'object',
-              required: ['location'],
-              properties: {
-                location: { type: 'string', description: '城市名称' },
-              },
-            },
-          },
-        },
-        {
-          type: 'function',
-          function: {
-            name: 'get_traffic_info',
-            description: '查询指定城市交通信息',
-            parameters: {
-              type: 'object',
-              required: ['location'],
-              properties: {
-                location: { type: 'string', description: '城市名称' },
-              },
-            },
-          },
-        },
+        // {
+        //   type: 'function',
+        //   function: {
+        //     name: 'get_weather',
+        //     description: '查询指定城市天气',
+        //     parameters: {
+        //       type: 'object',
+        //       required: ['location'],
+        //       properties: {
+        //         location: { type: 'string', description: '城市名称' },
+        //       },
+        //     },
+        //   },
+        // },
+        // {
+        //   type: 'function',
+        //   function: {
+        //     name: 'get_traffic_info',
+        //     description: '查询指定城市交通信息',
+        //     parameters: {
+        //       type: 'object',
+        //       required: ['location'],
+        //       properties: {
+        //         location: { type: 'string', description: '城市名称' },
+        //       },
+        //     },
+        //   },
+        // },
       ],
       temperature: 1,
       top_p: 0.95,
-      // stream: true,
-      stream: false,
+      stream: true,
+      // stream: false,
+      thinking: {
+        type: 'enabled',
+      },
     };
+
+    this.ctxManager = new LlmContextManager();
   }
 
   public reset(): void {
-    this.chatChain.messages = [];
+    this.chatReq.messages = [];
   }
 
   public getChatName(): string {
@@ -252,7 +262,7 @@ class LlmCommonChat extends BaseChatChannel {
     if (choose) {
       logger.debug(choose);
       this.model = choose.data;
-      this.chatChain.model = choose.data.name;
+      this.chatReq.model = choose.data.name;
     } else {
       return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
     }
@@ -270,9 +280,11 @@ class LlmCommonChat extends BaseChatChannel {
   public async chat(text: string): Promise<void> {
     this.chan.appendUserInput(new Date().toISOString(), text);
 
-    this.chatChain.messages.push({
-      role: 'user',
-      content: text,
+    this.ctxManager.appendMessage({
+      oriMessage: {
+        role: 'user',
+        content: text,
+      },
     });
 
     const kStatusNone = 0;
@@ -355,9 +367,11 @@ class LlmCommonChat extends BaseChatChannel {
               if (c.finish_reason) {
                 status = kStatusStop;
 
-                this.chatChain.messages.push({
-                  role: 'assistant',
-                  content: respText,
+                this.ctxManager.appendMessage({
+                  oriMessage: {
+                    role: 'assistant',
+                    content: respText,
+                  },
                 });
               }
             }
@@ -375,13 +389,14 @@ class LlmCommonChat extends BaseChatChannel {
       onEnd: (rsp: http.IncomingMessage) => {
         logger.debug(rsp.statusCode);
         this.chan.append(
-          ` (\`END\`, usage: in \`${promptTokens}\`, out \`${completionTokens}\`, total \`${promptTokens + completionTokens}\`)`,
+          `\n(\`END\`, usage: in \`${promptTokens}\`, out \`${completionTokens}\`, total \`${promptTokens + completionTokens}\`)`,
         );
         logger.debug(fcList);
       },
     };
 
-    await this.caller.completionsSSE(this.chatChain, cb);
+    this.chatReq.messages = this.ctxManager.getMessages();
+    await this.caller.completionsSSE(this.chatReq, cb);
   }
 
   public async delSession(_chatId: string): Promise<null | Error> {

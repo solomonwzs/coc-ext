@@ -51,6 +51,9 @@ export interface LlmChatRequest {
   tools?: LlmChatTool[];
   logprobs?: boolean;
   top_logprobs?: number; // (, 20]
+  thinking?: {
+    type: 'enabled' | 'disabled';
+  };
 }
 
 interface LlmChatResponseDataMessage {
@@ -97,20 +100,34 @@ export interface LlmChatResponseData {
   } | null;
 }
 
-interface LlmChatTurn {}
+interface LlmChatMessageInfo {
+  oriMessage: LlmChatMessage;
+}
+
+interface LlmContext {
+  fullHistory: LlmChatMessageInfo[];
+  tokens: number;
+}
 
 export class LlmContextManager {
-  private fullHistory: LlmChatTurn[];
+  private ctx: LlmContext;
 
-  constructor(readonly tokenLimit: number) {
-    this.fullHistory = [];
+  constructor() {
+    this.ctx = {
+      fullHistory: [],
+      tokens: 0,
+    };
   }
 
-  public appendChatTurn(userInput: string, assistantInput: string) {
-    this.fullHistory.push({
-      user: userInput,
-      assistant: assistantInput,
-      timestamp: Math.floor(Date.now() / 1000),
-    });
+  public appendMessage(msg: LlmChatMessageInfo) {
+    this.ctx.fullHistory.push(msg);
+  }
+
+  public getMessages(): LlmChatMessage[] {
+    let msgs: LlmChatMessage[] = [];
+    for (let i of this.ctx.fullHistory) {
+      msgs.push(i.oriMessage);
+    }
+    return msgs;
   }
 }

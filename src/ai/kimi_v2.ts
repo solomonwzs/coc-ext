@@ -10,6 +10,13 @@ import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
 
+let globalKimi = {
+  searchWindow: new ScratchWindow('Kimi Search', 'markdown'),
+  host: 'www.kimi.com',
+  scenario: 'SCENARIO_K2D5',
+  timeout: 5000,
+};
+
 interface WebPage {
   title: string;
   url: string;
@@ -121,6 +128,9 @@ interface ChatRequest {
     }[];
     scenario: string;
   };
+  options?: {
+    thinking?: boolean;
+  };
 }
 
 interface ChatResponse {
@@ -147,11 +157,6 @@ interface ChatResponse {
     name: string;
   };
 }
-
-let globalKimi = {
-  searchWindow: new ScratchWindow('Kimi Search', 'markdown'),
-  host: 'www.kimi.com',
-};
 
 class StreamDecoder {
   private cache: Buffer;
@@ -310,7 +315,7 @@ class KimiChatV2 extends BaseChatChannel {
         method: 'GET',
         protocol: 'https:',
         headers: this.getHeaders(),
-        timeout: 1000,
+        timeout: globalKimi.timeout,
       },
     };
     const resp = await sendHttpRequest(refreshReq);
@@ -333,7 +338,7 @@ class KimiChatV2 extends BaseChatChannel {
         method: 'POST',
         protocol: 'https:',
         headers: this.getHeaders(),
-        timeout: 1000,
+        timeout: globalKimi.timeout,
       },
       data: JSON.stringify(data),
     };
@@ -556,7 +561,7 @@ class KimiChatV2 extends BaseChatChannel {
             } else if (msg.ref) {
               refs.push(msg.ref.search);
             } else if (msg.done) {
-              this.chan.append(' (END)');
+              this.chan.append('\n(END)');
             } else if (msg.heartbeat) {
             } else {
               logger.debug(msg);
@@ -580,13 +585,13 @@ class KimiChatV2 extends BaseChatChannel {
 
     let chatReq: ChatRequest = {
       chatId: this.chatId,
-      scenario: 'SCENARIO_K2',
+      scenario: globalKimi.scenario,
       tools: [{ type: 'TOOL_TYPE_SEARCH', search: {} }],
       message: {
         parent_id: this.currentMsgid,
         role: 'user',
         blocks: [{ message_id: '', text: { content: text } }],
-        scenario: 'SCENARIO_K2',
+        scenario: globalKimi.scenario,
       },
     };
 
