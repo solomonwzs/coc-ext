@@ -3,6 +3,7 @@ import { BaseChatChannel, ChatItem } from './base';
 import { llmCommonChat } from './llmcommon';
 import { deepseekChat } from './deepseek';
 import { kimiChatV2 } from './kimi_v2';
+import { zaiChat } from './zai';
 import {
   echoMessage,
   getText,
@@ -16,6 +17,7 @@ export let name2AiChat = new Map<string, BaseChatChannel>([
   [kimiChatV2.getChatName(), kimiChatV2],
   [deepseekChat.getChatName(), deepseekChat],
   [llmCommonChat.getChatName(), llmCommonChat],
+  [zaiChat.getChatName(), zaiChat],
 ]);
 
 let globalAiChat: BaseChatChannel | null = null;
