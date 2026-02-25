@@ -35,7 +35,7 @@ interface LlmServConfig {
   proxy?: string;
 }
 
-interface LlmModels {
+interface LlmModel0 {
   name: string;
   alias: string;
   description: string;
@@ -43,10 +43,18 @@ interface LlmModels {
   enableFunctionCall: boolean;
   multimodalEnabled: boolean;
   enabled: boolean;
+  id?: string;
+  max_model_len?: number;
+}
+
+interface LlmModel1 {
+  id: string;
+  max_model_len: number;
 }
 
 interface LlmModelsResponse {
-  models: LlmModels[];
+  models?: LlmModel0[];
+  data?: LlmModel1[];
 }
 
 interface LlmFunctionCall {
@@ -165,7 +173,6 @@ class LlmCaller {
 class LlmCommonChat extends BaseChatChannel {
   private caller: LlmCaller;
   private chatReq: LlmChatRequest;
-  private model: LlmModels | undefined;
   private ctxManager: LlmContextManager;
 
   constructor(servConf: LlmServConfig) {
@@ -236,39 +243,17 @@ class LlmCommonChat extends BaseChatChannel {
       return llmResp;
     }
 
-    let alignHelper = new StringAlignHelper('LR');
-    for (let i of llmResp.models) {
-      if (!i.enabled) {
-        continue;
-      }
-      alignHelper.put(i.alias, i.tokenLimit.toString());
-    }
+    logger.debug(llmResp);
+    if (llmResp.data && llmResp.data.length > 0) {
+      let model = llmResp.data[0];
+      logger.debug(model.id);
+      this.chatReq.model = model.id;
 
-    let quickItems: any[] = [];
-    for (let i of llmResp.models) {
-      if (!i.enabled) {
-        continue;
-      }
-      let n = quickItems.length;
-      quickItems.push({
-        label: `${alignHelper.get(n, 0)}    f[${i.enableFunctionCall ? 'o' : 'x'}] m[${i.multimodalEnabled ? 'o' : 'x'}] t[${alignHelper.get(n, 1)}]`,
-        data: i,
-      });
+      let chatId = crypto.randomUUID();
+      this.caller.setConersationId(chatId);
+      return chatId;
     }
-
-    let choose = await window.showQuickPick(quickItems, {
-      title: 'Choose model',
-    });
-    if (choose) {
-      logger.debug(choose);
-      this.model = choose.data;
-      this.chatReq.model = choose.data.name;
-    } else {
-      return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
-    }
-    let chatId = crypto.randomUUID();
-    this.caller.setConersationId(chatId);
-    return chatId;
+    return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
@@ -315,7 +300,7 @@ class LlmCommonChat extends BaseChatChannel {
 
           try {
             let data = JSON.parse(m.data) as LlmChatResponseData;
-            logger.debug(data);
+            // logger.debug(data);
             if (reqId.length == 0) {
               reqId = data.id;
               this.chan.append(`>> id:${reqId}\n`);
