@@ -23,8 +23,8 @@ interface WebPage {
   siteName: string;
   iconUrl: string;
   snippet?: string;
-  publishTime: string;
-  siteQuality: {
+  publishTime?: string;
+  siteQuality?: {
     isTrustedSite?: boolean;
     description?: string;
   };
@@ -33,6 +33,11 @@ interface WebPage {
 interface Search {
   keywords?: string[];
   webPages?: WebPage[];
+}
+
+interface SearchResult {
+  id: string;
+  base: WebPage;
 }
 
 interface FileInfo {
@@ -65,12 +70,22 @@ interface Exception {
   };
 }
 
+interface Tool {
+  toolCallId: string;
+  name: string;
+  args: string;
+  contents: {
+    searchResult: SearchResult;
+  }[];
+}
+
 interface Block {
   id: string;
   text?: {
     content: string;
   };
   search?: Search;
+  tool?: Tool;
   file?: FileInfo;
   exception?: Exception;
 }
@@ -145,6 +160,12 @@ interface ChatResponse {
     status: string;
     scenario?: string;
     blocks?: Block[];
+    ref?: {
+      searchChunks?: {
+        id: string;
+        base: WebPage;
+      }[];
+    };
   };
   block?: Block;
   status?: string;
@@ -231,14 +252,14 @@ class KimiChatV2 extends BaseChatChannel {
       return 0;
     }
 
-    let block = JSON.parse(cache.toString()) as Search;
-    if (!block.webPages) {
+    let webPages = JSON.parse(cache.toString()) as WebPage[];
+    if (webPages.length == 0) {
       return 0;
     }
 
     let lines: string[] = [];
     let idx = 0;
-    for (let web of block.webPages) {
+    for (let web of webPages) {
       idx += 1;
       lines.push(`# ${idx} - ${web.title}`);
       lines.push('');
@@ -453,13 +474,28 @@ class KimiChatV2 extends BaseChatChannel {
 
         for (let block of msg.blocks) {
           if (block.search) {
+            logger.debug('1');
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
-            await this.cache.set(cacheKey, JSON.stringify(block.search));
+            await this.cache.set(
+              cacheKey,
+              JSON.stringify(block.search.webPages),
+            );
             if (block.search && block.search.webPages) {
               this.chan.append(
                 ` [search result (${block.search.webPages.length})]\n`,
               );
             }
+          } else if (block.tool && block.tool.name === 'web_search') {
+            logger.debug('2');
+            let cacheKey = `${this.chatId}-${msg.id}-search.json`;
+            let webPages: WebPage[] = [];
+            for (let content of block.tool.contents) {
+              webPages.push(content.searchResult.base);
+            }
+            await this.cache.set(cacheKey, JSON.stringify(webPages));
+            this.chan.append(
+              ` [search result (${block.tool.contents.length})]\n`,
+            );
           } else if (block.text) {
             this.chan.append(block.text.content);
           } else if (block.exception) {
@@ -499,7 +535,6 @@ class KimiChatV2 extends BaseChatChannel {
     }
     this.chan.appendUserInput(new Date().toISOString(), text);
 
-    let keywords: string[] = [];
     let webPages: WebPage[] = [];
     let refs: Ref[] = [];
     let decoder = new StreamDecoder();
@@ -547,16 +582,21 @@ class KimiChatV2 extends BaseChatChannel {
                 this.chan.append(msg.block.text.content, false);
               } else if (
                 msg.block.search &&
-                msg.block.search.keywords &&
-                msg.mask === 'block.search.keywords'
-              ) {
-                keywords.push(...msg.block.search.keywords);
-              } else if (
-                msg.block.search &&
                 msg.block.search.webPages &&
                 msg.mask === 'block.search.webPages'
               ) {
                 webPages.push(...msg.block.search.webPages);
+              } else if (
+                msg.message &&
+                msg.message.ref &&
+                msg.message.ref.searchChunks &&
+                msg.mask === 'message.refs.searchChunks'
+              ) {
+                for (let ch of msg.message.ref.searchChunks) {
+                  webPages.push(ch.base);
+                }
+              } else {
+                logger.debug(msg);
               }
             } else if (msg.ref) {
               refs.push(msg.ref.search);
@@ -607,9 +647,9 @@ class KimiChatV2 extends BaseChatChannel {
     };
     await sendHttpRequestWithCallback(req, cb);
 
-    if (keywords.length > 0 || webPages.length > 0) {
+    if (webPages.length > 0) {
       let cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
-      await this.cache.set(cacheKey, JSON.stringify({ keywords, webPages }));
+      await this.cache.set(cacheKey, JSON.stringify(webPages));
     }
     if (refs.length > 0) {
       let cacheKey = `${this.chatId}-${this.currentMsgid}-refs.json`;
