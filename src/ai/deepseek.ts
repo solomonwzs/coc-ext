@@ -604,6 +604,10 @@ class DeepseekChat extends BaseChatChannel {
                 }
               } else if (p === 'response/thinking_elapsed_secs') {
                 this.chan.append('\n\n---\n');
+              } else if (typeof d.v === 'object' && 'response' in d.v) {
+                this.chan.append(d.v.response.content, false);
+              } else {
+                logger.debug(m);
               }
             }
           } else {

@@ -61,7 +61,7 @@ export class ChatChannel {
       winid = await nvim.call('bufwinid', this.chatName);
       // let bufnr = (await nvim.call('bufnr', this.chatName)) as number;
       await nvim.call('win_execute', [winid, 'setl wrap']);
-      await nvim.call('win_execute', [winid, 'set ft=aichat']);
+      await nvim.call('win_execute', [winid, 'set ft=markdown']);
     } else {
       await nvim.call('win_gotoid', [winid]);
     }

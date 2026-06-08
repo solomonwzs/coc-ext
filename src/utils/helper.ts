@@ -74,11 +74,11 @@ export async function echoMessage(hl: string, msg: string) {
 
 async function winid2bufnr(winid: number): Promise<number> {
   let { nvim } = workspace;
-  let winnr = await nvim.call('win_id2win', winid);
-  if (!winnr) {
-    return -1;
-  }
-  let bufnr = await nvim.call('winbufnr', [winnr]);
+  // let winnr = await nvim.call('win_id2win', winid);
+  // if (!winnr) {
+  //   return -1;
+  // }
+  let bufnr = await nvim.call('winbufnr', [winid]);
   if (!bufnr) {
     return -1;
   }
@@ -113,7 +113,11 @@ export async function popup(
   if (bufnr == -1) {
     return;
   }
-  await workspace.nvim.call('setbufvar', [bufnr, '&filetype', filetype]);
+  try {
+    await workspace.nvim.call('setbufvar', [bufnr, '&filetype', filetype]);
+  } catch (e) {
+    logger.error((e as Error).stack);
+  }
 }
 
 export function getDocumentPath(
