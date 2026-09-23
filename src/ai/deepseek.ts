@@ -33,31 +33,49 @@ interface ChatSession {
   updated_at: number;
 }
 
+interface ChatSearchQuery {
+  query: string;
+}
+
 interface ChatSearchResult {
   url: string;
   title: string;
   snippet: string;
   cite_index?: number;
-  published_at: number;
-  site_name: string;
+  published_at: number | null;
+  site_name: string | null;
   site_icon: string;
   query_indexes?: number[];
 }
 
+interface ChatMessageFragment {
+  id: number;
+  type: string;
+  content?: string;
+  thinking_content?: string;
+  status?: string;
+  queries?: ChatSearchQuery[];
+  results?: ChatSearchResult[];
+  references?: any[];
+  stage_id?: number;
+}
+
 interface ChatMessage {
   message_id: number;
-  parent_id: number | undefined;
+  parent_id: number | null;
   model: string;
   role: string;
-  content: string;
   thinking_enabled: boolean;
-  thinking_content: string | undefined;
   ban_edit: boolean;
   ban_regenerate: boolean;
+  status: string;
   accumulated_token_usage: number;
   inserted_at: number;
   search_enabled: boolean;
-  search_results?: ChatSearchResult[];
+  fragments?: ChatMessageFragment[];
+  has_pending_fragment: boolean;
+  auto_continue: boolean;
+  search_triggered: boolean;
 }
 
 interface ChatChallenge {
@@ -88,40 +106,33 @@ interface ChatResponse {
 }
 
 interface ChatComplResp {
-  response: {
-    message_id: number;
-    parent_id: number;
-    model: string;
-    role: string;
-    content: string;
-    thinking_enabled: boolean;
-    thinking_content?: any;
-    thinking_elapsed_secs?: any;
-    ban_edit: boolean;
-    ban_regenerate: boolean;
-    status: string;
-    accumulated_token_usage: number;
-    files: any[];
-    tips: any[];
-    inserted_at: number;
-    search_enabled: boolean;
-    search_status: string;
-    search_results: any;
-  };
-}
-
-interface ChatPV {
-  p: string;
-  v: any;
+  message_id: number;
+  parent_id: number | null;
+  model: string;
+  role: string;
+  thinking_enabled: boolean;
+  ban_edit: boolean;
+  ban_regenerate: boolean;
+  status: string;
+  accumulated_token_usage: number;
+  inserted_at: number;
+  search_enabled: boolean;
+  fragments?: ChatMessageFragment[];
+  content?: string;
+  search_status?: string;
+  search_results?: ChatSearchResult[];
 }
 
 interface ChatComplData {
   request_message_id?: number;
   response_message_id?: number;
+  model_type?: string;
   updated_at?: number;
+  click_behavior?: string;
+  auto_resume?: boolean;
   o?: string;
   p?: string;
-  v?: ChatComplResp | string | ChatSearchResult[] | ChatPV[];
+  v?: any;
 }
 
 class Sha3Wasm {
@@ -244,12 +255,18 @@ async function getWasm(dir: string): Promise<Sha3Wasm | Error> {
 }
 
 function searchReault2Lines(item: ChatSearchResult, idx: number) {
-  let lines: string[] = [];
-  let date = new Date(item.published_at * 1000);
-  let dstr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  const lines: string[] = [];
+  const meta: string[] = [];
+  if (item.site_name) {
+    meta.push(item.site_name);
+  }
+  if (item.published_at) {
+    const date = new Date(item.published_at * 1000);
+    meta.push(`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`);
+  }
   lines.push(`# ${idx} - ${item.title}`);
   lines.push('');
-  lines.push(`[${item.site_name} - ${dstr}](${item.url})`);
+  lines.push(`[${meta.join(' - ')}](${item.url})`);
   lines.push('');
   lines.push(item.snippet);
   return lines;
@@ -386,27 +403,42 @@ class DeepseekChat extends BaseChatChannel {
     for (const msg of messages) {
       this.currentMsgid = msg.message_id;
       if (msg.role == 'USER') {
-        this.chan.appendUserInput(
-          new Date(msg.inserted_at * 1000).toISOString(),
-          msg.content,
-        );
+        const contents: string[] = [];
+        for (const frag of msg.fragments ?? []) {
+          if (frag.type == 'REQUEST' && frag.content) {
+            contents.push(frag.content);
+          }
+        }
+        if (contents.length > 0) {
+          this.chan.appendUserInput(
+            new Date(msg.inserted_at * 1000).toISOString(),
+            contents.join('\n'),
+          );
+        }
       } else {
         this.chan.append(`>> id:${msg.message_id}\n`);
 
-        if (msg.search_results) {
+        const searchResults: ChatSearchResult[] = [];
+        for (const frag of msg.fragments ?? []) {
+          if (frag.type == 'SEARCH' && frag.results) {
+            searchResults.push(...frag.results);
+          }
+        }
+        if (searchResults.length > 0) {
           let cacheKey = `${this.chatId}-${msg.message_id}-search.json`;
-          await this.cache.set(cacheKey, JSON.stringify(msg.search_results));
-          this.chan.append(
-            ` [search result (${msg.search_results.length})]\n`,
-          );
+          await this.cache.set(cacheKey, JSON.stringify(searchResults));
+          this.chan.append(` [search result (${searchResults.length})]\n`);
         }
 
-        if (msg.thinking_enabled && msg.thinking_content) {
-          this.chan.append('---');
-          this.chan.append(msg.thinking_content);
-          this.chan.append('\n---\n');
+        for (const frag of msg.fragments ?? []) {
+          if (frag.type == 'THINKING' && frag.content) {
+            this.chan.append('---');
+            this.chan.append(frag.content);
+            this.chan.append('\n---\n');
+          } else if (frag.type == 'RESPONSE' && frag.content) {
+            this.chan.append(frag.content);
+          }
         }
-        this.chan.append(msg.content);
       }
     }
 
@@ -551,64 +583,233 @@ class DeepseekChat extends BaseChatChannel {
       }),
     };
 
-    let decoder = new ChunkDecoder();
+    const decoder = new ChunkDecoder();
     let searchResults: ChatSearchResult[] = [];
+    let searchMarkerPrinted = false;
     let event = '';
     let p = '';
+    let o = '';
+    // streaming response state: data frames are JSON-patch style updates
+    // ({p: path, o: op, v: value}) on a response object carrying its text in
+    // fragments[]; frames may omit p/o to repeat the previous operation, and
+    // full snapshots ({v: {response: {...}}}) re-send the whole response
+    let fragments: ChatMessageFragment[] = [];
+    let emittedThinking = 0;
+    let emittedContent = 0;
+    let inThinking = false;
+
+    const printSearchMarker = () => {
+      if (searchMarkerPrinted || searchResults.length == 0) {
+        return;
+      }
+      closeThinking();
+      this.chan.append(`\ue68f [search result (${searchResults.length})]\n`);
+      searchMarkerPrinted = true;
+    };
+
+    const closeThinking = () => {
+      if (!inThinking) {
+        return;
+      }
+      this.chan.append('\n\n---\n');
+      inThinking = false;
+    };
+
+    // merge search results (dedup by url)
+    const mergeSearchResults = (items: any[]) => {
+      for (const item of items) {
+        if (!item || typeof item.url != 'string') {
+          continue;
+        }
+        if (searchResults.some((r) => r.url == item.url)) {
+          continue;
+        }
+        searchResults.push(item as ChatSearchResult);
+      }
+    };
+
+    // re-emit the new suffix of the fragments content / thinking text
+    const emitFragments = () => {
+      let contentText = '';
+      let thinkingText = '';
+      for (const frag of fragments) {
+        if (frag.type == 'SEARCH') {
+          if (frag.results) {
+            mergeSearchResults(frag.results);
+          }
+          if (frag.status == 'FINISHED') {
+            printSearchMarker();
+          }
+        } else if (frag.type == 'REQUEST') {
+          continue;
+        } else if (frag.type == 'THINK' || frag.type == 'THINKING') {
+          thinkingText += frag.thinking_content ?? frag.content ?? '';
+        } else {
+          if (frag.thinking_content) {
+            thinkingText += frag.thinking_content;
+          }
+          if (typeof frag.content == 'string') {
+            contentText += frag.content;
+          }
+        }
+      }
+
+      if (thinkingText.length > emittedThinking) {
+        if (!inThinking) {
+          this.chan.append('---');
+          inThinking = true;
+        }
+        this.chan.append(thinkingText.slice(emittedThinking), false);
+        emittedThinking = thinkingText.length;
+      }
+      if (contentText.length > emittedContent) {
+        closeThinking();
+        this.chan.append(contentText.slice(emittedContent), false);
+        emittedContent = contentText.length;
+      }
+    };
+
+    // apply a patch to one fragment field: content / thinking_content / status / results
+    const applyFragmentPatch = (index: number, field: string, value: any) => {
+      let i = index < 0 ? fragments.length + index : index;
+      if (i < 0 || i >= fragments.length) {
+        // patch arrived before any snapshot: synthesize the fragment
+        let type = 'RESPONSE';
+        if (field == 'thinking_content') {
+          type = 'THINK';
+        } else if (field == 'results' || field == 'status') {
+          type = 'SEARCH';
+        }
+        fragments.push({ id: fragments.length + 1, type });
+        i = fragments.length - 1;
+      }
+      const frag = fragments[i];
+
+      if (field == 'content' && typeof value == 'string') {
+        frag.content = o == 'SET' ? value : (frag.content ?? '') + value;
+        emitFragments();
+      } else if (field == 'thinking_content' && typeof value == 'string') {
+        frag.thinking_content = o == 'SET' ? value : (frag.thinking_content ?? '') + value;
+        emitFragments();
+      } else if (field == 'results' && Array.isArray(value)) {
+        frag.results = (frag.results ?? []).concat(value);
+        mergeSearchResults(value);
+        emitFragments();
+      } else if (field == 'status' && typeof value == 'string') {
+        frag.status = value;
+        if (frag.type == 'SEARCH' && value == 'FINISHED') {
+          printSearchMarker();
+        }
+      }
+    };
+
+    // dispatch one data frame; p and o are remembered so follow-up frames
+    // carrying only `v` repeat the previous operation
+    const applyPatch = (path: string, value: any) => {
+      if (typeof value == 'string') {
+        const arr = /^response\/fragments\/(-?\d+)\/(content|thinking_content|status|results)$/.exec(path);
+        if (arr) {
+          applyFragmentPatch(parseInt(arr[1]), arr[2], value);
+        } else if (path == 'response/search_status') {
+          if (value == 'FINISHED') {
+            printSearchMarker();
+          }
+        } else if (path == 'response/thinking_elapsed_secs') {
+          closeThinking();
+        } else if (path == 'response/content') {
+          applyFragmentPatch(-1, 'content', value);
+        } else if (path == 'response/thinking_content') {
+          applyFragmentPatch(-1, 'thinking_content', value);
+        } else {
+          logger.debug({ p: path, o, v: value });
+        }
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        if (path == 'response' && o == 'BATCH') {
+          for (const sub of value) {
+            if (sub && sub.p) {
+              applyPatch(sub.p.startsWith('response/') ? sub.p : `response/${sub.p}`, sub.v);
+            }
+          }
+        } else if (path == 'response/fragments') {
+          for (const frag of value) {
+            if (frag && typeof frag == 'object') {
+              fragments.push(frag as ChatMessageFragment);
+            }
+          }
+          emitFragments();
+        } else if (path.endsWith('/results') || path == 'response/search_results') {
+          mergeSearchResults(value);
+        } else {
+          logger.debug({ p: path, o, v: value });
+        }
+        return;
+      }
+
+      if (value && typeof value == 'object') {
+        if ('response' in value) {
+          // full response snapshot
+          const resp = value.response as ChatComplResp;
+          if (Array.isArray(resp.search_results)) {
+            mergeSearchResults(resp.search_results);
+          }
+          if (resp.search_status == 'FINISHED') {
+            printSearchMarker();
+          }
+          if (resp.fragments) {
+            fragments = resp.fragments;
+            emitFragments();
+          } else if (typeof resp.content == 'string') {
+            fragments = [{ id: 1, type: 'RESPONSE', content: resp.content }];
+            emitFragments();
+          }
+        } else if (path == 'response/fragments') {
+          fragments.push(value as ChatMessageFragment);
+          emitFragments();
+        } else {
+          logger.debug({ p: path, o, v: value });
+        }
+        return;
+      }
+
+      logger.debug({ p: path, o, v: value });
+    };
+
     const cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
           return;
         }
 
-        let msgList = decoder.decode(chunk);
-        for (let m of msgList) {
+        const msgList = decoder.decode(chunk);
+        for (const m of msgList) {
           if (m.type === 'event') {
             event = m.data;
             if (event === 'close') {
               this.chan.append('\n(END)');
             }
           } else if (m.type === 'data') {
-            let d = JSON.parse(m.data) as ChatComplData;
+            const d = JSON.parse(m.data) as ChatComplData;
             if (event === 'ready') {
-              if (
-                d.request_message_id != undefined &&
-                d.response_message_id != undefined
-              ) {
+              if (d.request_message_id != undefined && d.response_message_id != undefined) {
                 this.chan.append(`>> id:${d.response_message_id}\n`);
                 this.currentMsgid = d.response_message_id;
               }
             } else if (event === 'update_session') {
+              if (d.v === undefined) {
+                continue;
+              }
               if (d.p) {
                 p = d.p;
               }
-
-              if (p === 'response/search_status') {
-                if (d.v === 'FINISHED' && searchResults.length > 0) {
-                  this.chan.append(
-                    ` [search result (${searchResults.length})]\n`,
-                  );
-                }
-              } else if (p === 'response/search_results') {
-                if (Array.isArray(d.v)) {
-                  searchResults.push(...(d.v as ChatSearchResult[]));
-                }
-              } else if (p === 'response/content' && typeof d.v === 'string') {
-                this.chan.append(d.v, false);
-              } else if (p === 'response/thinking_content') {
-                if (d.p === 'response/thinking_content') {
-                  this.chan.append('---');
-                }
-                if (typeof d.v === 'string') {
-                  this.chan.append(d.v, false);
-                }
-              } else if (p === 'response/thinking_elapsed_secs') {
-                this.chan.append('\n\n---\n');
-              } else if (typeof d.v === 'object' && 'response' in d.v) {
-                this.chan.append(d.v.response.content, false);
-              } else {
-                logger.debug(m);
+              if (d.o) {
+                o = d.o;
               }
+              applyPatch(p, d.v);
+            } else {
+              logger.debug(m);
             }
           } else {
             logger.debug(m);
@@ -620,18 +821,20 @@ class DeepseekChat extends BaseChatChannel {
         this.chan.append(err.message);
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        logger.info(
-          `[Deepseek] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`,
-        );
+        logger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`);
       },
       onTimeout: () => {
         logger.error('[Deepseek] timeout');
       },
     };
     await sendHttpRequestWithCallback(req, cb);
+    closeThinking();
 
     if (searchResults.length > 0) {
-      let cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
+      if (!searchMarkerPrinted) {
+        printSearchMarker();
+      }
+      const cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
       await this.cache.set(cacheKey, JSON.stringify(searchResults));
     }
   }
