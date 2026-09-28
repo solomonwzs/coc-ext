@@ -28,7 +28,7 @@ import {
   ExternalExecResponse,
 } from './utils/externalexec';
 import { debug } from './utils/debug';
-import { getEnvHttpProxy } from './utils/common';
+import { getEnvHttpProxy } from './lib/comm/common';
 import { decodeMimeEncodeStr } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
 import { googleTranslate } from './translators/google';

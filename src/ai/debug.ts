@@ -1,6 +1,6 @@
 import { window, workspace, Position } from 'coc.nvim';
 import { cocLogger } from '../utils/logger';
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import { BaseChatChannel, ChatItem } from './base';
 
 function sleepMs(ms: number) {

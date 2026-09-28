@@ -1,4 +1,4 @@
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import http from 'http';
 import {
   sendHttpRequest,
@@ -208,20 +208,20 @@ class Sha3Wasm {
     const statusBytes = this.readBuffer(retptr, 4);
     if (statusBytes.length !== 4) {
       this.addToStack(16);
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read status fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'read status fail');
     }
     let status = new DataView(statusBytes.buffer).getInt32(0, true);
 
     let valueBytes = this.readBuffer(retptr + 8, 8);
     if (valueBytes.length !== 8) {
       this.addToStack(16);
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read value fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'read value fail');
     }
     let value = new DataView(valueBytes.buffer).getFloat64(0, true);
 
     this.addToStack(16);
     if (status !== 1) {
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'computePowAnswer fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'computePowAnswer fail');
     }
     return Math.floor(value);
   }
@@ -239,8 +239,8 @@ async function getWasm(dir: string): Promise<Sha3Wasm | Error> {
       : `https://${globalDeepseek.host}/static/sha3_wasm_bg.7b9ca65ddd.wasm`;
   if ((await fsAccess(wasmPath, fs.constants.R_OK)) != null) {
     if ((await simpleHttpDownloadFile(downloadUrl, wasmPath)) == -1) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] get wasm fail',
       );
     }
@@ -310,7 +310,7 @@ class DeepseekChat extends BaseChatChannel {
     method: string,
     path: string,
     d?: any,
-  ): Promise<ChatResponse | CocExtError> {
+  ): Promise<ChatResponse | ExtError> {
     let req: HttpRequest = {
       args: {
         host: globalDeepseek.host,
@@ -325,8 +325,8 @@ class DeepseekChat extends BaseChatChannel {
     }
     let resp = await sendHttpRequest(req);
     if (resp.statusCode != 200 || !resp.body) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         `[Deepseek] statusCode: ${resp.statusCode}, error: ${resp.error}, path: ${req.args.path}`,
       );
     }
@@ -343,8 +343,8 @@ class DeepseekChat extends BaseChatChannel {
     }
     let chatSessions = resp.data.biz_data?.chat_sessions;
     if (chatSessions == undefined) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] get sessions fail',
       );
     }
@@ -375,8 +375,8 @@ class DeepseekChat extends BaseChatChannel {
 
     let id = resp.data.biz_data?.id;
     if (!id || id.length == 0) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] create chat fail',
       );
     }
@@ -393,8 +393,8 @@ class DeepseekChat extends BaseChatChannel {
     }
     const messages = resp.data.biz_data?.chat_messages;
     if (messages == undefined) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] get messages fail',
       );
     }
@@ -520,8 +520,8 @@ class DeepseekChat extends BaseChatChannel {
     }
     let challenge = resp.data.biz_data?.challenge;
     if (!challenge) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] get challenge fail',
       );
     } else {

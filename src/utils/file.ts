@@ -1,14 +1,14 @@
 import fs from 'fs';
 import { callShell } from './externalexec';
-import { CocExtErrnoError } from '../utils/common';
+import { ExtErrnoError } from '../lib/comm/common';
 
 export async function fsAccess(
   path: fs.PathLike,
   mode: number | undefined,
-): Promise<null | CocExtErrnoError> {
+): Promise<null | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.access(path, mode, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(null);
+      err ? resolve(new ExtErrnoError(err)) : resolve(null);
     });
   });
 }
@@ -16,10 +16,10 @@ export async function fsAccess(
 export async function fsMkdir(
   path: fs.PathLike,
   opts?: fs.MakeDirectoryOptions,
-): Promise<null | CocExtErrnoError> {
+): Promise<null | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.mkdir(path, opts, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(null);
+      err ? resolve(new ExtErrnoError(err)) : resolve(null);
     });
   });
 }
@@ -28,14 +28,14 @@ export async function fsOpen(
   path: fs.PathLike,
   flags?: fs.OpenMode,
   mode?: fs.Mode,
-): Promise<number | CocExtErrnoError> {
+): Promise<number | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.open(
       path,
       flags,
       mode,
       (err: NodeJS.ErrnoException | null, fd: number) => {
-        err ? resolve(new CocExtErrnoError(err)) : resolve(fd);
+        err ? resolve(new ExtErrnoError(err)) : resolve(fd);
       },
     );
   });
@@ -44,7 +44,7 @@ export async function fsOpen(
 export async function fsWrite(
   fd: number,
   buf: NodeJS.ArrayBufferView,
-): Promise<number | CocExtErrnoError> {
+): Promise<number | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.write(
       fd,
@@ -54,16 +54,16 @@ export async function fsWrite(
         written: number,
         _buffer: NodeJS.ArrayBufferView,
       ) => {
-        err ? resolve(new CocExtErrnoError(err)) : resolve(written);
+        err ? resolve(new ExtErrnoError(err)) : resolve(written);
       },
     );
   });
 }
 
-export async function fsClose(fd: number): Promise<null | CocExtErrnoError> {
+export async function fsClose(fd: number): Promise<null | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.close(fd, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(null);
+      err ? resolve(new ExtErrnoError(err)) : resolve(null);
     });
   });
 }
@@ -71,10 +71,10 @@ export async function fsClose(fd: number): Promise<null | CocExtErrnoError> {
 export async function fsWriteFile(
   filename: string,
   data: string | NodeJS.ArrayBufferView,
-): Promise<null | CocExtErrnoError> {
+): Promise<null | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.writeFile(filename, data, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(null);
+      err ? resolve(new ExtErrnoError(err)) : resolve(null);
     });
   });
 }
@@ -82,30 +82,30 @@ export async function fsWriteFile(
 export async function fsAppendFile(
   filename: string,
   data: string | Uint8Array,
-): Promise<null | CocExtErrnoError> {
+): Promise<null | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.appendFile(filename, data, (err: NodeJS.ErrnoException | null) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(null);
+      err ? resolve(new ExtErrnoError(err)) : resolve(null);
     });
   });
 }
 
 export async function fsStat(
   filename: string,
-): Promise<fs.Stats | CocExtErrnoError> {
+): Promise<fs.Stats | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.stat(filename, (err: NodeJS.ErrnoException | null, stats: fs.Stats) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(stats);
+      err ? resolve(new ExtErrnoError(err)) : resolve(stats);
     });
   });
 }
 
 export async function fsReadFile(
   filename: string,
-): Promise<Buffer | CocExtErrnoError> {
+): Promise<Buffer | ExtErrnoError> {
   return new Promise((resolve) => {
     fs.readFile(filename, (err: NodeJS.ErrnoException | null, data: Buffer) => {
-      err ? resolve(new CocExtErrnoError(err)) : resolve(data);
+      err ? resolve(new ExtErrnoError(err)) : resolve(data);
     });
   });
 }

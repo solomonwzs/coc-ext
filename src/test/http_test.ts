@@ -1,4 +1,4 @@
-import { getEnvHttpProxy } from '../utils/common';
+import { getEnvHttpProxy } from '../lib/comm/common';
 import https from 'https';
 import http from 'http';
 import {

@@ -90,13 +90,13 @@ export function strFindFirstNotOf(str: string, ch: Set<string>): number {
   return -1;
 }
 
-export class CocExtError extends Error {
+export class ExtError extends Error {
   public errorCode: number;
 
   constructor(errorCode: number, message: string) {
     super(message);
 
-    this.name = 'CocExtError';
+    this.name = 'ExtError';
     this.errorCode = errorCode;
   }
 
@@ -108,7 +108,7 @@ export class CocExtError extends Error {
   static ERR_ZAI = -6;
 }
 
-export class CocExtErrnoError extends Error {
+export class ExtErrnoError extends Error {
   public errno: number | undefined;
   public code: string | undefined;
   public path: string | undefined;
@@ -116,7 +116,7 @@ export class CocExtErrnoError extends Error {
 
   constructor(err: NodeJS.ErrnoException) {
     super(err.message);
-    this.name = 'CocExtErrnoError';
+    this.name = 'ExtErrnoError';
     this.errno = err.errno;
     this.code = err.code;
     this.path = err.path;

@@ -1,6 +1,6 @@
 import { OutputChannel, window } from 'coc.nvim';
 import { getcfg } from './config';
-import { stringify } from './common';
+import { stringify } from '../lib/comm/common';
 import path from 'path';
 import { BaseLogger } from '../lib/comm/logger';
 

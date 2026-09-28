@@ -1,4 +1,4 @@
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import http from 'http';
 import {
   sendHttpRequest,
@@ -24,7 +24,7 @@ import {
   countTextWidth,
   StringAlignHelper,
 } from '../utils/helper';
-import { getEnvHttpProxy } from '../utils/common';
+import { getEnvHttpProxy } from '../lib/comm/common';
 import { window, workspace, ProviderResult } from 'coc.nvim';
 
 interface LlmServConfig {
@@ -94,7 +94,7 @@ class LlmCaller {
     method: string,
     path: string,
     data?: any,
-  ): Promise<string | CocExtError> {
+  ): Promise<string | ExtError> {
     let req: HttpRequest = {
       args: {
         host: this.endpoint.hostname,
@@ -109,8 +109,8 @@ class LlmCaller {
     };
     let resp = await sendHttpRequest(req);
     if (resp.statusCode != 200 || !resp.body) {
-      return new CocExtError(
-        CocExtError.ERR_COMM_AI,
+      return new ExtError(
+        ExtError.ERR_COMM_AI,
         `[CommAI] statusCode: ${resp.statusCode}, path: ${req.args.path}, resp: ${resp.body?.toString()}`,
       );
     }
@@ -121,7 +121,7 @@ class LlmCaller {
     this.headers['X-Conversation-Id'] = id;
   }
 
-  public async models(): Promise<LlmModelsResponse | CocExtError> {
+  public async models(): Promise<LlmModelsResponse | ExtError> {
     delete this.headers['Content-Type'];
     delete this.headers['X-Request-Id'];
 
@@ -131,7 +131,7 @@ class LlmCaller {
 
   public async completions(
     data: LlmChatRequest,
-  ): Promise<LlmChatResponseData | CocExtError> {
+  ): Promise<LlmChatResponseData | ExtError> {
     this.headers['Content-Type'] = 'application/json';
     this.headers['X-Request-Id'] = crypto.randomUUID();
 
@@ -253,7 +253,7 @@ class LlmCommonChat extends BaseChatChannel {
       this.caller.setConersationId(chatId);
       return chatId;
     }
-    return new CocExtError(CocExtError.ERR_COMM_AI, 'choose model fail');
+    return new ExtError(ExtError.ERR_COMM_AI, 'choose model fail');
   }
 
   public async showHistoryMessages(): Promise<null | Error> {

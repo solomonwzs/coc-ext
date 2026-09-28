@@ -6,7 +6,7 @@ import {
 } from '../utils/http';
 import http from 'http';
 import { cocLogger } from '../utils/logger';
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
 import { URLSearchParams } from 'url';
@@ -326,8 +326,8 @@ class ZAiChat extends BaseChatChannel {
 
     let resp = await sendHttpRequest(req);
     if (resp.statusCode != 200 || !resp.body) {
-      return new CocExtError(
-        CocExtError.ERR_ZAI,
+      return new ExtError(
+        ExtError.ERR_ZAI,
         `[Z.ai] statusCode: ${resp.statusCode}, path: ${path}, resp: ${resp.body?.toString()}`,
       );
     }

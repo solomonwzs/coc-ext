@@ -1,7 +1,7 @@
 import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import { AutocmdInfo } from '../utils/types';
 // import { logger } from '../utils/logger';
-import { strFindFirstOf, strFindFirstNotOf } from '../utils/common';
+import { strFindFirstOf, strFindFirstNotOf } from '../lib/comm/common';
 
 export interface AutocmdGroupInfo {
   group: string;

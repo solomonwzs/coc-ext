@@ -6,7 +6,7 @@ import {
 } from '../utils/http';
 import http from 'http';
 import { cocLogger } from '../utils/logger';
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
 
@@ -368,20 +368,20 @@ class KimiChatV2 extends BaseChatChannel {
       !this.headers['Authorization'] &&
       (await this.getAccessToken()) != 200
     ) {
-      return new CocExtError(CocExtError.ERR_AUTH, '[Kimi] Auth fail');
+      return new ExtError(ExtError.ERR_AUTH, '[Kimi] Auth fail');
     }
 
     let resp = await sendHttpRequest(req);
     if (resp.statusCode == 401) {
       if ((await this.getAccessToken()) != 200) {
-        return new CocExtError(CocExtError.ERR_AUTH, '[Kimi] Auth fail');
+        return new ExtError(ExtError.ERR_AUTH, '[Kimi] Auth fail');
       }
       resp = await sendHttpRequest(req);
     }
 
     if (resp.statusCode != 200 || !resp.body) {
-      return new CocExtError(
-        CocExtError.ERR_KIMI,
+      return new ExtError(
+        ExtError.ERR_KIMI,
         `[Kimi] statusCode: ${resp.statusCode}, path: ${path}, resp: ${resp.body?.toString()}`,
       );
     }

@@ -1,6 +1,6 @@
 import { workspace } from 'coc.nvim';
 import { parseHighlightInfo } from '../lists/highlight';
-import { getRandomId } from '../utils/common';
+import { getRandomId } from '../lib/comm/common';
 // import { logger } from '../utils/logger';
 
 export async function highlightSource(): Promise<any> {

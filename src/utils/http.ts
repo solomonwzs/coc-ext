@@ -1,6 +1,6 @@
 import https from 'https';
 import http from 'http';
-import { CocExtError, getEnvHttpProxy } from './common';
+import { ExtError, getEnvHttpProxy } from '../lib/comm/common';
 import { URL } from 'url';
 import { fsOpen, fsWrite, fsClose } from './file';
 
@@ -56,7 +56,7 @@ export async function simpleHttpsProxy(
           resolve({ agent: new https.Agent({ socket }) });
         } else {
           resolve({
-            error: new CocExtError(CocExtError.ERR_HTTP, 'connect fail'),
+            error: new ExtError(ExtError.ERR_HTTP, 'connect fail'),
           });
         }
       })
@@ -95,8 +95,8 @@ export async function simpleHttpRequest(
       })
       .on('timeout', () => {
         resolve({
-          error: new CocExtError(
-            CocExtError.ERR_HTTP,
+          error: new ExtError(
+            ExtError.ERR_HTTP,
             `query ${opts.hostname ? opts.hostname : opts.host} timeout`,
           ),
         });

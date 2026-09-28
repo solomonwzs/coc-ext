@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { getRandomId } from '../utils/common';
+import { getRandomId } from '../lib/comm/common';
 import { callShell } from '../utils/externalexec';
 
 export function pythonTest() {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { fsAccess, fsReadFile } from '../utils/file';
-import { CocExtError } from '../utils/common';
+import { ExtError } from '../lib/comm/common';
 import { simpleHttpDownloadFile } from '../utils/http';
 
 class DeepseekWasm {
@@ -76,20 +76,20 @@ class DeepseekWasm {
     const statusBytes = this.readMemory(retptr, 4);
     if (statusBytes.length !== 4) {
       this.addToStack(16);
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read status fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'read status fail');
     }
     let status = new DataView(statusBytes.buffer).getInt32(0, true);
 
     let valueBytes = this.readMemory(retptr + 8, 8);
     if (valueBytes.length !== 8) {
       this.addToStack(16);
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'read value fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'read value fail');
     }
     let value = new DataView(valueBytes.buffer).getFloat64(0, true);
 
     this.addToStack(16);
     if (status !== 1) {
-      return new CocExtError(CocExtError.ERR_DEEPSEEK, 'computePowAnswer fail');
+      return new ExtError(ExtError.ERR_DEEPSEEK, 'computePowAnswer fail');
     }
     return Math.floor(value);
   }
@@ -101,8 +101,8 @@ async function getWasm(): Promise<DeepseekWasm | Error> {
     'https://chat.deepseek.com/static/sha3_wasm_bg.7b9ca65ddd.wasm';
   if ((await fsAccess(wasmPath, fs.constants.R_OK)) != null) {
     if ((await simpleHttpDownloadFile(downloadUrl, wasmPath)) == -1) {
-      return new CocExtError(
-        CocExtError.ERR_DEEPSEEK,
+      return new ExtError(
+        ExtError.ERR_DEEPSEEK,
         '[Deepseek] get wasm fail',
       );
     }
