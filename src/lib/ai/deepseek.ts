@@ -736,6 +736,17 @@ export class DeepseekChat extends BaseChat {
             }
           }
           emitFragments();
+        } else if (/^response\/fragments\/-?\d+$/.test(path) && o == 'BATCH') {
+          // BATCH patch on a specific fragment ([-1] = last/current):
+          // apply each sub-field (status/content/...) onto that fragment so
+          // e.g. a SEARCH fragment's status reaches FINISHED in time to
+          // print the search marker before the body, not at the end.
+          const index = /\/([-\d]+)$/.exec(path)![1];
+          for (const sub of value) {
+            if (sub && sub.p) {
+              applyPatch(`response/fragments/${index}/${sub.p}`, sub.v);
+            }
+          }
         } else if (
           path.endsWith('/results') ||
           path == 'response/search_results'

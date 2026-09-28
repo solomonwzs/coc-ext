@@ -11,8 +11,12 @@ import { BaseLogger } from '../comm/logger';
 
 const globalKimi = {
   host: 'www.kimi.com',
-  scenario: 'SCENARIO_K2D5',
+  scenario: 'SCENARIO_OK_COMPUTER',
   timeout: 5000,
+  reasoning_effort: 'REASONING_EFFORT_HIGH',
+  context_length: 'CONTEXT_LENGTH_L',
+  model: 'k3-agent',
+  kimiplus_id: 'ok-computer',
 };
 
 interface WebPage {
@@ -128,7 +132,7 @@ interface ChatRequest {
   scenario: string;
   tools: {
     type: string;
-    search: any;
+    search?: any;
   }[];
   message: {
     parent_id?: string;
@@ -143,7 +147,12 @@ interface ChatRequest {
   };
   options?: {
     thinking?: boolean;
+    enable_plugin?: boolean;
+    reasoning_effort?: string;
+    context_length?: string;
+    model?: string;
   };
+  kimiplus_id?: string;
 }
 
 interface ChatResponse {
@@ -632,13 +641,24 @@ export class KimiChatV2 extends BaseChat {
     let chatReq: ChatRequest = {
       chatId: this.chatId,
       scenario: globalKimi.scenario,
-      tools: [{ type: 'TOOL_TYPE_SEARCH', search: {} }],
+      tools: [
+        { type: 'TOOL_TYPE_SEARCH', search: {} },
+        { type: 'TOOL_TYPE_ASK_USER' },
+      ],
       message: {
         parent_id: this.currentMsgid,
         role: 'user',
         blocks: [{ message_id: '', text: { content: text } }],
         scenario: globalKimi.scenario,
       },
+      options: {
+        thinking: true,
+        enable_plugin: true,
+        reasoning_effort: globalKimi.reasoning_effort,
+        context_length: globalKimi.context_length,
+        model: globalKimi.model,
+      },
+      kimiplus_id: globalKimi.kimiplus_id,
     };
 
     const req: HttpRequest = {
