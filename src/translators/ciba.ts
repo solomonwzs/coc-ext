@@ -1,6 +1,6 @@
 import { ITranslation, createTranslation } from './base';
 import { cocLogger } from '../utils/logger';
-import { sendHttpRequest, HttpRequest } from '../utils/http';
+import { sendHttpRequest, HttpRequest } from '../lib/comm/http';
 import { URL } from 'url';
 
 function getParaphrase(obj: any): string {

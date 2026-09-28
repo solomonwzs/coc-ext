@@ -1,5 +1,5 @@
 import { ITranslation, createTranslation } from './base';
-import { sendHttpRequest, HttpRequest } from '../utils/http';
+import { sendHttpRequest, HttpRequest } from '../lib/comm/http';
 import { cocLogger } from '../utils/logger';
 import { URL } from 'url';
 

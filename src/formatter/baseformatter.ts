@@ -6,7 +6,7 @@ import {
   TextEdit,
 } from 'coc.nvim';
 import { FormatterSetting } from '../utils/types';
-import { callShell } from '../utils/externalexec';
+import { callShell } from '../lib/comm/externalexec';
 import { showNotification } from '../utils/notify';
 import { cocLogger } from '../utils/logger';
 

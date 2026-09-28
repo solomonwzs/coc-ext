@@ -1,54 +1,17 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
-import os from 'os';
-import { fsReadFile, fsWriteFile, fsMkdir } from '../utils/file';
 import { cocLogger } from '../utils/logger';
+import { BaseChatChannel, ChatRefOptions, ChatRefItem } from '../lib/ai/base';
+import { popup, ScratchWindow } from '../utils/helper';
 
-export interface ChatItem {
-  label: string;
-  chatId: string;
-  description: string;
-}
-
-export class FileCache {
-  private ready: boolean = false;
-  constructor(public readonly dir: string) {}
-
-  public async checkDir() {
-    if (this.ready) {
-      return null;
-    }
-    let err = await fsMkdir(this.dir, { recursive: true, mode: 0o755 });
-    if (err) {
-      return err;
-    }
-    this.ready = true;
-    return null;
-  }
-
-  public async set(key: string, data: string | NodeJS.ArrayBufferView) {
-    let err = await this.checkDir();
-    if (err) {
-      return err;
-    }
-    let cacheFile = `${this.dir}/${key}`;
-    return await fsWriteFile(cacheFile, data);
-  }
-
-  public async get(key: string) {
-    let err = await this.checkDir();
-    if (err) {
-      return err;
-    }
-    let cacheFile = `${this.dir}/${key}`;
-    return await fsReadFile(cacheFile);
-  }
-}
-
-export class ChatChannel {
+export class CocChatChannel extends BaseChatChannel {
   protected channel: OutputChannel;
   protected winid: number;
 
-  constructor(protected chatName: string) {
+  constructor(
+    protected chatName: string,
+    protected scratchWindow: ScratchWindow,
+  ) {
+    super();
     this.channel = window.createOutputChannel(chatName);
     this.winid = -1;
   }
@@ -81,7 +44,7 @@ export class ChatChannel {
     this.winid = -1;
   }
 
-  public append(text: string, newline: boolean = true) {
+  private append0(text: string, newline: boolean = true) {
     if (newline) {
       this.channel.appendLine(text);
     } else {
@@ -94,11 +57,19 @@ export class ChatChannel {
     }
   }
 
+  public append(text: string) {
+    this.append0(text, false);
+  }
+
+  public appendLine(text: string) {
+    this.append0(text, true);
+  }
+
   public appendUserInput(datetime: string, text: string) {
-    this.append(`\n>> ${datetime}`);
+    this.append0(`\n>> ${datetime}`);
     let lines = text.split('\n');
     for (const i of lines) {
-      this.append(`>> ${i}`);
+      this.append0(`>> ${i}`);
     }
   }
 
@@ -108,6 +79,65 @@ export class ChatChannel {
       this.channel = window.createOutputChannel(this.chatName);
       this.winid = -1;
     }
+  }
+
+  public async popup(content: string, title?: string, filetype?: string) {
+    await popup(content, title, filetype);
+  }
+
+  public async openSearchWindow(lines: string[]) {
+    await this.scratchWindow.open(lines);
+  }
+
+  public async getCurrentRef(
+    opts?: ChatRefOptions,
+  ): Promise<null | ChatRefItem> {
+    let doc = await workspace.document;
+    let pos = await window.getCursorPosition();
+    let lines = await doc.buffer.lines;
+    let line = lines[pos.line];
+    if (!line) {
+      return null;
+    }
+
+    let ch0 = opts ? opts.start : '[';
+    let ch1 = opts ? opts.start : ']';
+    let start = pos.character;
+    while (start >= 0) {
+      let ch = line[start];
+      if (!ch || ch == ch0) break;
+      start -= 1;
+    }
+    if (start < 0) {
+      return null;
+    }
+    let end = pos.character;
+    while (end < line.length) {
+      let ch = line[end];
+      if (!ch || ch == ch1) break;
+      end += 1;
+    }
+    if (end >= line.length) {
+      return null;
+    }
+    let refText = line.substring(start, end + 1);
+
+    let lineStart = pos.line - 1;
+    let segmentId = '';
+    for (; lineStart >= 0; --lineStart) {
+      const l = lines[lineStart];
+      if (l.length > 6 && l.slice(0, 6) == '>> id:') {
+        segmentId = l.slice(6).trim();
+        break;
+      }
+    }
+    if (segmentId.length == 0) {
+      return null;
+    }
+    return {
+      refText,
+      segmentId,
+    };
   }
 }
 
@@ -147,113 +177,4 @@ export class ChunkDecoder {
     }
     return out;
   }
-}
-
-export abstract class BaseChatChannel {
-  protected chatId: string | undefined;
-  protected cache: FileCache;
-  protected chan: ChatChannel;
-
-  constructor() {
-    this.chatId = undefined;
-    this.cache = new FileCache(
-      `${os.homedir}/.cache/chat_${this.getChatName()}`,
-    );
-    this.chan = new ChatChannel(this.getChatName());
-  }
-
-  public getCurrentChatId() {
-    return this.chatId;
-  }
-
-  public setCurrentChatId(chatId: string) {
-    this.chatId = chatId;
-    this.chan.clear();
-  }
-
-  public async sendChat(text: string) {
-    await this.chan.openAutoScroll();
-    await this.chat(text);
-    this.chan.closeAutoScroll();
-  }
-
-  public async show() {
-    await this.chan.show();
-  }
-
-  public hide() {
-    this.chan.hide();
-  }
-
-  public clear() {
-    this.chan.clear();
-  }
-
-  public abstract reset(): void;
-  public abstract getChatName(): string;
-  public abstract getChatList(): Promise<ChatItem[] | Error>;
-  public abstract createChatId(name: string): Promise<string | Error>;
-  public abstract showHistoryMessages(): Promise<null | Error>;
-  public abstract showItem(): Promise<void>;
-  public abstract chat(text: string): Promise<void>;
-  public abstract delSession(chatId: string): Promise<null | Error>;
-}
-
-interface ChatRefOptions {
-  start: string;
-  end: string;
-}
-interface ChatRefItem {
-  refText: string;
-  segmentId: string;
-}
-export async function getCurrentRef(
-  opts?: ChatRefOptions,
-): Promise<null | ChatRefItem> {
-  let doc = await workspace.document;
-  let pos = await window.getCursorPosition();
-  let lines = await doc.buffer.lines;
-  let line = lines[pos.line];
-  if (!line) {
-    return null;
-  }
-
-  let ch0 = opts ? opts.start : '[';
-  let ch1 = opts ? opts.start : ']';
-  let start = pos.character;
-  while (start >= 0) {
-    let ch = line[start];
-    if (!ch || ch == ch0) break;
-    start -= 1;
-  }
-  if (start < 0) {
-    return null;
-  }
-  let end = pos.character;
-  while (end < line.length) {
-    let ch = line[end];
-    if (!ch || ch == ch1) break;
-    end += 1;
-  }
-  if (end >= line.length) {
-    return null;
-  }
-  let refText = line.substring(start, end + 1);
-
-  let lineStart = pos.line - 1;
-  let segmentId = '';
-  for (; lineStart >= 0; --lineStart) {
-    const l = lines[lineStart];
-    if (l.length > 6 && l.slice(0, 6) == '>> id:') {
-      segmentId = l.slice(6).trim();
-      break;
-    }
-  }
-  if (segmentId.length == 0) {
-    return null;
-  }
-  return {
-    refText,
-    segmentId,
-  };
 }

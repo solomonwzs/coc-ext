@@ -1,9 +1,7 @@
 import { window, workspace, ProviderResult } from 'coc.nvim';
-import { BaseChatChannel, ChatItem } from './base';
-import { llmCommonChat } from './llmcommon';
-import { deepseekChat } from './deepseek';
-import { kimiChatV2 } from './kimi_v2';
-import { zaiChat } from './zai';
+import { BaseChat, ChatItem } from '../lib/ai/base';
+// import { llmCommonChat } from './llmcommon';
+// import { zaiChat } from './zai';
 import {
   echoMessage,
   getText,
@@ -12,15 +10,17 @@ import {
 } from '../utils/helper';
 import { cocLogger } from '../utils/logger';
 import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
+import { deepseekChat } from './deepseek';
+import { kimiChatV2 } from './kimi_v2';
 
-export let name2AiChat = new Map<string, BaseChatChannel>([
+export let name2AiChat = new Map<string, BaseChat>([
   [kimiChatV2.getChatName(), kimiChatV2],
   [deepseekChat.getChatName(), deepseekChat],
-  [llmCommonChat.getChatName(), llmCommonChat],
-  [zaiChat.getChatName(), zaiChat],
+  // [llmCommonChat.getChatName(), llmCommonChat],
+  // [zaiChat.getChatName(), zaiChat],
 ]);
 
-let globalAiChat: BaseChatChannel | null = null;
+let globalAiChat: BaseChat | null = null;
 let globalScratchWindow = new ScratchWindow('Chat Input', 'text');
 
 export async function aiChatSelect() {
@@ -156,7 +156,7 @@ export class AiChatList extends BasicList {
 
   constructor(
     public readonly name: string,
-    private readonly aiChat: BaseChatChannel,
+    private readonly aiChat: BaseChat,
   ) {
     super();
 

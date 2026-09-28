@@ -10,8 +10,8 @@ import {
 import minimatch from 'minimatch';
 import path from 'path';
 import { CryptoSetting, Execution } from './utils/types';
-import { callShell, ExternalExecResponse } from './utils/externalexec';
-import { fsStat, getFilesList } from './utils/file';
+import { callShell, ExternalExecResponse } from './lib/comm/externalexec';
+import { fsStat, getFilesList } from './lib/comm/file';
 import { cocLogger } from './utils/logger';
 import {
   encodeAes256Str,

@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { fsAccess, fsReadFile } from '../utils/file';
+import { fsAccess, fsReadFile } from '../lib/comm/file';
 import { ExtError } from '../lib/comm/common';
-import { simpleHttpDownloadFile } from '../utils/http';
+import { simpleHttpDownloadFile } from '../lib/comm/http';
 
 class DeepseekWasm {
   private memory: WebAssembly.Memory;

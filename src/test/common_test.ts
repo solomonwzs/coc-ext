@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { getRandomId } from '../lib/comm/common';
-import { callShell } from '../utils/externalexec';
+import { callShell } from '../lib/comm/externalexec';
 
 export function pythonTest() {
   const py = spawn('python3', ['/tmp/2.py'], {

@@ -3,7 +3,7 @@ import {
   HttpRequest,
   sendHttpRequest,
   sendHttpRequestWithCallback,
-} from '../utils/http';
+} from '../lib/comm/http';
 
 export async function kimiTest() {
   const trafficID = Array.from({ length: 20 }, () =>

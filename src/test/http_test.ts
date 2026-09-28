@@ -6,7 +6,7 @@ import {
   sendHttpRequest,
   simpleHttpRequest,
   simpleHttpsProxy,
-} from '../utils/http';
+} from '../lib/comm/http';
 
 export async function httpTest(): Promise<void> {
   console.log(getEnvHttpProxy());

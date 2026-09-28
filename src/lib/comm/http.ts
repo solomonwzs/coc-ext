@@ -1,6 +1,6 @@
 import https from 'https';
 import http from 'http';
-import { ExtError, getEnvHttpProxy } from '../lib/comm/common';
+import { ExtError, getEnvHttpProxy } from './common';
 import { URL } from 'url';
 import { fsOpen, fsWrite, fsClose } from './file';
 

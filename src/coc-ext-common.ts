@@ -26,7 +26,7 @@ import {
   callPython,
   callShell,
   ExternalExecResponse,
-} from './utils/externalexec';
+} from './lib/comm/externalexec';
 import { debug } from './utils/debug';
 import { getEnvHttpProxy } from './lib/comm/common';
 import { decodeMimeEncodeStr } from './utils/decoder';

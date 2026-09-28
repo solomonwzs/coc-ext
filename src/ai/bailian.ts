@@ -4,7 +4,7 @@ import {
   sendHttpRequestWithCallback,
   HttpRequest,
   HttpRequestCallback,
-} from '../utils/http';
+} from '../lib/comm/http';
 import { cocLogger } from '../utils/logger';
 
 interface BailianCompletion {

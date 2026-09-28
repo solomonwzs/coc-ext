@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { callShell } from './externalexec';
-import { ExtErrnoError } from '../lib/comm/common';
+import { ExtErrnoError } from './common';
 
 export async function fsAccess(
   path: fs.PathLike,

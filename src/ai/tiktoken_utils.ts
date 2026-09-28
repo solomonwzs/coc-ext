@@ -2,8 +2,8 @@ import { Tiktoken } from 'tiktoken';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { fsAccess, fsMkdir, fsReadFile } from '../utils/file';
-import { simpleHttpDownloadFile } from '../utils/http';
+import { fsAccess, fsMkdir, fsReadFile } from '../lib/comm/file';
+import { simpleHttpDownloadFile } from '../lib/comm/http';
 import { cocLogger } from '../utils/logger';
 
 async function cache_file_path(name: string) {

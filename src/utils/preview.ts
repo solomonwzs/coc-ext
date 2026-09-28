@@ -11,8 +11,8 @@ import {
   quickCheckArchiveType,
   ArchiveType,
   fsWriteFile,
-} from './file';
-import { callShell } from './externalexec';
+} from '../lib/comm/file';
+import { callShell } from '../lib/comm/externalexec';
 import { cocLogger } from './logger';
 
 const base64ScratchWindow = new ScratchWindow('BASE64 DECODE', 'text');

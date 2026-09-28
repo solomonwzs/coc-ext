@@ -4,8 +4,8 @@ import { sleepMs, popup, newScratchWindow } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
 import { showNotification } from '../utils/notify';
-import { fsReadFile } from '../utils/file';
-import { ChatChannel } from '../ai/base';
+import { fsReadFile } from '../lib/comm/file';
+// import { ChatChannel } from '../ai/base';
 
 export async function debugWindow(): Promise<any> {
   let id = (await workspace.nvim.call('ui#window#new', {
@@ -142,19 +142,19 @@ export async function debugNewWin() {
   // logger.debug(wins);
 }
 
-export async function debugChat() {
-  let chan = new ChatChannel('---');
-  await chan.show();
+// export async function debugChat() {
+//   let chan = new ChatChannel('---');
+//   await chan.show();
 
-  await chan.appendUserInput('now', 'hello');
-  // for (let i = 0; i < 20; ++i) {
-  //   await chan.append(`${i}`);
-  //   await sleepMs(50);
-  // }
-  chan.clear();
-  await chan.appendUserInput('now', 'hello');
-}
+//   await chan.appendUserInput('now', 'hello');
+//   // for (let i = 0; i < 20; ++i) {
+//   //   await chan.append(`${i}`);
+//   //   await sleepMs(50);
+//   // }
+//   chan.clear();
+//   await chan.appendUserInput('now', 'hello');
+// }
 
 export async function debug(_cmd: string, ..._args: any[]): Promise<any> {
-  await debugChat();
+  // await debugChat();
 }

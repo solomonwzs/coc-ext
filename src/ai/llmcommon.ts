@@ -5,7 +5,7 @@ import {
   sendHttpRequestWithCallback,
   HttpRequest,
   HttpRequestCallback,
-} from '../utils/http';
+} from '../lib/comm/http';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
 import {
   LlmChatRequest,
@@ -13,8 +13,8 @@ import {
   LlmContextManager,
 } from './context';
 import { cocLogger } from '../utils/logger';
-import { fsAccess, fsReadFile } from '../utils/file';
-import { simpleHttpDownloadFile } from '../utils/http';
+import { fsAccess, fsReadFile } from '../lib/comm/file';
+import { simpleHttpDownloadFile } from '../lib/comm/http';
 import fs from 'fs';
 import { getcfg } from '../utils/config';
 import { CocExtAIChatConfig } from '../utils/types';

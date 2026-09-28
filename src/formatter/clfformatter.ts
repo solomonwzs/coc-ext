@@ -10,7 +10,7 @@ import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from './baseformatter';
 import fs from 'fs';
 import path from 'path';
-import { fsAccess } from '../utils/file';
+import { fsAccess } from '../lib/comm/file';
 
 export class ClfFormatter extends BaseFormatter {
   constructor(public readonly setting: FormatterSetting) {

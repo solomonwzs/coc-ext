@@ -1,10 +1,10 @@
 import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import path from 'path';
-import { callShell } from '../utils/externalexec';
+import { callShell } from '../lib/comm/externalexec';
 import { getDefxIcon } from '../utils/icons';
 import { cocLogger } from '../utils/logger';
 import { openFile } from '../utils/helper';
-// import { fsRead } from '../utils/file';
+// import { fsRead } from '../lib/comm/file';
 import { showNotification } from '../utils/notify';
 import { RgMatchData } from '../utils/types';
 

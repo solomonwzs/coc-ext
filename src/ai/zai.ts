@@ -3,7 +3,7 @@ import {
   sendHttpRequestWithCallback,
   HttpRequest,
   HttpRequestCallback,
-} from '../utils/http';
+} from '../lib/comm/http';
 import http from 'http';
 import { cocLogger } from '../utils/logger';
 import { ExtError } from '../lib/comm/common';

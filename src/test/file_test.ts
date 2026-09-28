@@ -3,7 +3,7 @@ import path from 'path';
 import minimatch from 'minimatch';
 import { URI } from 'vscode-uri';
 import os from 'os';
-import { fsStat, getFilesList } from '../utils/file';
+import { fsStat, getFilesList } from '../lib/comm/file';
 
 export function writefileTest() {
   fs.writeFile('/tmp/1.txt', 'hello', (err) => {

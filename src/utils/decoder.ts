@@ -1,5 +1,5 @@
 import { TextDecoder } from 'util';
-import { callShell } from './externalexec';
+import { callShell } from '../lib/comm/externalexec';
 // import { logger } from './logger';
 
 export function decodeStr(str: string, enc: string): string {

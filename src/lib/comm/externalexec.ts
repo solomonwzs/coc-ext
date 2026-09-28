@@ -1,5 +1,5 @@
 import path from 'path';
-import { CallShellOptions, Execution } from './types';
+import { CallShellOptions, Execution } from '../../utils/types';
 import {
   spawn,
   ChildProcessWithoutNullStreams,

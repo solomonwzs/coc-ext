@@ -1,3 +1,6 @@
+import path from 'path';
+import { stringify } from './common';
+
 export abstract class BaseLogger {
   protected level: number;
 
@@ -6,7 +9,7 @@ export abstract class BaseLogger {
   }
 
   protected abstract logLevel(level: string, value: any): void;
-  
+
   public debug(value: any): void {
     if (this.level > 0) {
       return;
@@ -30,5 +33,13 @@ export abstract class BaseLogger {
 
   public error(message: any): void {
     this.logLevel('E', message);
+  }
+}
+
+export class CommLogger extends BaseLogger {
+  protected logLevel(level: string, value: any): void {
+    const fn = path.basename(__filename);
+    const str = stringify(value);
+    console.log(`${level} [${fn}] ${str}`);
   }
 }
