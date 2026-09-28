@@ -11,7 +11,7 @@ async function start() {
     external: ['coc.nvim'],
     platform: 'node',
     target: 'node10.12',
-    outfile: 'lib/coc-ext-erlang.js',
+    outfile: 'dist/coc-ext-erlang.js',
   });
 }
 

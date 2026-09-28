@@ -11,7 +11,7 @@ async function start() {
     external: ['coc.nvim', 'tiktoken'],
     platform: 'node',
     target: 'node10.12',
-    outfile: 'lib/coc-ext-common.js',
+    outfile: 'dist/coc-ext-common.js',
   });
 }
 

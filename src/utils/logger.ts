@@ -2,13 +2,14 @@ import { OutputChannel, window } from 'coc.nvim';
 import { getcfg } from './config';
 import { stringify } from './common';
 import path from 'path';
+import { BaseLogger } from '../lib/comm/logger';
 
-export class Logger {
+export class Logger extends BaseLogger {
   private channel: OutputChannel;
   private detail: boolean;
-  private level: number;
 
   constructor() {
+    super();
     this.channel = window.createOutputChannel('coc-ext');
     this.detail = getcfg<boolean>('log.detail', false) === true;
     this.level = getcfg<number>('log.level', 1);
@@ -22,7 +23,7 @@ export class Logger {
     return i.toString().padStart(n, '0');
   }
 
-  private logLevel(level: string, value: any): void {
+  protected logLevel(level: string, value: any): void {
     const now = new Date();
     const str = stringify(value);
     if (this.detail) {
@@ -44,36 +45,6 @@ export class Logger {
     }
     const fn = path.basename(__filename);
     this.channel.appendLine(`${level} [${fn}] ${str}`);
-  }
-
-  public debug(value: any): void {
-    if (this.level > 0) {
-      return;
-    }
-    this.logLevel('D', value);
-  }
-
-  public info(value: any): void {
-    if (this.level > 1) {
-      return;
-    }
-    this.logLevel('I', value);
-  }
-
-  public warn(value: any): void {
-    if (this.level > 2) {
-      return;
-    }
-    this.logLevel('W', value);
-  }
-
-  public error(message: any): void {
-    this.logLevel('E', message);
-  }
-
-  public append(message: any): void {
-    const str = stringify(message);
-    this.channel.append(str);
   }
 }
 

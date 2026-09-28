@@ -11,7 +11,7 @@ async function start() {
     external: [],
     platform: 'node',
     target: 'node10.12',
-    outfile: 'lib/test.js',
+    outfile: 'dist/test.js',
   });
 }
 
