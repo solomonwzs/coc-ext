@@ -12,7 +12,7 @@ import path from 'path';
 import { CryptoSetting, Execution } from './utils/types';
 import { callShell, ExternalExecResponse } from './utils/externalexec';
 import { fsStat, getFilesList } from './utils/file';
-import { logger } from './utils/logger';
+import { cocLogger } from './utils/logger';
 import {
   encodeAes256Str,
   decodeAes256Str,
@@ -177,7 +177,7 @@ class CryptoHandler {
         const cmd = this.getEncryptCmd(new_name, f);
         const res = await callShell(cmd.exec, cmd.args);
         if (res.exitCode != 0) {
-          logger.error(`encrypt ${f} fail`);
+          cocLogger.error(`encrypt ${f} fail`);
         }
       }
     }
@@ -211,7 +211,7 @@ class CryptoHandler {
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-crypto works`);
-  logger.info(`coc-ext-crypto works`);
+  cocLogger.info(`coc-ext-crypto works`);
 
   const conf_path = path.join(workspace.root, g_conf_filename);
   const stat = await fsStat(conf_path);
@@ -238,15 +238,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
   if (handler.isAutoEncrypt()) {
     context.subscriptions.push(
       events.on('BufWritePost', async () => {
-        logger.debug('?');
+        cocLogger.debug('?');
         const doc = await workspace.document;
         if (handler.shouldEncrypt(Uri.parse(doc.uri).fsPath)) {
           const res = await handler.encryptToFile(doc);
           if (!res) {
-            logger.error('encrypt fail');
+            cocLogger.error('encrypt fail');
           }
           if (res && res.error) {
-            logger.error(res.error);
+            cocLogger.error(res.error);
           }
         }
       })

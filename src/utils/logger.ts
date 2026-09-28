@@ -4,7 +4,7 @@ import { stringify } from './common';
 import path from 'path';
 import { BaseLogger } from '../lib/comm/logger';
 
-export class Logger extends BaseLogger {
+export class CocLogger extends BaseLogger {
   private channel: OutputChannel;
   private detail: boolean;
 
@@ -48,4 +48,4 @@ export class Logger extends BaseLogger {
   }
 }
 
-export const logger = new Logger();
+export const cocLogger = new CocLogger();

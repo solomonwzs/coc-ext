@@ -8,7 +8,7 @@ import {
 import { FormatterSetting } from '../utils/types';
 import { callShell } from '../utils/externalexec';
 import { showNotification } from '../utils/notify';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 
 export abstract class BaseFormatter {
   protected setting: FormatterSetting;
@@ -35,7 +35,7 @@ export abstract class BaseFormatter {
     if (resp.exitCode != 0) {
       showNotification(`${exec} fail, ret ${resp.exitCode}`, 'formatter');
       if (resp.error) {
-        logger.error(resp.error.toString());
+        cocLogger.error(resp.error.toString());
       }
     } else if (resp.data) {
       showNotification(`${exec} ok`, 'formatter');

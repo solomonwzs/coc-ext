@@ -12,7 +12,7 @@ import {
   LlmChatResponseData,
   LlmContextManager,
 } from './context';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
 import fs from 'fs';
@@ -243,10 +243,10 @@ class LlmCommonChat extends BaseChatChannel {
       return llmResp;
     }
 
-    logger.debug(llmResp);
+    cocLogger.debug(llmResp);
     if (llmResp.data && llmResp.data.length > 0) {
       let model = llmResp.data[0];
-      logger.debug(model.id);
+      cocLogger.debug(model.id);
       this.chatReq.model = model.id;
 
       let chatId = crypto.randomUUID();
@@ -288,7 +288,7 @@ class LlmCommonChat extends BaseChatChannel {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         // logger.debug(chunk.toString());
         if (rsp.statusCode != 200) {
-          logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
+          cocLogger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
         }
 
@@ -366,17 +366,17 @@ class LlmCommonChat extends BaseChatChannel {
               completionTokens = data.usage.completion_tokens;
             }
           } catch (e) {
-            logger.error(e);
-            logger.debug(m.data);
+            cocLogger.error(e);
+            cocLogger.debug(m.data);
           }
         }
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        logger.debug(rsp.statusCode);
+        cocLogger.debug(rsp.statusCode);
         this.chan.append(
           `\n(\`END\`, usage: in \`${promptTokens}\`, out \`${completionTokens}\`, total \`${promptTokens + completionTokens}\`)`,
         );
-        logger.debug(fcList);
+        cocLogger.debug(fcList);
       },
     };
 
@@ -399,7 +399,7 @@ function create_llm_common_chat() {
       ) as LlmServConfig;
       return new LlmCommonChat(conf);
     } catch (err) {
-      logger.error(err);
+      cocLogger.error(err);
     }
   }
   return new LlmCommonChat({

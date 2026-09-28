@@ -7,7 +7,7 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { fsAccess, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
 import fs from 'fs';
@@ -557,7 +557,7 @@ class DeepseekChat extends BaseChatChannel {
   public async chat(prompt: string) {
     const challenge = await this.getPowChallenge('/api/v0/chat/completion');
     if (challenge instanceof Error) {
-      logger.error(challenge);
+      cocLogger.error(challenge);
       return;
     }
 
@@ -721,7 +721,7 @@ class DeepseekChat extends BaseChatChannel {
         } else if (path == 'response/thinking_content') {
           applyFragmentPatch(-1, 'thinking_content', value);
         } else {
-          logger.debug({ p: path, o, v: value });
+          cocLogger.debug({ p: path, o, v: value });
         }
         return;
       }
@@ -743,7 +743,7 @@ class DeepseekChat extends BaseChatChannel {
         } else if (path.endsWith('/results') || path == 'response/search_results') {
           mergeSearchResults(value);
         } else {
-          logger.debug({ p: path, o, v: value });
+          cocLogger.debug({ p: path, o, v: value });
         }
         return;
       }
@@ -769,12 +769,12 @@ class DeepseekChat extends BaseChatChannel {
           fragments.push(value as ChatMessageFragment);
           emitFragments();
         } else {
-          logger.debug({ p: path, o, v: value });
+          cocLogger.debug({ p: path, o, v: value });
         }
         return;
       }
 
-      logger.debug({ p: path, o, v: value });
+      cocLogger.debug({ p: path, o, v: value });
     };
 
     const cb: HttpRequestCallback = {
@@ -809,10 +809,10 @@ class DeepseekChat extends BaseChatChannel {
               }
               applyPatch(p, d.v);
             } else {
-              logger.debug(m);
+              cocLogger.debug(m);
             }
           } else {
-            logger.debug(m);
+            cocLogger.debug(m);
           }
         }
       },
@@ -821,10 +821,10 @@ class DeepseekChat extends BaseChatChannel {
         this.chan.append(err.message);
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        logger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`);
+        cocLogger.info(`[Deepseek] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`);
       },
       onTimeout: () => {
-        logger.error('[Deepseek] timeout');
+        cocLogger.error('[Deepseek] timeout');
       },
     };
     await sendHttpRequestWithCallback(req, cb);

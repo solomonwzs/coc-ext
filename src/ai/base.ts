@@ -1,7 +1,7 @@
 import { OutputChannel, window, workspace } from 'coc.nvim';
 import os from 'os';
 import { fsReadFile, fsWriteFile, fsMkdir } from '../utils/file';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 
 export interface ChatItem {
   label: string;
@@ -141,7 +141,7 @@ export class ChunkDecoder {
             data: str.substring(pos0 + 1).trim(),
           });
         } else if (str.length > 0) {
-          logger.debug(str);
+          cocLogger.debug(str);
         }
       }
     }

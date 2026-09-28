@@ -1,5 +1,5 @@
 import { ITranslation, createTranslation } from './base';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { sendHttpRequest, HttpRequest } from '../utils/http';
 import { URL } from 'url';
 
@@ -60,11 +60,11 @@ export async function googleTranslate(
   };
   const resp = await sendHttpRequest(req);
   if (resp.error) {
-    logger.error(resp.error.message);
+    cocLogger.error(resp.error.message);
     return null;
   }
   if (resp.statusCode != 200 || !resp.body || resp.body.length == 0) {
-    logger.error(`google, status: ${resp.statusCode}`);
+    cocLogger.error(`google, status: ${resp.statusCode}`);
     return null;
   }
   const obj = JSON.parse(resp.body.toString());

@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { DefxIcos, DefxIcosInfo } from '../utils/types';
 import { workspace } from 'coc.nvim';
 import path from 'path';

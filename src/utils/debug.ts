@@ -1,5 +1,5 @@
 import { window, workspace, TextEdit } from 'coc.nvim';
-import { logger } from './logger';
+import { cocLogger } from './logger';
 import { sleepMs, popup, newScratchWindow } from './helper';
 import { Lightbulb } from '../lightbulb/lightbulb';
 import { getDocumentSymbols, getCursorSymbolList } from './symbol';
@@ -12,7 +12,7 @@ export async function debugWindow(): Promise<any> {
     position: 'top',
   })) as number;
   let w = workspace.nvim.createWindow(id);
-  logger.info(w.id);
+  cocLogger.info(w.id);
 }
 
 export async function debugApplyEdit(): Promise<any> {
@@ -33,7 +33,7 @@ export async function debugLuaEval(): Promise<any> {
     'print(_A[1] + _A[2])',
     [2, 3],
   ]);
-  logger.debug(x);
+  cocLogger.debug(x);
   await workspace.nvim.call('luaeval', ['vim.notify(_A)', 'hi']);
   await workspace.nvim.call('luaeval', [
     'require("coc-ext").quickpick(_A[1], _A[2], _A[3])',
@@ -54,7 +54,7 @@ export async function debugFloatFactory(): Promise<any> {
 
 export async function debugSelection(): Promise<any> {
   let doc = await workspace.document;
-  logger.debug(doc.lineCount);
+  cocLogger.debug(doc.lineCount);
   // window.showMessage(`test, ${text}`);
   // workspace.nvim.command(`echo "${text}"`);
   let tt = (
@@ -65,7 +65,7 @@ export async function debugSelection(): Promise<any> {
 
 export async function debugRange(): Promise<any> {
   const range = await window.getSelectedRange('cursor');
-  logger.debug(range);
+  cocLogger.debug(range);
 }
 
 export async function debugLightbulb(): Promise<any> {
@@ -87,7 +87,7 @@ export async function debugSymbol(): Promise<any> {
   // logger.debug(workspace.bufnr);
   // logger.debug(bufnr);
   let sym = await getDocumentSymbols(bufnr);
-  logger.debug(sym);
+  cocLogger.debug(sym);
 }
 
 export async function debugSleep(): Promise<any> {

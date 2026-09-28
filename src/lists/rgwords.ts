@@ -2,7 +2,7 @@ import { ListAction, ListContext, ListItem, Neovim, BasicList } from 'coc.nvim';
 import path from 'path';
 import { callShell } from '../utils/externalexec';
 import { getDefxIcon } from '../utils/icons';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { openFile } from '../utils/helper';
 // import { fsRead } from '../utils/file';
 import { showNotification } from '../utils/notify';
@@ -85,7 +85,7 @@ export default class RgwordsList extends BasicList {
     const args = ['--color', 'never', '--json', pattern];
     const resp = await callShell('rg', args, undefined, { shell: true });
     if (resp.exitCode != 0) {
-      logger.error('rg fail');
+      cocLogger.error('rg fail');
       if (resp.error) {
         showNotification(resp.error.toString());
       }
@@ -93,7 +93,7 @@ export default class RgwordsList extends BasicList {
     }
 
     if (!resp.data) {
-      logger.error('no data');
+      cocLogger.error('no data');
       return null;
     }
 

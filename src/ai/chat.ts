@@ -10,7 +10,7 @@ import {
   countTextWidth,
   ScratchWindow,
 } from '../utils/helper';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
 
 export let name2AiChat = new Map<string, BaseChatChannel>([
@@ -55,7 +55,7 @@ export async function aiChatOpen() {
   if (!globalAiChat.getCurrentChatId()) {
     let items = await globalAiChat.getChatList();
     if (items instanceof Error) {
-      logger.error(items);
+      cocLogger.error(items);
       echoMessage('ErrorMsg', items.message);
       return -1;
     }
@@ -71,7 +71,7 @@ export async function aiChatOpen() {
 
       let chatId = await globalAiChat.createChatId(new_name);
       if (chatId instanceof Error) {
-        logger.error(chatId);
+        cocLogger.error(chatId);
         return -1;
       }
       globalAiChat.setCurrentChatId(chatId);
@@ -79,7 +79,7 @@ export async function aiChatOpen() {
       globalAiChat.setCurrentChatId(choose.chatId);
       let err = await globalAiChat.showHistoryMessages();
       if (err instanceof Error) {
-        logger.error(err);
+        cocLogger.error(err);
       }
     }
   }
@@ -170,7 +170,7 @@ export class AiChatList extends BasicList {
       }
       let chatId = await this.aiChat.createChatId(new_name);
       if (chatId instanceof Error) {
-        logger.error(chatId);
+        cocLogger.error(chatId);
         echoMessage('ErrorMsg', 'create session fail');
         return;
       }
@@ -199,7 +199,7 @@ export class AiChatList extends BasicList {
         this.aiChat.setCurrentChatId(data.chatId);
         let err = await this.aiChat.showHistoryMessages();
         if (err instanceof Error) {
-          logger.error(err);
+          cocLogger.error(err);
         }
 
         globalAiChat = this.aiChat;
@@ -215,7 +215,7 @@ export class AiChatList extends BasicList {
         if (del) {
           let err = await this.aiChat.delSession(i.chatId);
           if (err instanceof Error) {
-            logger.error(err);
+            cocLogger.error(err);
           }
 
           if (this.aiChat.getCurrentChatId() === i.chatId) {
@@ -238,7 +238,7 @@ export class AiChatList extends BasicList {
   public async loadItems(_context: ListContext): Promise<ListItem[] | null> {
     let items = await this.aiChat.getChatList();
     if (items instanceof Error) {
-      logger.error(items);
+      cocLogger.error(items);
       echoMessage('ErrorMsg', items.message);
       return null;
     }

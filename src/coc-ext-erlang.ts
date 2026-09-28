@@ -6,7 +6,7 @@ import {
   TransportKind,
   ServerOptions,
 } from 'coc.nvim';
-import { logger } from './utils/logger';
+import { cocLogger } from './utils/logger';
 import { getcfg } from './utils/config';
 import { showNotification } from './utils/notify';
 
@@ -14,8 +14,8 @@ let client: LanguageClient;
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-erlang works`);
-  logger.info(`coc-ext-erlang works`);
-  logger.info(workspace.getConfiguration('coc-ext.erlang'));
+  cocLogger.info(`coc-ext-erlang works`);
+  cocLogger.info(workspace.getConfiguration('coc-ext.erlang'));
 
   const server_path: string = getcfg<string>(
     'erlang.erlangLsPath',

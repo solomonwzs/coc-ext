@@ -13,7 +13,7 @@ import {
   fsWriteFile,
 } from './file';
 import { callShell } from './externalexec';
-import { logger } from './logger';
+import { cocLogger } from './logger';
 
 const base64ScratchWindow = new ScratchWindow('BASE64 DECODE', 'text');
 
@@ -66,7 +66,7 @@ async function saveTempFile(buf: Buffer, md5: string): Promise<string | null> {
   const file = path.join(os.tmpdir(), `coc-ext-preview-${md5}`);
   const err = await fsWriteFile(file, buf);
   if (err) {
-    logger.error(`write temp file failed: ${err}`);
+    cocLogger.error(`write temp file failed: ${err}`);
     return null;
   }
   return file;
@@ -125,7 +125,7 @@ export function decodeBase64Fn(): () => ProviderResult<any> {
         popup(info, '[BASE64 DECODE]');
       }
     } catch (e) {
-      logger.error(`base64 decode failed: ${e}`);
+      cocLogger.error(`base64 decode failed: ${e}`);
     }
   };
 }

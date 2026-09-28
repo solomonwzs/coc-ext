@@ -14,7 +14,7 @@ import { getcfg } from './config';
 import path from 'path';
 import { Nullable, OpenOptions, CocExtFloatConfig } from './types';
 import { TextEncoder } from 'util';
-import { logger } from './logger';
+import { cocLogger } from './logger';
 
 function defauleFloatWinConfig(): FloatWinConfig {
   let conf = getcfg<CocExtFloatConfig>('floatConfig', {});
@@ -116,7 +116,7 @@ export async function popup(
   try {
     await workspace.nvim.call('setbufvar', [bufnr, '&filetype', filetype]);
   } catch (e) {
-    logger.error((e as Error).stack);
+    cocLogger.error((e as Error).stack);
   }
 }
 

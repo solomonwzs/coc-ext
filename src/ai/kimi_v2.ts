@@ -5,7 +5,7 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import http from 'http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
@@ -248,7 +248,7 @@ class KimiChatV2 extends BaseChatChannel {
     let cacheKey = `${this.chatId}-${segmentId}-search.json`;
     let cache = await this.cache.get(cacheKey);
     if (cache instanceof Error) {
-      logger.error(cache);
+      cocLogger.error(cache);
       return 0;
     }
 
@@ -287,7 +287,7 @@ class KimiChatV2 extends BaseChatChannel {
     let cacheKey = `${this.chatId}-${segment_id}-refs.json`;
     let cache = await this.cache.get(cacheKey);
     if (cache instanceof Error) {
-      logger.error(cache);
+      cocLogger.error(cache);
       return 0;
     }
     let refs = JSON.parse(cache.toString()) as Ref[];
@@ -341,7 +341,7 @@ class KimiChatV2 extends BaseChatChannel {
     };
     const resp = await sendHttpRequest(refreshReq);
     if (resp.statusCode == 200 && resp.body) {
-      logger.debug(resp.body.toString());
+      cocLogger.debug(resp.body.toString());
       const obj = JSON.parse(resp.body.toString());
       this.headers['Authorization'] = `Bearer ${obj['access_token']}`;
     }
@@ -465,7 +465,7 @@ class KimiChatV2 extends BaseChatChannel {
               ` [file: ${block.file.meta.name}](${block.file.blob.previewUrl})`,
             );
           } else {
-            logger.debug(block);
+            cocLogger.debug(block);
           }
         }
       } else if (msg.role == 'assistant') {
@@ -474,7 +474,7 @@ class KimiChatV2 extends BaseChatChannel {
 
         for (let block of msg.blocks) {
           if (block.search) {
-            logger.debug('1');
+            cocLogger.debug('1');
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             await this.cache.set(
               cacheKey,
@@ -486,7 +486,7 @@ class KimiChatV2 extends BaseChatChannel {
               );
             }
           } else if (block.tool && block.tool.name === 'web_search') {
-            logger.debug('2');
+            cocLogger.debug('2');
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             let webPages: WebPage[] = [];
             for (let content of block.tool.contents) {
@@ -503,7 +503,7 @@ class KimiChatV2 extends BaseChatChannel {
               ` ${block.exception.error.localizedMessage.message}`,
             );
           } else {
-            logger.debug(block);
+            cocLogger.debug(block);
           }
         }
 
@@ -542,7 +542,7 @@ class KimiChatV2 extends BaseChatChannel {
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
-          logger.error(`statusCode: ${rsp.statusCode}`);
+          cocLogger.error(`statusCode: ${rsp.statusCode}`);
           return;
         }
         let msgList = decoder.decode(chunk);
@@ -596,7 +596,7 @@ class KimiChatV2 extends BaseChatChannel {
                   webPages.push(ch.base);
                 }
               } else {
-                logger.debug(msg);
+                cocLogger.debug(msg);
               }
             } else if (msg.ref) {
               refs.push(msg.ref.search);
@@ -604,22 +604,22 @@ class KimiChatV2 extends BaseChatChannel {
               this.chan.append('\n(END)');
             } else if (msg.heartbeat) {
             } else {
-              logger.debug(msg);
+              cocLogger.debug(msg);
             }
           } catch (e) {
-            logger.error(e);
-            logger.debug(strMsg);
+            cocLogger.error(e);
+            cocLogger.debug(strMsg);
           }
         }
       },
       onError: (err: Error) => {
-        logger.error(err);
+        cocLogger.error(err);
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        logger.debug(rsp.statusCode);
+        cocLogger.debug(rsp.statusCode);
       },
       onTimeout: () => {
-        logger.error('time out');
+        cocLogger.error('time out');
       },
     };
 

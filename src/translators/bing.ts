@@ -1,6 +1,6 @@
 import { ITranslation, createTranslation } from './base';
 import { sendHttpRequest, HttpRequest } from '../utils/http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { URL } from 'url';
 
 function getParaphrase(html: string): string {
@@ -43,11 +43,11 @@ export async function bingTranslate(
   };
   const resp = await sendHttpRequest(req);
   if (resp.error) {
-    logger.error(resp.error.message);
+    cocLogger.error(resp.error.message);
     return null;
   }
   if (resp.statusCode != 200 || !resp.body || resp.body.length == 0) {
-    logger.error(`bing, status: ${resp.statusCode}`);
+    cocLogger.error(`bing, status: ${resp.statusCode}`);
     return null;
   }
 

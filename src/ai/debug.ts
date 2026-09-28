@@ -1,5 +1,5 @@
 import { window, workspace, Position } from 'coc.nvim';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem } from './base';
 

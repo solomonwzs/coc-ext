@@ -8,7 +8,7 @@ import {
   TextEdit,
   ProviderResult,
 } from 'coc.nvim';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 // import getcfg from '../utils/config';
 import { FormatterSetting } from '../utils/types';
 import { BaseFormatter } from '../formatter/baseformatter';
@@ -50,7 +50,7 @@ export class FormattingEditProvider
     range?: Range,
   ): Promise<TextEdit[]> {
     if (!this.formatter) {
-      logger.error('formatter was null');
+      cocLogger.error('formatter was null');
       showNotification('formatter was null', 'formatter');
       return [];
     }

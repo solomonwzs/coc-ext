@@ -5,7 +5,7 @@ import {
   HttpRequest,
   HttpRequestCallback,
 } from '../utils/http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 
 interface BailianCompletion {
   choices: {
@@ -105,8 +105,8 @@ class BailianChat extends BaseChatChannel {
               }
             });
         } catch (e) {
-          logger.debug(chunk.toString());
-          logger.error(e);
+          cocLogger.debug(chunk.toString());
+          cocLogger.error(e);
         }
       },
       onError: (err: Error) => {

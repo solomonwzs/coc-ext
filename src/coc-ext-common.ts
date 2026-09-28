@@ -32,7 +32,7 @@ import { getEnvHttpProxy } from './utils/common';
 import { decodeMimeEncodeStr } from './utils/decoder';
 import { getCursorSymbolList } from './utils/symbol';
 import { googleTranslate } from './translators/google';
-import { logger } from './utils/logger';
+import { cocLogger } from './utils/logger';
 import { popup, getText } from './utils/helper';
 import { decodeBase64Fn } from './utils/preview';
 import { leader_recv } from './leaderf/leaderf';
@@ -107,7 +107,7 @@ async function replaceExecText(
     const ed = TextEdit.replace(range, res.data.toString('utf8'));
     await doc.applyEdits([ed]);
   } else {
-    logger.error(res.error?.toString('utf8'));
+    cocLogger.error(res.error?.toString('utf8'));
   }
 }
 
@@ -182,7 +182,7 @@ function decodeStrFn(enc: string): () => ProviderResult<any> {
     if (res.exitCode == 0 && res.data) {
       popup(res.data.toString('utf8'), `[${enc.toUpperCase()} decode]`);
     } else {
-      logger.error(res.error?.toString('utf8'));
+      cocLogger.error(res.error?.toString('utf8'));
     }
   };
 }
@@ -231,9 +231,9 @@ export async function aiChatSelectAndOpen() {
 
 export async function activate(context: ExtensionContext): Promise<void> {
   context.logger.info(`coc-ext-common works`);
-  logger.info(`coc-ext-common works`);
-  logger.info(workspace.getConfiguration('coc-ext.common'));
-  logger.info(process.env.COC_VIMCONFIG);
+  cocLogger.info(`coc-ext-common works`);
+  cocLogger.info(workspace.getConfiguration('coc-ext.common'));
+  cocLogger.info(process.env.COC_VIMCONFIG);
 
   // const { nvim } = workspace;
   const langFmtSet = new Set<string>();

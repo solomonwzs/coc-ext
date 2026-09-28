@@ -6,7 +6,7 @@ import {
   HttpResponse,
 } from '../utils/http';
 import http from 'http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
@@ -194,7 +194,7 @@ class KimiChat extends BaseChatChannel {
     if (cache instanceof Error) {
       let tmp = await this.refCard(segment_id);
       if (tmp instanceof Error) {
-        logger.error(tmp);
+        cocLogger.error(tmp);
         return;
       } else {
         item = tmp;
@@ -487,7 +487,7 @@ class KimiChat extends BaseChatChannel {
               }
             });
         } catch (e) {
-          logger.error(e);
+          cocLogger.error(e);
         }
       },
       onEnd: (rsp: http.IncomingMessage) => {
@@ -533,12 +533,12 @@ class KimiChat extends BaseChatChannel {
     await sendHttpRequestWithCallback(req, cb);
     if (statusCode == 401) {
       if ((await this.getAccessToken()) != 200) {
-        logger.error('Authorization Expired');
+        cocLogger.error('Authorization Expired');
         return;
       }
       await sendHttpRequestWithCallback(req, cb);
     }
-    logger.info(statusCode);
+    cocLogger.info(statusCode);
   }
 
   public async delSession(chatId: string): Promise<null | Error> {

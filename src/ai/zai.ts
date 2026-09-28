@@ -5,7 +5,7 @@ import {
   HttpRequestCallback,
 } from '../utils/http';
 import http from 'http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 import { CocExtError } from '../utils/common';
 import { BaseChatChannel, ChatItem, getCurrentRef, ChunkDecoder } from './base';
 import { popup, ScratchWindow } from '../utils/helper';
@@ -340,7 +340,7 @@ class ZAiChat extends BaseChatChannel {
       return resp;
     }
     let au = JSON.parse(resp.toString()) as AuthResponse;
-    logger.debug(au);
+    cocLogger.debug(au);
     if (au.token) {
       this.token = au.token;
     }
@@ -487,7 +487,7 @@ class ZAiChat extends BaseChatChannel {
         tags_generation: true,
       },
     };
-    logger.debug(chatReq);
+    cocLogger.debug(chatReq);
 
     const kStatusNone = 0;
     const kStatusReasoning = 1;
@@ -499,7 +499,7 @@ class ZAiChat extends BaseChatChannel {
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
-          logger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
+          cocLogger.error(`statusCode: ${rsp.statusCode}, ${chunk.toString()}`);
           return;
         }
 
@@ -507,7 +507,7 @@ class ZAiChat extends BaseChatChannel {
         for (let m of msgList) {
           try {
             let d = JSON.parse(m.data) as ChatResponseData;
-            logger.debug(d);
+            cocLogger.debug(d);
 
             if (d.data.phase == 'thinking' && d.data.delta_content) {
               if (status != kStatusReasoning) {
@@ -533,8 +533,8 @@ class ZAiChat extends BaseChatChannel {
               this.chan.append('\n(END)');
             }
           } catch (e) {
-            logger.error(e);
-            logger.debug(m.data);
+            cocLogger.error(e);
+            cocLogger.debug(m.data);
           }
         }
       },
@@ -553,7 +553,7 @@ class ZAiChat extends BaseChatChannel {
       signature_timestamp: timestamp.toString(),
     });
     let sign = generateSignature(this.userId, requestId, text, timestamp);
-    logger.debug(params.toString());
+    cocLogger.debug(params.toString());
 
     this.headers['X-Signature'] = sign;
     let req: HttpRequest = {

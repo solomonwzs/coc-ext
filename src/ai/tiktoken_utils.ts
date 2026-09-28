@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { fsAccess, fsMkdir, fsReadFile } from '../utils/file';
 import { simpleHttpDownloadFile } from '../utils/http';
-import { logger } from '../utils/logger';
+import { cocLogger } from '../utils/logger';
 
 async function cache_file_path(name: string) {
   const cache_dir = path.join(os.homedir(), '.cache');
@@ -43,14 +43,14 @@ export class TiktokenCore {
 
     if ((await fsAccess(tiktoken_file, fs.constants.R_OK)) != null) {
       if ((await simpleHttpDownloadFile(download_url, tiktoken_file)) == -1) {
-        logger.error(`download fail, ${download_url}`);
+        cocLogger.error(`download fail, ${download_url}`);
         return;
       }
     }
 
     const buf = await fsReadFile(tiktoken_file);
     if (buf instanceof Error) {
-      logger.error(`read tiktoken fail, ${buf.message}`);
+      cocLogger.error(`read tiktoken fail, ${buf.message}`);
       return;
     }
 
