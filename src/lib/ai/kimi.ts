@@ -87,6 +87,9 @@ interface Block {
   text?: {
     content: string;
   };
+  think?: {
+    content: string;
+  };
   search?: Search;
   tool?: Tool;
   file?: FileInfo;
@@ -502,6 +505,10 @@ export class KimiChat extends BaseChat {
             this.chan.appendLine(
               ` [search result (${block.tool.contents.length})]\n`,
             );
+          } else if (block.think) {
+            this.chan.appendLine('---');
+            this.chan.appendLine(block.think.content);
+            this.chan.appendLine('\n---\n');
           } else if (block.text) {
             this.chan.appendLine(block.text.content);
           } else if (block.exception) {
@@ -545,6 +552,14 @@ export class KimiChat extends BaseChat {
     let refs: Ref[] = [];
     let decoder = new StreamDecoder();
     let searchEnd = false;
+    let inThinking = false;
+    const closeThinking = () => {
+      if (!inThinking) {
+        return;
+      }
+      this.chan.appendLine('\n\n---\n');
+      inThinking = false;
+    };
     let cb: HttpRequestCallback = {
       onData: (chunk: Buffer, rsp: http.IncomingMessage) => {
         if (rsp.statusCode != 200) {
@@ -553,7 +568,6 @@ export class KimiChat extends BaseChat {
         }
         let msgList = decoder.decode(chunk);
         for (const strMsg of msgList) {
-          this.logger.debug(strMsg);
           try {
             let msg = JSON.parse(strMsg) as ChatResponse;
             if (
@@ -574,18 +588,42 @@ export class KimiChat extends BaseChat {
               this.currentMsgid = msg.message.id;
             } else if (
               msg.op === 'set' &&
+              msg.mask === 'block.think' &&
+              msg.block &&
+              msg.block.think &&
+              msg.block.think.content
+            ) {
+              if (!inThinking) {
+                this.chan.appendLine('---');
+                inThinking = true;
+              }
+              this.chan.append(msg.block.think.content);
+            } else if (
+              msg.op === 'set' &&
               msg.mask === 'block.text' &&
               msg.block &&
               msg.block.text &&
               msg.block.text.content
             ) {
+              closeThinking();
               this.chan.append(msg.block.text.content);
             } else if (msg.op === 'append' && msg.block) {
               if (
+                msg.block.think &&
+                msg.block.think.content &&
+                msg.mask === 'block.think.content'
+              ) {
+                if (!inThinking) {
+                  this.chan.appendLine('---');
+                  inThinking = true;
+                }
+                this.chan.append(msg.block.think.content);
+              } else if (
                 msg.block.text &&
                 msg.block.text.content &&
                 msg.mask === 'block.text.content'
               ) {
+                closeThinking();
                 if (!searchEnd) {
                   searchEnd = true;
                   if (webPages.length > 0) {
@@ -616,6 +654,7 @@ export class KimiChat extends BaseChat {
             } else if (msg.ref) {
               refs.push(msg.ref.search);
             } else if (msg.done) {
+              closeThinking();
               this.chan.appendLine('\n(END)');
             } else if (msg.heartbeat) {
             } else {
