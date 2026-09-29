@@ -11,10 +11,10 @@ import {
 import { cocLogger } from '../utils/logger';
 import { ListAction, ListContext, ListItem, BasicList } from 'coc.nvim';
 import { deepseekChat } from './deepseek';
-import { kimiChatV2 } from './kimi_v2';
+import { kimiChat } from './kimi';
 
 export let name2AiChat = new Map<string, BaseChat>([
-  [kimiChatV2.getChatName(), kimiChatV2],
+  [kimiChat.getChatName(), kimiChat],
   [deepseekChat.getChatName(), deepseekChat],
   // [llmCommonChat.getChatName(), llmCommonChat],
   // [zaiChat.getChatName(), zaiChat],

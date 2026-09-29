@@ -234,7 +234,7 @@ function searchResults2Lines(webPages: WebPage[]) {
   return lines;
 }
 
-export class KimiChatV2 extends BaseChat {
+export class KimiChat extends BaseChat {
   private headers: http.OutgoingHttpHeaders;
   private currentMsgid: string;
 
