@@ -58,12 +58,12 @@ export abstract class BaseChatChannel {
 
   public abstract hide(): Promise<void>;
 
-  public abstract openAutoScroll(): Promise<void>;
+  public abstract beforeChat(): Promise<void>;
 
-  public abstract closeAutoScroll(): Promise<void>;
+  public abstract afterChat(): Promise<void>;
 
   public abstract append(text: string): void;
-  
+
   public abstract appendLine(text: string): void;
 
   public abstract appendUserInput(datetime: string, text: string): void;
@@ -142,9 +142,9 @@ export abstract class BaseChat {
   }
 
   public async sendChat(text: string) {
-    await this.chan.openAutoScroll();
+    await this.chan.beforeChat();
     await this.chat(text);
-    this.chan.closeAutoScroll();
+    await this.chan.afterChat();
   }
 
   public async show() {

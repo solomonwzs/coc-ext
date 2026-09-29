@@ -13,10 +13,11 @@ const globalKimi = {
   host: 'www.kimi.com',
   scenario: 'SCENARIO_OK_COMPUTER',
   timeout: 5000,
-  reasoning_effort: 'REASONING_EFFORT_HIGH',
-  context_length: 'CONTEXT_LENGTH_L',
+  reasoningEffort: 'REASONING_EFFORT_HIGH',
+  contextLength: 'CONTEXT_LENGTH_L',
   model: 'k3-agent',
-  kimiplus_id: 'ok-computer',
+  kimiplusId: 'ok-computer',
+  newChatIdPlaceholder: '$new',
 };
 
 interface WebPage {
@@ -182,7 +183,8 @@ interface ChatResponse {
     search: Ref;
   };
   chat?: {
-    name: string;
+    id?: string;
+    name?: string;
   };
 }
 
@@ -356,7 +358,7 @@ export class KimiChat extends BaseChat {
     };
     const resp = await sendHttpRequest(refreshReq);
     if (resp.statusCode == 200 && resp.body) {
-      this.logger.debug(resp.body.toString());
+      this.logger.info(resp.body.toString());
       const obj = JSON.parse(resp.body.toString());
       this.headers['Authorization'] = `Bearer ${obj['access_token']}`;
     }
@@ -404,17 +406,8 @@ export class KimiChat extends BaseChat {
     return resp.body;
   }
 
-  public async createChatId(name: string): Promise<string | Error> {
-    let resp = await this.postJsonRequest('/api/chat', {
-      name,
-      is_example: false,
-    });
-    if (resp instanceof Error) {
-      return resp;
-    }
-
-    let obj = JSON.parse(resp.toString());
-    return obj['id'];
+  public async createChatId(_name: string): Promise<string | Error> {
+    return globalKimi.newChatIdPlaceholder;
   }
 
   public async getChatList(): Promise<ChatItem[] | Error> {
@@ -480,7 +473,7 @@ export class KimiChat extends BaseChat {
               ` [file: ${block.file.meta.name}](${block.file.blob.previewUrl})`,
             );
           } else {
-            this.logger.debug(block);
+            this.logger.info(block);
           }
         }
       } else if (msg.role == 'assistant') {
@@ -489,7 +482,6 @@ export class KimiChat extends BaseChat {
 
         for (let block of msg.blocks) {
           if (block.search) {
-            this.logger.debug('1');
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             await this.cache.set(
               cacheKey,
@@ -501,7 +493,6 @@ export class KimiChat extends BaseChat {
               );
             }
           } else if (block.tool && block.tool.name === 'web_search') {
-            this.logger.debug('2');
             let cacheKey = `${this.chatId}-${msg.id}-search.json`;
             let webPages: WebPage[] = [];
             for (let content of block.tool.contents) {
@@ -518,7 +509,7 @@ export class KimiChat extends BaseChat {
               ` ${block.exception.error.localizedMessage.message}`,
             );
           } else {
-            this.logger.debug(block);
+            this.logger.info(block);
           }
         }
 
@@ -562,9 +553,18 @@ export class KimiChat extends BaseChat {
         }
         let msgList = decoder.decode(chunk);
         for (const strMsg of msgList) {
+          this.logger.debug(strMsg);
           try {
             let msg = JSON.parse(strMsg) as ChatResponse;
             if (
+              this.chatId === globalKimi.newChatIdPlaceholder &&
+              msg.op === 'set' &&
+              msg.mask === 'chat.lastRequest' &&
+              msg.chat &&
+              msg.chat.id
+            ) {
+              this.chatId = msg.chat.id;
+            } else if (
               msg.op === 'set' &&
               msg.mask === 'message' &&
               msg.message &&
@@ -611,7 +611,7 @@ export class KimiChat extends BaseChat {
                   webPages.push(ch.base);
                 }
               } else {
-                this.logger.debug(msg);
+                this.logger.info(msg);
               }
             } else if (msg.ref) {
               refs.push(msg.ref.search);
@@ -619,11 +619,11 @@ export class KimiChat extends BaseChat {
               this.chan.appendLine('\n(END)');
             } else if (msg.heartbeat) {
             } else {
-              this.logger.debug(msg);
+              this.logger.info(msg);
             }
           } catch (e) {
             this.logger.error(e);
-            this.logger.debug(strMsg);
+            this.logger.info(strMsg);
           }
         }
       },
@@ -631,7 +631,7 @@ export class KimiChat extends BaseChat {
         this.logger.error(err);
       },
       onEnd: (rsp: http.IncomingMessage) => {
-        this.logger.debug(rsp.statusCode);
+        this.logger.info(rsp.statusCode);
       },
       onTimeout: () => {
         this.logger.error('time out');
@@ -639,7 +639,10 @@ export class KimiChat extends BaseChat {
     };
 
     let chatReq: ChatRequest = {
-      chatId: this.chatId,
+      chatId:
+        this.chatId === globalKimi.newChatIdPlaceholder
+          ? undefined
+          : this.chatId,
       scenario: globalKimi.scenario,
       tools: [
         { type: 'TOOL_TYPE_SEARCH', search: {} },
@@ -654,11 +657,11 @@ export class KimiChat extends BaseChat {
       options: {
         thinking: true,
         enable_plugin: true,
-        reasoning_effort: globalKimi.reasoning_effort,
-        context_length: globalKimi.context_length,
+        reasoning_effort: globalKimi.reasoningEffort,
+        context_length: globalKimi.contextLength,
         model: globalKimi.model,
       },
-      kimiplus_id: globalKimi.kimiplus_id,
+      kimiplus_id: globalKimi.kimiplusId,
     };
 
     const req: HttpRequest = {

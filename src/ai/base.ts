@@ -35,12 +35,12 @@ export class CocChatChannel extends BaseChatChannel {
     this.channel.hide();
   }
 
-  public async openAutoScroll() {
+  public async beforeChat() {
     let { nvim } = workspace;
     this.winid = (await nvim.call('bufwinid', this.chatName)) as number;
   }
 
-  public async closeAutoScroll() {
+  public async afterChat() {
     this.winid = -1;
   }
 
