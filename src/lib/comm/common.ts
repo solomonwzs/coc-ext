@@ -106,6 +106,7 @@ export class ExtError extends Error {
   static ERR_DEEPSEEK = -4;
   static ERR_COMM_AI = -5;
   static ERR_ZAI = -6;
+  static ERR_MIMO = -7;
 }
 
 export class ExtErrnoError extends Error {

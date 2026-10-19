@@ -2,6 +2,8 @@
 // import { puppeteerTest } from './test/browser_test';
 // import { pathTest2 } from './test/file_test';
 import { contentTextWidthTest } from './test/text_test';
+import { mimoTest } from './test/mimo_test';
 
 console.log('========');
 contentTextWidthTest();
+mimoTest();
