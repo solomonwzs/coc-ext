@@ -47,6 +47,8 @@ class MockChannel extends BaseChatChannel {
     this.output = [];
   }
 
+  public flush() {}
+
   public async getCurrentRef(): Promise<null | ChatRefItem> {
     return null;
   }
@@ -266,7 +268,10 @@ export async function mimoTest() {
     check('currentMsgid updated', (chat as any).currentMsgid == '31905223');
 
     const req = requests.find((r) => r.url?.includes('react/chat'));
-    check('react/chat carries ph param', req?.url?.includes('xiaomichatbot_ph=b5OyYDPaoyV%2FatkY%2Bv7ukw%3D%3D') == true);
+    check(
+      'react/chat carries ph param',
+      req?.url?.includes('xiaomichatbot_ph=b5OyYDPaoyV%2FatkY%2Bv7ukw%3D%3D') == true
+    );
     check('react/chat has traceparent', typeof req?.headers['traceparent'] == 'string');
     const body = JSON.parse(req?.body ? req.body : '{}');
     check(

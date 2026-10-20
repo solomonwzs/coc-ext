@@ -282,12 +282,7 @@ export class DeepseekChat extends BaseChat {
 
   private getHeader(): http.OutgoingHttpHeaders {
     return {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-        'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-        'Chrome/91.0.4472.77 ' +
-        'Safari/537.36 ' +
-        'Edg/91.0.864.41',
+      'User-Agent': BaseChat.browserUserAgent,
       authorization: `Bearer ${this.authKey}`,
       Origin: `https://${globalDeepseek.host}`,
       'x-client-locale': 'zh_CN',
@@ -852,6 +847,8 @@ export class DeepseekChat extends BaseChat {
       const cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
       await this.cache.set(cacheKey, JSON.stringify(searchResults));
     }
+    // push any partial line still sitting in the channel buffer
+    this.chan.flush();
   }
 
   public async delSession(chatId: string): Promise<null | Error> {

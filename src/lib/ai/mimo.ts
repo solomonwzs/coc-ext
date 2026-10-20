@@ -13,7 +13,12 @@
 // messageType field may also carry 'error' / 'sensitive_*' markers
 
 import http from 'http';
-import { sendHttpRequest, sendHttpRequestWithCallback, HttpRequest, HttpRequestCallback } from '../comm/http';
+import {
+  sendHttpRequest,
+  sendHttpRequestWithCallback,
+  HttpRequest,
+  HttpRequestCallback,
+} from '../comm/http';
 import { ExtError } from '../comm/common';
 import { BaseChat, BaseChatChannel, ChatItem, ChunkDecoder } from './base';
 import { BaseLogger } from '../comm/logger';
@@ -112,7 +117,11 @@ function genTraceparent(): string {
 export class MimoChat extends BaseChat {
   private currentMsgid: string;
 
-  constructor(readonly auth: MimoAuth, chan: BaseChatChannel, protected logger: BaseLogger) {
+  constructor(
+    readonly auth: MimoAuth,
+    chan: BaseChatChannel,
+    protected logger: BaseLogger,
+  ) {
     super(chan);
     this.currentMsgid = '';
   }
@@ -148,12 +157,7 @@ export class MimoChat extends BaseChat {
 
   private getHeader(): http.OutgoingHttpHeaders {
     return {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-        'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-        'Chrome/91.0.4472.77 ' +
-        'Safari/537.36 ' +
-        'Edg/91.0.864.41',
+      'User-Agent': BaseChat.browserUserAgent,
       Accept: '*/*',
       'Content-Type': 'application/json',
       Origin: `https://${globalMimo.host}`,
@@ -165,8 +169,15 @@ export class MimoChat extends BaseChat {
   }
 
   private checkAuth(): ExtError | null {
-    if (this.auth.serviceToken.length == 0 || this.auth.ph.length == 0 || this.auth.userId.length == 0) {
-      return new ExtError(ExtError.ERR_AUTH, '[Mimo] empty auth (serviceToken / userId / ph)');
+    if (
+      this.auth.serviceToken.length == 0 ||
+      this.auth.ph.length == 0 ||
+      this.auth.userId.length == 0
+    ) {
+      return new ExtError(
+        ExtError.ERR_AUTH,
+        '[Mimo] empty auth (serviceToken / userId / ph)',
+      );
     }
     return null;
   }
@@ -175,7 +186,7 @@ export class MimoChat extends BaseChat {
     method: string,
     path: string,
     d?: any,
-    timeout: number = globalMimo.timeout
+    timeout: number = globalMimo.timeout,
   ): Promise<T | ExtError> {
     const authErr = this.checkAuth();
     if (authErr) {
@@ -207,7 +218,8 @@ export class MimoChat extends BaseChat {
       }
     }
     if (resp.statusCode != 200 || !obj || obj.code != 0) {
-      const isAuth = obj != null && (obj.code == 401 || obj.loginUrl != undefined);
+      const isAuth =
+        obj != null && (obj.code == 401 || obj.loginUrl != undefined);
       let msg =
         `[Mimo] statusCode: ${resp.statusCode}, ` +
         `code: ${obj ? obj.code : '-'}, msg: ${obj ? obj.msg : resp.error}, ` +
@@ -221,9 +233,13 @@ export class MimoChat extends BaseChat {
   }
 
   public async getChatList(): Promise<ChatItem[] | Error> {
-    const data = await this.httpQuery<MimoConversationListData>('POST', '/open-apis/chat/conversation/list', {
-      pageInfo: { pageNum: 1, pageSize: globalMimo.pageSize },
-    });
+    const data = await this.httpQuery<MimoConversationListData>(
+      'POST',
+      '/open-apis/chat/conversation/list',
+      {
+        pageInfo: { pageNum: 1, pageSize: globalMimo.pageSize },
+      },
+    );
     if (data instanceof Error) {
       return data;
     }
@@ -248,11 +264,15 @@ export class MimoChat extends BaseChat {
     // conversationId is generated locally, then registered via save
     const id = genId32();
     const title = name.trim().length > 0 ? name.trim() : 'New conversation';
-    const err = await this.httpQuery('POST', '/open-apis/chat/conversation/save', {
-      conversationId: id,
-      title,
-      type: 'chat',
-    });
+    const err = await this.httpQuery(
+      'POST',
+      '/open-apis/chat/conversation/save',
+      {
+        conversationId: id,
+        title,
+        type: 'chat',
+      },
+    );
     if (err instanceof Error) {
       return err;
     }
@@ -261,10 +281,14 @@ export class MimoChat extends BaseChat {
   }
 
   public async showHistoryMessages(): Promise<null | Error> {
-    const data = await this.httpQuery<MimoDialog[]>('POST', '/open-apis/react/dialog/list', {
-      queryParam: { conversationId: this.chatId },
-      pageInfo: { pageNum: 1, pageSize: globalMimo.pageSize },
-    });
+    const data = await this.httpQuery<MimoDialog[]>(
+      'POST',
+      '/open-apis/react/dialog/list',
+      {
+        queryParam: { conversationId: this.chatId },
+        pageInfo: { pageNum: 1, pageSize: globalMimo.pageSize },
+      },
+    );
     if (data instanceof Error) {
       return data;
     }
@@ -279,7 +303,10 @@ export class MimoChat extends BaseChat {
 
     for (const dialog of dialogs) {
       if (dialog.inputInfo && dialog.inputInfo.query) {
-        this.chan.appendUserInput(dialog.createTime ? dialog.createTime : '', dialog.inputInfo.query);
+        this.chan.appendUserInput(
+          dialog.createTime ? dialog.createTime : '',
+          dialog.inputInfo.query,
+        );
       }
 
       for (const detail of dialog.dialogLogDetailList ?? []) {
@@ -322,7 +349,7 @@ export class MimoChat extends BaseChat {
       'POST',
       '/open-apis/chat/conversation/genTitle',
       { conversationId: this.chatId, content },
-      globalMimo.genTitleTimeout
+      globalMimo.genTitleTimeout,
     );
     if (data instanceof Error) {
       return data;
@@ -464,7 +491,9 @@ export class MimoChat extends BaseChat {
         const obj = parseData(data);
         closeThinking();
         gotError = true;
-        this.chan.appendLine(` (ERROR) ${obj && obj.content ? obj.content : data}`);
+        this.chan.appendLine(
+          ` (ERROR) ${obj && obj.content ? obj.content : data}`,
+        );
       } else if (ev == 'sensitive_query') {
         closeThinking();
         this.chan.appendLine(' (sensitive query) ');
@@ -514,7 +543,9 @@ export class MimoChat extends BaseChat {
           closeThinking();
           this.chan.appendLine(` (ERROR) ${rsp.statusCode} ${msg}`);
         }
-        this.logger.info(`[Mimo] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`);
+        this.logger.info(
+          `[Mimo] chat statusCode: ${rsp.statusCode}, msg: ${rsp.statusMessage}`,
+        );
       },
       onTimeout: () => {
         this.logger.error('[Mimo] timeout');
@@ -522,10 +553,14 @@ export class MimoChat extends BaseChat {
     };
     await sendHttpRequestWithCallback(req, cb);
     closeThinking();
+    // push any partial line still sitting in the channel buffer
+    this.chan.flush();
 
     // web frontend generates the conversation title from the first exchange
     if (firstMsg && !gotError && contentText.length > 0) {
-      const err = await this.genTitle(`${prompt} ${reasoningText}\n\n${contentText}`);
+      const err = await this.genTitle(
+        `${prompt} ${reasoningText}\n\n${contentText}`,
+      );
       if (err instanceof Error) {
         this.logger.error(err);
       }
@@ -534,7 +569,11 @@ export class MimoChat extends BaseChat {
 
   public async delSession(chatId: string): Promise<null | Error> {
     // batch delete endpoint, body is the raw conversationId array
-    const err = await this.httpQuery('POST', '/open-apis/chat/conversation/delete', [chatId]);
+    const err = await this.httpQuery(
+      'POST',
+      '/open-apis/chat/conversation/delete',
+      [chatId],
+    );
     return err instanceof Error ? err : null;
   }
 }

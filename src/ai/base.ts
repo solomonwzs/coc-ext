@@ -6,6 +6,9 @@ import { popup, ScratchWindow } from '../utils/helper';
 export class CocChatChannel extends BaseChatChannel {
   protected channel: OutputChannel;
   protected winid: number;
+  protected buf: string;
+
+  protected static bufSize = 16;
 
   constructor(
     protected chatName: string,
@@ -14,6 +17,7 @@ export class CocChatChannel extends BaseChatChannel {
     super();
     this.channel = window.createOutputChannel(chatName);
     this.winid = -1;
+    this.buf = '';
   }
 
   public async show() {
@@ -44,17 +48,40 @@ export class CocChatChannel extends BaseChatChannel {
     this.winid = -1;
   }
 
-  private append0(text: string, newline: boolean = true) {
-    if (newline) {
-      this.channel.appendLine(text);
-    } else {
-      this.channel.append(text);
-    }
-
+  private scrollBottom() {
     if (this.winid != -1) {
-      let { nvim } = workspace;
+      const { nvim } = workspace;
       nvim.call('win_execute', [this.winid, 'norm G']);
     }
+  }
+
+  // push buffered partial content to the OutputChannel
+  private flushBuf() {
+    if (this.buf.length != 0) {
+      this.channel.append(this.buf);
+      this.buf = '';
+    }
+  }
+
+  public flush() {
+    this.flushBuf();
+    this.scrollBottom();
+  }
+
+  private append0(text: string, newline = true) {
+    if (newline) {
+      // appendLine always pushes buffered content out first, keeping order
+      this.flushBuf();
+      this.channel.appendLine(text);
+    } else {
+      this.buf += text;
+      if (this.buf.length < CocChatChannel.bufSize && !this.buf.includes('\n')) {
+        return;
+      }
+      this.channel.append(this.buf);
+      this.buf = '';
+    }
+    this.scrollBottom();
   }
 
   public append(text: string) {
@@ -74,6 +101,7 @@ export class CocChatChannel extends BaseChatChannel {
   }
 
   public clear() {
+    this.buf = '';
     if (this.channel.content.length != 0) {
       this.channel.dispose();
       this.channel = window.createOutputChannel(this.chatName);

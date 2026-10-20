@@ -250,12 +250,7 @@ export class KimiChat extends BaseChat {
   ) {
     super(chan);
     this.headers = {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-        'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-        'Chrome/91.0.4472.77 ' +
-        'Safari/537.36 ' +
-        'Edg/91.0.864.41',
+      'User-Agent': BaseChat.browserUserAgent,
       Origin: `https://${globalKimi.host}`,
       Referer: `https://${globalKimi.host}`,
       'x-msh-platform': 'web',
@@ -714,6 +709,8 @@ export class KimiChat extends BaseChat {
       data: this.encodeBuffer(chatReq),
     };
     await sendHttpRequestWithCallback(req, cb);
+    // push any partial line still sitting in the channel buffer
+    this.chan.flush();
 
     if (webPages.length > 0) {
       let cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;

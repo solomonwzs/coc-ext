@@ -70,6 +70,8 @@ export abstract class BaseChatChannel {
 
   public abstract clear(): void;
 
+  public abstract flush(): void;
+
   public abstract getCurrentRef(
     opts?: ChatRefOptions,
   ): Promise<null | ChatRefItem>;
@@ -124,6 +126,9 @@ export class ChunkDecoder {
 export abstract class BaseChat {
   protected chatId: string | undefined;
   protected cache: FileCache;
+
+  protected static browserUserAgent =
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
 
   constructor(protected chan: BaseChatChannel) {
     this.chatId = undefined;
