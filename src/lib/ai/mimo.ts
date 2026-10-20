@@ -11,6 +11,13 @@
 //   sensitive_title / web_search / doc / tip_ratio / tip_truncate
 // message data carries {messageType, reasoningContent | content}; the
 // messageType field may also carry 'error' / 'sensitive_*' markers
+//
+// citation protocol (verified 2026-10-20, webSearchStatus=auto):
+//   - model calls a `search` tool (toolCalls), results come back as a
+//     `tool` message whose responses[].responseData is a JSON string of
+//     search results (url/title/site/summary/.../index)
+//   - final content carries inline [citation:N] markers, N maps to the
+//     result's `index` field; see doc for the full dialog result sequence
 
 import http from 'http';
 import {
@@ -62,10 +69,93 @@ interface MimoConversationListData {
   dataList?: MimoConversationItem[];
 }
 
+// one entry of a `tool` message: responses[] / toolCalls[] (openai-style)
+interface MimoToolCall {
+  id?: string;
+  name?: string;
+  type?: string;
+  arguments?: string;
+  responseData?: string;
+}
+
+// search result entry inside a search tool response (responseData JSON)
+interface MimoSearchResult {
+  index: number;
+  url: string;
+  title: string;
+  site: string;
+  summary: string;
+  siteIcon: string;
+  datePublished: string;
+}
+
+// normalize one raw search result entry (frontend maps name|title etc.)
+function normalizeSearchResult(e: any): MimoSearchResult | null {
+  if (!e || typeof e != 'object' || !e.url) {
+    return null;
+  }
+  return {
+    index: typeof e.index == 'number' ? e.index : -1,
+    url: String(e.url),
+    title: String(e.name ?? e.title ?? ''),
+    site: String(e.siteName ?? e.site ?? ''),
+    summary: String(e.snippet ?? e.summary ?? ''),
+    siteIcon: String(e.siteIcon ?? ''),
+    datePublished: String(e.datePublished ?? ''),
+  };
+}
+
+// extract search results from one tool response (like the frontend's SK());
+// responseData is a JSON string, sometimes double-encoded
+function extractSearchResults(resp: MimoToolCall): MimoSearchResult[] {
+  if (resp.name != 'search' || !resp.responseData) {
+    return [];
+  }
+  let data: any;
+  try {
+    data = JSON.parse(resp.responseData);
+    if (typeof data == 'string') {
+      data = JSON.parse(data);
+    }
+  } catch (e) {
+    return [];
+  }
+  if (!Array.isArray(data)) {
+    return [];
+  }
+  const out: MimoSearchResult[] = [];
+  for (const e of data) {
+    const r = normalizeSearchResult(e);
+    if (r != null) {
+      out.push(r);
+    }
+  }
+  return out;
+}
+
+function searchResult2Lines(item: MimoSearchResult, idx: number) {
+  const lines: string[] = [];
+  const meta: string[] = [];
+  if (item.site) {
+    meta.push(item.site);
+  }
+  if (item.datePublished) {
+    meta.push(item.datePublished.substring(0, 10));
+  }
+  lines.push(`# ${idx} - ${item.title}`);
+  lines.push('');
+  lines.push(`[${meta.join(' - ')}](${item.url})`);
+  lines.push('');
+  lines.push(item.summary);
+  return lines;
+}
+
 interface MimoDialogResult {
   messageType?: string;
   reasoningContent?: string;
   content?: string;
+  toolCalls?: MimoToolCall[];
+  responses?: MimoToolCall[];
 }
 
 interface MimoDialogDetail {
@@ -96,6 +186,8 @@ interface MimoStreamMessage {
   messageType?: string;
   reasoningContent?: string;
   content?: string;
+  toolCalls?: MimoToolCall[];
+  responses?: MimoToolCall[];
 }
 
 // 32 hex chars, generated client-side (both msgId and conversationId)
@@ -317,8 +409,23 @@ export class MimoChat extends BaseChat {
         }
 
         let inThinking = false;
+        let searchResults: MimoSearchResult[] = [];
         for (const r of detail.result ?? []) {
-          if (r.reasoningContent) {
+          if (Array.isArray(r.toolCalls)) {
+            for (const call of r.toolCalls) {
+              if (call.name == 'search') {
+                this.chan.appendLine(' [searching...]');
+              }
+            }
+          } else if (Array.isArray(r.responses)) {
+            for (const resp of r.responses) {
+              const results = extractSearchResults(resp);
+              if (results.length > 0) {
+                searchResults.push(...results);
+                this.chan.appendLine(` [search result (${results.length})]`);
+              }
+            }
+          } else if (r.reasoningContent) {
             if (!inThinking) {
               this.chan.appendLine('---');
               inThinking = true;
@@ -335,13 +442,81 @@ export class MimoChat extends BaseChat {
         if (inThinking) {
           this.chan.appendLine('\n---\n');
         }
+        if (searchResults.length > 0) {
+          const cacheKey = `${this.chatId}-${detail.id}-search.json`;
+          const err = await this.cache.set(cacheKey, JSON.stringify(searchResults));
+          if (err instanceof Error) {
+            this.logger.error(err);
+          }
+        }
       }
     }
     return null;
   }
 
+  // cursor on [citation:N] -> popup the referenced search source
+  private async tryGetRef(messageId: string, refText: string) {
+    let regex = new RegExp(/^\[citation:([0-9]+)\]$/);
+    let arr = regex.exec(refText);
+    if (!arr || arr.length != 2) {
+      return -1;
+    }
+    const refId = parseInt(arr[1]);
+
+    const cacheKey = `${this.chatId}-${messageId}-search.json`;
+    const cache = await this.cache.get(cacheKey);
+    if (cache instanceof Error) {
+      return -1;
+    }
+    const items = JSON.parse(cache.toString()) as MimoSearchResult[];
+    for (const item of items) {
+      if (item.index != refId) {
+        continue;
+      }
+      const text = searchResult2Lines(item, item.index).join('\n');
+      await this.chan.popup(text, '', 'markdown');
+      return;
+    }
+    return -1;
+  }
+
+  // cursor on [search result (N)] -> open all sources of that dialog
+  private async tryGetSearchResult(messageId: string, refText: string) {
+    let regex = new RegExp(/^\[search result \([0-9]+\)\]$/);
+    let arr = regex.exec(refText);
+    if (!arr || arr.length != 1) {
+      return;
+    }
+
+    const cacheKey = `${this.chatId}-${messageId}-search.json`;
+    const cache = await this.cache.get(cacheKey);
+    if (cache instanceof Error) {
+      return;
+    }
+    const items = JSON.parse(cache.toString()) as MimoSearchResult[];
+
+    const lines: string[] = [];
+    let idx = 0;
+    for (const item of items) {
+      idx += 1;
+      lines.push(...searchResult2Lines(item, idx));
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+    }
+    await this.chan.openSearchWindow(lines);
+  }
+
   public async showItem() {
-    // no citation / search-result marker protocol (webSearch disabled)
+    const refItem = await this.chan.getCurrentRef();
+    if (!refItem) {
+      return;
+    }
+
+    if ((await this.tryGetRef(refItem.segmentId, refItem.refText)) !== -1) {
+      return;
+    }
+    await this.tryGetSearchResult(refItem.segmentId, refItem.refText);
   }
 
   private async genTitle(content: string): Promise<null | Error> {
@@ -411,6 +586,7 @@ export class MimoChat extends BaseChat {
     let reasoningText = '';
     let contentText = '';
     let gotError = false;
+    const searchResults: MimoSearchResult[] = [];
     const errBuf: Buffer[] = [];
 
     const closeThinking = () => {
@@ -445,6 +621,24 @@ export class MimoChat extends BaseChat {
         return;
       }
 
+      if (Array.isArray(obj.toolCalls)) {
+        for (const call of obj.toolCalls) {
+          if (call.name == 'search') {
+            this.chan.appendLine(' [searching...]');
+          }
+        }
+        return;
+      }
+      if (Array.isArray(obj.responses)) {
+        for (const resp of obj.responses) {
+          const results = extractSearchResults(resp);
+          if (results.length > 0) {
+            searchResults.push(...results);
+            this.chan.appendLine(` [search result (${results.length})]`);
+          }
+        }
+        return;
+      }
       if (typeof obj.reasoningContent == 'string') {
         if (!inThinking) {
           this.chan.appendLine('---');
@@ -555,6 +749,15 @@ export class MimoChat extends BaseChat {
     closeThinking();
     // push any partial line still sitting in the channel buffer
     this.chan.flush();
+
+    // cache search results for showItem ([citation:N] lookup)
+    if (searchResults.length > 0 && this.currentMsgid.length > 0) {
+      const cacheKey = `${this.chatId}-${this.currentMsgid}-search.json`;
+      const err = await this.cache.set(cacheKey, JSON.stringify(searchResults));
+      if (err instanceof Error) {
+        this.logger.error(err);
+      }
+    }
 
     // web frontend generates the conversation title from the first exchange
     if (firstMsg && !gotError && contentText.length > 0) {

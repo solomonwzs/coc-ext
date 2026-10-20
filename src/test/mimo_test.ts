@@ -7,6 +7,7 @@
 // run: npm run build_test && node dist/test.js
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import https from 'https';
 import http from 'http';
@@ -22,6 +23,9 @@ const TEST_KEY = fs.readFileSync(path.join(__dirname, '../testdata/test-key.pem'
 
 class MockChannel extends BaseChatChannel {
   public output: string[] = [];
+  public popupContent: string[] = [];
+  public searchLines: string[][] = [];
+  public currentRef: { refText: string; segmentId: string } | null = null;
 
   public async show() {}
   public async hide() {}
@@ -49,12 +53,17 @@ class MockChannel extends BaseChatChannel {
 
   public flush() {}
 
-  public async getCurrentRef(): Promise<null | ChatRefItem> {
-    return null;
+  public async getCurrentRef() {
+    return this.currentRef;
   }
 
-  public async openSearchWindow(_lines: string[]) {}
-  public async popup(_content: string, _title?: string, _filetype?: string) {}
+  public async openSearchWindow(lines: string[]) {
+    this.searchLines.push(lines);
+  }
+
+  public async popup(content: string, _title?: string, _filetype?: string) {
+    this.popupContent.push(content);
+  }
 }
 
 class MockLogger extends BaseLogger {
@@ -81,6 +90,7 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 // the exact SSE stream captured from POST /open-apis/react/chat
+// (reconstructed from a real webSearchStatus=auto conversation)
 function capturedSseStream(): Buffer {
   const events: string[] = [];
   const push = (ev: string, data: string) => {
@@ -89,9 +99,54 @@ function capturedSseStream(): Buffer {
   push('dialogId', '{"content":"31905223"}');
   push('message', '{"messageType":"assistant","reasoningContent":"The user is"}');
   push('message', '{"messageType":"assistant","reasoningContent":" asking me"}');
-  push('message', '{"messageType":"assistant","content":"你好！我是 MiMo"}');
-  push('message', '{"messageType":"assistant","content":"，由小米大模型团队开发"}');
-  push('usage', '{"promptTokens":3752,"completionTokens":56,"totalTokens":3808}');
+  push('message', '{"messageType":"assistant","content":"我先检索一下。"}');
+  push(
+    'message',
+    JSON.stringify({
+      messageType: 'assistant',
+      toolCalls: [
+        {
+          arguments: '{"queries":["RTX GTX 区别"]}',
+          id: 'call_ecad4e1137674311a5881237',
+          name: 'search',
+          type: 'function',
+        },
+      ],
+    }),
+  );
+  push(
+    'message',
+    JSON.stringify({
+      messageType: 'tool',
+      responses: [
+        {
+          id: 'call_ecad4e1137674311a5881237',
+          name: 'search',
+          responseData: JSON.stringify([
+            {
+              url: 'https://example.com/rtx',
+              title: 'RTX 与 GTX 区别',
+              site: '示例站',
+              summary: 'RTX 有光追核心。',
+              index: 1,
+            },
+            {
+              url: 'https://example.com/gtx',
+              title: 'GTX 停产',
+              site: '示例站2',
+              summary: 'GTX 已停产。',
+              index: 2,
+            },
+          ]),
+        },
+      ],
+    }),
+  );
+  push('message', '{"messageType":"assistant","reasoningContent":"Let me think."}');
+  push(
+    'message',
+    '{"messageType":"assistant","content":"RTX 有光追 [citation:1]，GTX 已停产 [citation:2]。"}',
+  );
   push('usage', '{"promptTokens":3752,"completionTokens":56,"totalTokens":3808}');
   push('finish', '{"content":"[DONE]"}');
   return Buffer.from(events.join('\n'));
@@ -181,7 +236,43 @@ export async function mimoTest() {
                     id: 30109200,
                     result: [
                       { messageType: 'assistant', reasoningContent: 'Let me think.' },
-                      { messageType: 'assistant', content: '按 :q 退出' },
+                      {
+                        messageType: 'assistant',
+                        toolCalls: [
+                          {
+                            arguments: '{"queries":["vim 退出"]}',
+                            id: 'call_history123',
+                            name: 'search',
+                            type: 'function',
+                          },
+                        ],
+                      },
+                      {
+                        messageType: 'tool',
+                        responses: [
+                          {
+                            id: 'call_history123',
+                            name: 'search',
+                            responseData: JSON.stringify([
+                              {
+                                url: 'https://example.com/rtx',
+                                title: 'RTX 与 GTX 区别',
+                                site: '示例站',
+                                summary: 'RTX 有光追核心。',
+                                index: 1,
+                              },
+                              {
+                                url: 'https://example.com/gtx',
+                                title: 'GTX 停产',
+                                site: '示例站2',
+                                summary: 'GTX 已停产。',
+                                index: 2,
+                              },
+                            ]),
+                          },
+                        ],
+                      },
+                      { messageType: 'assistant', content: '按 :q 退出 [citation:1]' },
                     ],
                     dialogStatus: 'success',
                     model: 'mimo-v2.6-pro',
@@ -263,7 +354,14 @@ export async function mimoTest() {
     const text = chan.output.join('');
     check('stream prints dialog id', text.includes('>> id:31905223'));
     check('stream prints thinking block', text.includes('---') && text.includes('The user is asking me'));
-    check('stream prints content', text.includes('你好！我是 MiMo，由小米大模型团队开发'));
+    check(
+      'stream prints content with citation markers',
+      text.includes('RTX 有光追 [citation:1]，GTX 已停产 [citation:2]。'),
+    );
+    check(
+      'stream prints search markers',
+      text.includes(' [searching...]') && text.includes(' [search result (2)]'),
+    );
     check('stream ends with (END)', text.includes('(END)'));
     check('currentMsgid updated', (chat as any).currentMsgid == '31905223');
 
@@ -316,7 +414,48 @@ export async function mimoTest() {
     const text = chan.output.join('');
     check('history renders user query', text.includes('如何关闭 vim'));
     check('history renders dialog id', text.includes('>> id:30109200'));
-    check('history renders thinking + content', text.includes('Let me think.') && text.includes('按 :q 退出'));
+    check(
+      'history renders thinking + content',
+      text.includes('Let me think.') && text.includes('按 :q 退出'),
+    );
+    check(
+      'history renders search markers',
+      text.includes(' [searching...]') && text.includes(' [search result (2)]'),
+    );
+  }
+
+  // ---- showItem: cursor on [citation:N] ----
+  {
+    chan.currentRef = { refText: '[citation:2]', segmentId: '30109200' };
+    await chat.showItem();
+    check(
+      'showItem pops up cited source',
+      chan.popupContent.length == 1 &&
+        chan.popupContent[0].includes('GTX 停产') &&
+        chan.popupContent[0].includes('https://example.com/gtx'),
+    );
+  }
+
+  // ---- showItem: cursor on [search result (N)] ----
+  {
+    chan.currentRef = { refText: '[search result (2)]', segmentId: '30109200' };
+    await chat.showItem();
+    check(
+      'showItem opens search result window',
+      chan.searchLines.length == 1 &&
+        chan.searchLines[0].join('\n').includes('RTX 与 GTX 区别') &&
+        chan.searchLines[0].join('\n').includes('# 2 - GTX 停产'),
+    );
+  }
+
+  // ---- showItem: cursor elsewhere ----
+  {
+    chan.currentRef = null;
+    await chat.showItem();
+    check(
+      'showItem no-op without ref',
+      chan.popupContent.length == 1 && chan.searchLines.length == 1,
+    );
   }
 
   // ---- delSession ----
@@ -330,6 +469,17 @@ export async function mimoTest() {
   globalMimo.host = savedHost;
   globalMimo.port = savedPort;
   server.close();
+
+  // clean up cache files written by the test
+  try {
+    const cacheDir = `${os.homedir()}/.cache/chat_Mimo`;
+    fs.unlinkSync(path.join(cacheDir, `${newId}-31905223-search.json`));
+    fs.unlinkSync(
+      path.join(cacheDir, 'c90b68341131e4f0dc533884f2a709a3-30109200-search.json'),
+    );
+  } catch (e) {
+    console.log('cache cleanup skipped:', String(e));
+  }
 
   console.log(failed == 0 ? '\nmimoTest all passed' : `\nmimoTest FAILED: ${failed}`);
 }
