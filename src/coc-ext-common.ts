@@ -315,12 +315,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     workspace.registerKeymap(
       ['v'],
-      'ext-copy-xclip',
+      'ext-copy-text',
       async () => {
         const text = await getText('v', false);
-        await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
+        // wayland: wl-copy; x11 (or xwayland fallback): xclip
+        let res: ExternalExecResponse;
+        if (process.env.WAYLAND_DISPLAY) {
+          res = await callShell('wl-copy', ['--type', 'text/plain'], text);
+          if (res.exitCode != 0) {
+            res = await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
+          }
+        } else {
+          res = await callShell('xclip', ['-selection', 'clipboard', '-i'], text);
+        }
+        if (res.exitCode != 0) {
+          const detail = res.error ? `: ${res.error.toString()}` : '';
+          window.showErrorMessage(`copy failed (${res.exitCode})${detail}`);
+        }
       },
-      { sync: false },
+      { sync: false }
     ),
 
     workspace.registerKeymap(

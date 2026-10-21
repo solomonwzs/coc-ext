@@ -16,7 +16,7 @@ vmap <silent> <leader>cn <Plug>(coc-ext-change-name-rule)
 nmap <silent> <leader>cs <Plug>(coc-ext-cursor-symbol)
 vmap <silent> <leader>hl <Plug>(coc-ext-hl-preview)
 
-vmap <C-c> <Plug>(coc-ext-copy-xclip)
+vmap <C-c> <Plug>(coc-ext-copy-text)
 
 " for kimi
 nmap <silent> <leader>ch <Plug>(coc-ext-ai-chat-n)
