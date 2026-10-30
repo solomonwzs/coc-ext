@@ -3,7 +3,13 @@
 // import { pathTest2 } from './test/file_test';
 import { contentTextWidthTest } from './test/text_test';
 import { mimoTest } from './test/mimo_test';
+import { deepseekTest } from './test/deepseek_test';
 
-console.log('========');
-contentTextWidthTest();
-mimoTest();
+async function main() {
+  console.log('========');
+  contentTextWidthTest();
+  await mimoTest();
+  await deepseekTest();
+}
+
+main();

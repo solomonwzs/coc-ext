@@ -12,8 +12,9 @@ import { simpleHttpDownloadFile } from '../comm/http';
 import fs from 'fs';
 import { BaseLogger } from '../comm/logger';
 
-let globalDeepseek = {
+export const globalDeepseek = {
   host: 'chat.deepseek.com',
+  port: 443,
   timeout: 5000,
 };
 
@@ -299,6 +300,7 @@ export class DeepseekChat extends BaseChat {
     let req: HttpRequest = {
       args: {
         host: globalDeepseek.host,
+        port: globalDeepseek.port,
         path,
         method,
         protocol: 'https:',
@@ -551,6 +553,7 @@ export class DeepseekChat extends BaseChat {
     const req: HttpRequest = {
       args: {
         host: globalDeepseek.host,
+        port: globalDeepseek.port,
         path: '/api/v0/chat/completion',
         method: 'POST',
         protocol: 'https:',
