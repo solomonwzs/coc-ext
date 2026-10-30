@@ -358,7 +358,8 @@ export class DeepseekChat extends BaseChat {
       return resp;
     }
 
-    let id = resp.data.biz_data?.id;
+    // the server moved the id from biz_data.id to biz_data.chat_session.id
+    const id = resp.data.biz_data?.chat_session?.id ?? resp.data.biz_data?.id;
     if (!id || id.length == 0) {
       return new ExtError(ExtError.ERR_DEEPSEEK, '[Deepseek] create chat fail');
     }
