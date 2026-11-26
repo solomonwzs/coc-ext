@@ -28,7 +28,7 @@ export class CocChatChannel extends BaseChatChannel {
       winid = await nvim.call('bufwinid', this.chatName);
       // let bufnr = (await nvim.call('bufnr', this.chatName)) as number;
       await nvim.call('win_execute', [winid, 'setl wrap']);
-      await nvim.call('win_execute', [winid, 'set ft=markdown']);
+      await nvim.call('win_execute', [winid, 'set ft=aichat']);
     } else {
       await nvim.call('win_gotoid', [winid]);
     }
@@ -75,7 +75,10 @@ export class CocChatChannel extends BaseChatChannel {
       this.channel.appendLine(text);
     } else {
       this.buf += text;
-      if (this.buf.length < CocChatChannel.bufSize && !this.buf.includes('\n')) {
+      if (
+        this.buf.length < CocChatChannel.bufSize &&
+        !this.buf.includes('\n')
+      ) {
         return;
       }
       this.channel.append(this.buf);

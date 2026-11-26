@@ -18,10 +18,9 @@ vmap <silent> <leader>hl <Plug>(coc-ext-hl-preview)
 
 vmap <C-c> <Plug>(coc-ext-copy-text)
 
-" for kimi
 nmap <silent> <leader>ch <Plug>(coc-ext-ai-chat-n)
 vmap <silent> <leader>ch <Plug>(coc-ext-ai-chat-v)
 augroup my_coc_nvim
   autocmd!
-  autocmd FileType markdown nnoremap <buffer> K <Plug>(coc-ext-ai-show)
+  autocmd FileType aichat nnoremap <buffer> K <Plug>(coc-ext-ai-show)
 augroup END
